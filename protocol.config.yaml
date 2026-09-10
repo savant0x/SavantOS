@@ -1,0 +1,70 @@
+# Protocol Config — SavantOS project configuration for the ECHO Protocol
+#
+# Project: savant0x/SavantOS — sovereign agentic OS host (Go launcher +
+# QEMU/WHPX Linux guest). Hard fork of Try Omarchy for Windows.
+
+project:
+  name: 'SavantOS'
+  description: 'Sovereign agentic OS host for Windows: signed self-updating launcher running a Linux desktop guest under QEMU/WHPX. Go + PowerShell + Python release tooling.'
+  version: '0.0.1'
+
+protocol:
+  version: '0.2.0'
+  strict_mode: true # all 15 laws active
+
+language: 'go'
+
+commands:
+  build: 'go build ./...'            # run with cwd: app/
+  test: 'go test ./...'              # run with cwd: app/
+  type_check: 'go build ./...'        # Go compiles = typechecks; cwd: app/
+  vet: 'go vet -unsafeptr=false ./...' # upstream CI gate; plain `go vet` flags contractual win32 unsafe.Pointer interop (see .github/workflows/ci.yml)
+  lint: 'gofmt -l .'                 # cwd: app/; empty output = clean
+  # Full validation gate (bash, from repo root):
+  #   cd app && go build ./... && go vet -unsafeptr=false ./... && go test ./... && gofmt -l .
+
+paths:
+  src: 'app/'
+  tests: 'app/'          # Go tests are colocated (*_test.go)
+  docs: 'docs/'
+  dev: 'dev/'
+  fids: 'dev/fids/'
+  fids_archive: 'dev/fids/archive/'
+  session_summaries: 'dev/session-summaries/'
+  learnings: 'dev/LEARNINGS.md'
+
+quality:
+  max_file_lines: 600       # advisory; app/main.go (1061) predates the scaffold
+  max_function_lines: 60
+  max_line_length: 120      # advisory in Go (gofmt owns formatting)
+  max_nesting_depth: 4
+
+testing:
+  coverage_threshold: 70    # advisory
+  parallel_tests: true
+
+fid:
+  auto_create: true
+  severity_levels: ['critical', 'high', 'medium', 'low']
+  max_open_fids: 20
+
+perfection_loop:
+  max_iterations: 10
+  change_threshold: 0.10
+  convergence_threshold: 0.02
+  convergence_passes: 2
+  oscillation_limit: 3
+
+session:
+  auto_summary: true
+  summary_interval: 30
+  max_session_hours: 4
+
+# Secrets policy: .env* is gitignored. The Ed25519 update-signing keypair
+# lives OUTSIDE the repo (operator machine, ~/.savantos-keys/ by convention,
+# documented there in README.txt). Nothing in this repo may contain private
+# key material. The public half is pinned in app/update.go
+# (updatePublicKeyHex).
+secrets:
+  gitignored: ['.env.local', '.env.local*', '*.pem', '*.key']
+  update_signing_secret: 'SAVANTOS_UPDATE_SIGNING_KEY' # GitHub Actions secret name
