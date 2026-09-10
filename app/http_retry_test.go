@@ -1,0 +1,76 @@
+package main
+
+import (
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"sync/atomic"
+	"testing"
+)
+
+func TestGetWithSetupRetryRecoversFromTemporaryFailure(t *testing.T) {
+	configureSetupCancellation(false)
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if requests.Add(1) < 3 {
+			http.Error(w, "temporary", http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = fmt.Fprint(w, "ok")
+	}))
+	defer server.Close()
+	response, err := getWithSetupRetry(server.Client(), server.URL, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if requests.Load() != 3 {
+		t.Fatalf("requests = %d", requests.Load())
+	}
+}
+
+func TestSetupFailureHelpExplainsDNS(t *testing.T) {
+	err := fmt.Errorf("download failed: %w", &net.DNSError{Err: "no such host", Name: "github.com"})
+	if got := setupFailureHelp(err); got == "Check your connection and start Try Omarchy again." {
+		t.Fatalf("DNS error got generic help: %q", got)
+	}
+}
+
+func TestSetupFailureHelpExplainsDiskFull(t *testing.T) {
+	err := fmt.Errorf("unpacking rootfs: %w", &os.PathError{
+		Op:   "write",
+		Path: `C:\Users\x\AppData\Local\TryOmarchy\guest.next\rootfs.ext4.part`,
+		Err:  diskFullErrno,
+	})
+	got := setupFailureHelp(err)
+	if got == "Check your connection and start Try Omarchy again." {
+		t.Fatalf("disk-full error got connection help: %q", got)
+	}
+	if !strings.Contains(got, "disk space") {
+		t.Fatalf("disk-full help does not mention disk space: %q", got)
+	}
+}
+
+func TestSetupFailureHelpExplainsPreflightDiskFull(t *testing.T) {
+	err := fmt.Errorf("preflighting Omarchy storage: %w", errInsufficientDiskSpace)
+	got := setupFailureHelp(err)
+	if got == "Check your connection and start Try Omarchy again." {
+		t.Fatalf("preflight disk-full error got connection help: %q", got)
+	}
+	if !strings.Contains(got, "disk space") {
+		t.Fatalf("preflight disk-full help does not mention disk space: %q", got)
+	}
+}
+
+func TestGetWithSetupRetryStopsAfterBound(t *testing.T) {
+	configureSetupCancellation(false)
+	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, fmt.Errorf("lookup github.com: no such host")
+	})}
+	if _, err := getWithSetupRetry(client, "https://github.com/file", 2); err == nil {
+		t.Fatal("persistent DNS failure was accepted")
+	}
+}

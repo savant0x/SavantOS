@@ -1,0 +1,35 @@
+dist/
+*.ppm
+*.log
+*.iso
+*.raw
+*.ext4
+*.zst
+.wrangler/
+__pycache__/
+*.pyc
+
+# Build outputs (TryOmarchy line removed at rebrand commit)
+/SavantOS*.exe
+/SavantOS*.exe.sha256
+/TryOmarchy*.exe
+/TryOmarchy*.exe.sha256
+/artifacts/
+
+# Secrets and agent credentials — never commit
+.env
+.env.*
+*.pem
+*.key
+
+# Savant harness state
+.savant/
+
+# Brand assets live in assets/ (tracked); PNG exceptions above removed so
+# docs/ and assets/ images stay versioned.
+!docs/images/**
+!assets/**
+
+# Operator-local reference material and session artifacts — not product content
+lastses.md
+savant-docs/
