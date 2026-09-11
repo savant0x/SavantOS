@@ -196,7 +196,7 @@ jobs:
         shell: pwsh
         run: |
           $hash = (Get-FileHash app/SavantOS.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  SavantOS.exe" | Set-Content app/SavantOS.exe.sha256 -Encoding ascii
+          [IO.File]::WriteAllText("$PWD/app/SavantOS.exe.sha256", "$hash  SavantOS.exe`n")
 
       - name: Upload signed test launcher
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -312,7 +312,7 @@ jobs:
             }
           }
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  SavantOS.exe" | Set-Content release/SavantOS.exe.sha256 -Encoding ascii
+          [IO.File]::WriteAllText("$PWD/release/SavantOS.exe.sha256", "$hash  SavantOS.exe`n")
 
       - name: Sign authenticated update metadata
         shell: pwsh
