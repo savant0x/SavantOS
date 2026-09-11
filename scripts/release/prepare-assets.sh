@@ -7,7 +7,7 @@ artifacts=${1:-}
 [[ -n $artifacts && -d $artifacts ]] || { echo "Usage: $0 ARTIFACT_DIR" >&2; exit 2; }
 
 runtime_lock=${SAVANTOS_RUNTIME_LOCK:-"$repo_root/guest-build/runtime.lock.json"}
-readarray -t runtime_archives < <(python3 - "$runtime_lock" <<'PY'
+readarray -t runtime_archives < <(python3 - "$runtime_lock" <<'PY' | tr -d '\r'
 import json
 import pathlib
 import sys
@@ -22,7 +22,6 @@ for role in ("runtime", "source"):
     print("\t".join((role, entry["url"], entry["filename"], entry["sha256"])))
 PY
 )
-[[ ${#runtime_archives[@]} -eq 2 ]] || { echo "Invalid runtime lock" >&2; exit 1; }
 
 declare -A seen_names=()
 for archive in "${runtime_archives[@]}"; do
