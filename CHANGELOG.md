@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.0.1 - 2026-09-11
+
+The SavantOS lineage restarts at v0.0.1 (Savant Versioning,
+`docs/SAVANT-VERSIONING.md`). All entries below the divider are inherited
+upstream history, kept verbatim for provenance.
+
+### Features
+- Rebrand to SavantOS: launcher identity (module path, app title, exe,
+  data dirs, window classes, registry, uninstall), guest kernel-cmdline
+  words (`savantos.*`), the `TRY_SAVANTOS_*` host/guest env seam, trial
+  credentials (`savant`/`savant`), and the renamed launcher scripts.
+  Guest patches are proven by applying all 44 with `git am` against the
+  pinned upstream builder commit.
+- Update trust chain rotates to the SavantOS Ed25519 keypair; the release
+  base repoints to `github.com/savant0x/SavantOS` at v0.0.1 with an
+  all-zero placeholder manifest so first-run verification stays
+  fail-closed until the first factory image is published.
+- Governance scaffold: ECHO protocol, FID lifecycle, coding standards,
+  markdownlint docs gate, and aligned quality limits.
+
+### Fixes
+- Release tooling is CRLF-safe on Windows (prepare-assets digest field,
+  test fixture line endings).
+
+---
 ## v0.0.14-preview - 2026-09-05
 
 ### Features

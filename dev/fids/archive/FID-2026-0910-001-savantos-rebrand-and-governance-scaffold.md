@@ -5,9 +5,9 @@
 - **Filename:** FID-2026-0910-001-savantos-rebrand-and-governance-scaffold.md
 - **ID:** FID-2026-0910-001
 - **Severity:** high
-- **Status:** analyzed
+- **Status:** closed
 - **Created:** 2026-09-10
-- **Author:** Orchestrator (Savant)
+- **Author:** Savant
 
 ## Problem
 
@@ -318,3 +318,59 @@ our identity). Status moves analyzed -> fixed as the sweep commits land.
 - Recorder stalled a third time on this update ("read without write");
   Orchestrator wrote it directly per the recorded precedent. Change set
   ~50 added lines, under the 100-line escalation threshold.
+
+### Completion and closure (2026-09-11, continuation sessions)
+
+All remaining work of the recorded plan landed in four atomic commits
+(gates green before each):
+
+- `b9b0817` rebrand(host): app/ identity sweep (module path
+  github.com/savant0x/SavantOS/app, appTitle, stableLauncherName,
+  TRYOMARCHY_* → TRY_SAVANTOS_, window classes, registry keys, data dirs,
+  uninstall paths), trial credentials savant/savant, savantos.* kernel
+  words; versioninfo.json + regenerated icon.ico/.syso (versioninfo.rc
+  retired). Sweep drivers committed to dev/scratchpad as method
+  provenance. Gates: go build/vet/test clean, gofmt -l empty.
+- `cc303f2` rebrand(guest/scripts/CI): sweep_patches.py restructured to
+  PATH_SHIELD → TOKENS → BARE_SHIELD, fixing the ordering flaw the
+  crashed session identified (the bare-omarchy shield marked the
+  substring inside every tryomarchy/Try Omarchy/try-omarchy composite,
+  dead-ending the token list, and PRE's omarchy-export rename mangled
+  try-omarchy-export) — 29/44 patches touched, all 44 proven by git am
+  against a pristine worktree at pinned aa009bd. sweep_scripts.py:
+  repo-URL tokens run BEFORE the shield (omacom/try-omarchy-windows
+  contains omarchy-windows, which the shield was marking first), secret
+  name token, smoke-guest credential rules; launcher scripts renamed
+  with callers updated; release.yml legacy bridge machinery removed;
+  master→main; .github/release-notes retired; guest-build/README.md
+  synced. Gates: YAML parse of all workflows, py_compile, unittest,
+  bash -n, remnant greps.
+- `de97d13` rebrand(docs): sweep_docs.py with per-phrase shields (the
+  guest remains Omarchy-based in prose; product identity sweeps);
+  provenance banner in docs/FINDINGS.md; docs/V1-READINESS.md deleted
+  (operator-approved); README rewritten with the operator banner and
+  removed from .markdownlintignore. Gate: bun run lint:md exit 0.
+- `1c53ca2` fix(release): CRLF safety — prepare-assets.sh pipes the
+  runtime-lock heredoc through tr -d '\r' and validates after cleaning;
+  the test fixture writes newline='\n'. Windows-local failures only;
+  python suite green on the operator machine afterwards.
+- `602a07a` trust: updatePublicKeyHex and sign-update
+  expectedPublicKeyHex both pin the SavantOS key af8f488e…626, derived
+  from the private PEM at /c/Users/spenc/dev/.savantos-keys (public half
+  only; no private material read into logs or context). The upstream
+  omacom key f1edc8c2… is gone from the tracked tree (its only remaining
+  mention is this document's forensic record). manifest.go repoints to
+  savant0x/SavantOS v0.0.1 and embeds the all-zero
+  SHA256SUMS.v0.0.1 (digest c4d36c4d…8ad) so first-run verification
+  stays fail-closed until the Release workflow publishes the real
+  factory image; the eight unreferenced upstream preview fixtures are
+  deleted. validate-pin cross-checks pass; Go gates green; python
+  release suite 10/10.
+
+Attribution audit (operator directive: Savant naming permitted, foreign
+agent branding prohibited): commit messages and the tracked tree scanned
+for Codebuff/Freebuff/other-agent identifiers — none present; committer
+identity savant0x throughout; this FID's Author field neutralized to
+"Savant". Final state: seven commits on main, none pushed; the remote is
+created after this FID closes. FID status → closed and archived per the
+Recorder protocol.
