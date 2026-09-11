@@ -25,14 +25,14 @@ func TestSetupReaderStopsAfterCancellation(t *testing.T) {
 }
 
 func TestCleanupCancelledFirstInstallRemovesData(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "TryOmarchy")
+	root := filepath.Join(t.TempDir(), "SavantOS")
 	if err := os.MkdirAll(filepath.Join(root, "guest"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "guest", "rootfs.ext4.zst.part"), []byte("partial"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	executable := filepath.Join(t.TempDir(), "TryOmarchy.exe")
+	executable := filepath.Join(t.TempDir(), "SavantOS.exe")
 	if err := os.WriteFile(executable, []byte("launcher"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -49,8 +49,8 @@ func TestCleanupCancelledFirstInstallRemovesData(t *testing.T) {
 }
 
 func TestCleanupPreservesLauncherInsideInstallDirectory(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "TryOmarchy")
-	executable := filepath.Join(root, "bin", "TryOmarchy.exe")
+	root := filepath.Join(t.TempDir(), "SavantOS")
+	executable := filepath.Join(root, "bin", "SavantOS.exe")
 	if err := os.MkdirAll(filepath.Dir(executable), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestCleanupExistingInstallOnlyRemovesStagingFiles(t *testing.T) {
 		}
 	}
 
-	if err := cleanupCancelledSetup(root, filepath.Join(t.TempDir(), "TryOmarchy.exe"), false); err != nil {
+	if err := cleanupCancelledSetup(root, filepath.Join(t.TempDir(), "SavantOS.exe"), false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(stable); err != nil {

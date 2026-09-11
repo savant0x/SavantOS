@@ -13,8 +13,8 @@ func TestSettingsShortcutArguments(t *testing.T) {
 	if got := settingsShortcutArguments(defaultDir); got != "-settings" {
 		t.Fatalf("default settings shortcut arguments = %q", got)
 	}
-	custom := `D:\Try Omarchy Test`
-	want := `-dir "D:\Try Omarchy Test" -settings`
+	custom := `D:\SavantOS Test`
+	want := `-dir "D:\SavantOS Test" -settings`
 	if got := settingsShortcutArguments(custom); got != want {
 		t.Fatalf("custom settings shortcut arguments = %q, want %q", got, want)
 	}

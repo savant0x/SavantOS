@@ -37,26 +37,6 @@ func TestRuntimeReceiptTracksReleaseAndExecutable(t *testing.T) {
 	}
 }
 
-func TestRuntimeReceiptSurvivesRepositoryTransfer(t *testing.T) {
-	root := t.TempDir()
-	bin := filepath.Join(root, "bin")
-	if err := os.MkdirAll(bin, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(bin, "qemu-system-x86_64w.exe"), []byte("runtime"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	manifestSHA := strings.Repeat("a", 64)
-	archiveSHA := strings.Repeat("b", 64)
-	tag := "v0.0.11-preview"
-	if err := writeRuntimeReceipt(root, legacyReleaseBase+tag, manifestSHA, archiveSHA); err != nil {
-		t.Fatal(err)
-	}
-	if !runtimeReceiptMatches(root, transferredReleaseBase+tag, manifestSHA, archiveSHA) {
-		t.Fatal("runtime receipt did not survive the repository transfer")
-	}
-}
-
 func TestRuntimeArchiveMatchesAcrossReleases(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "bin"), 0o755); err != nil {

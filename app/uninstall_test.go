@@ -6,26 +6,26 @@ import (
 )
 
 func TestUninstallKeyNameIsStablePerInstall(t *testing.T) {
-	def := `C:\Users\me\AppData\Local\TryOmarchy`
-	if got := uninstallKeyName(def, def); got != "TryOmarchy" {
+	def := `C:\Users\me\AppData\Local\SavantOS`
+	if got := uninstallKeyName(def, def); got != "SavantOS" {
 		t.Fatalf("default install key: %q", got)
 	}
-	a := uninstallKeyName(`E:\Omarchy\TryOmarchy`, def)
-	b := uninstallKeyName(`e:\omarchy\tryomarchy\`, def)
-	if a != b || !strings.HasPrefix(a, "TryOmarchy-") || len(a) != len("TryOmarchy-")+8 {
+	a := uninstallKeyName(`E:\SavantOS\SavantOS`, def)
+	b := uninstallKeyName(`e:\savantos\savantos\`, def)
+	if a != b || !strings.HasPrefix(a, "SavantOS-") || len(a) != len("SavantOS-")+8 {
 		t.Fatalf("alternate install keys differ or are malformed: %q %q", a, b)
 	}
 	if uninstallKeyName(`D:\Other`, def) == a {
 		t.Fatal("different folders must not share a key")
 	}
-	if got := uninstallDisplayName(`E:\Omarchy\TryOmarchy`, def); got != `Try Omarchy (E:\Omarchy\TryOmarchy)` {
+	if got := uninstallDisplayName(`E:\SavantOS\SavantOS`, def); got != `SavantOS (E:\SavantOS\SavantOS)` {
 		t.Fatalf("display name: %q", got)
 	}
 }
 
 func TestUninstallCommandQuotesPaths(t *testing.T) {
-	got := uninstallCommand(`E:\My Omarchy\TryOmarchy.exe`, `E:\My Omarchy`)
-	if got != `"E:\My Omarchy\TryOmarchy.exe" -dir "E:\My Omarchy" -uninstall` {
+	got := uninstallCommand(`E:\My SavantOS\SavantOS.exe`, `E:\My SavantOS`)
+	if got != `"E:\My SavantOS\SavantOS.exe" -dir "E:\My SavantOS" -uninstall` {
 		t.Fatalf("command: %s", got)
 	}
 	if displayVersion("v0.0.12-preview") != "0.0.12-preview" {

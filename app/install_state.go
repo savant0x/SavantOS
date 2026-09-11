@@ -63,23 +63,12 @@ func normalizedRelease(release string) string {
 	return strings.TrimRight(strings.TrimSpace(release), "/")
 }
 
-// releaseLocationsEquivalent recognizes only the repository-transfer form of
-// the same tagged release. This prevents an owner-only URL change from looking
-// like a payload update while keeping unrelated repositories and tags distinct.
+// releaseLocationsEquivalent recognizes the same tagged release. With a
+// single release repository this is normalized-string equality; unrelated
+// repositories and tags stay distinct so an owner-only URL change cannot
+// masquerade as a payload update.
 func releaseLocationsEquivalent(a, b string) bool {
-	a = normalizedRelease(a)
-	b = normalizedRelease(b)
-	if a == b {
-		return true
-	}
-	legacyTag := strings.TrimPrefix(a, legacyReleaseBase)
-	transferredTag := strings.TrimPrefix(b, transferredReleaseBase)
-	if legacyTag != a && transferredTag != b && legacyTag != "" && legacyTag == transferredTag {
-		return true
-	}
-	legacyTag = strings.TrimPrefix(b, legacyReleaseBase)
-	transferredTag = strings.TrimPrefix(a, transferredReleaseBase)
-	return legacyTag != b && transferredTag != a && legacyTag != "" && legacyTag == transferredTag
+	return normalizedRelease(a) == normalizedRelease(b)
 }
 
 func normalizedSHA256(value string) string {

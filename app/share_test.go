@@ -28,7 +28,7 @@ func TestShareCmdlineEncodesTheNameAsOneWord(t *testing.T) {
 		t.Fatalf("no share produced %q", got)
 	}
 	got := shareCmdline(`C:\Users\me\My Files`)
-	const prefix = " tryomarchy.sharename="
+	const prefix = " savantos.sharename="
 	if len(got) <= len(prefix) || got[:len(prefix)] != prefix {
 		t.Fatalf("shareCmdline = %q", got)
 	}

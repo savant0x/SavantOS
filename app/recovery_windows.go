@@ -16,7 +16,7 @@ import (
 
 func chooseBackupDestination() (string, bool, error) {
 	for {
-		name, ok, err := chooseRecoveryPath(0, "Save a new Omarchy backup", "Omarchy-"+time.Now().Format("2006-01-02-150405")+".zip", true, false)
+		name, ok, err := chooseRecoveryPath(0, "Save a new SavantOS backup", "SavantOS-"+time.Now().Format("2006-01-02-150405")+".zip", true, false)
 		if err != nil || !ok {
 			return "", ok, err
 		}
@@ -52,7 +52,7 @@ func runRecoveryUI(dir, action string) error {
 		uiDone()
 		infoBox("Backup saved to:\n\n" + name + "\n\nIt contains personal guest files and is not encrypted. Keep it private.")
 	case "restore":
-		source, ok, err := chooseRecoveryPath(0, "Choose a trusted Omarchy backup", "", false, false)
+		source, ok, err := chooseRecoveryPath(0, "Choose a trusted SavantOS backup", "", false, false)
 		if err != nil || !ok {
 			return err
 		}
@@ -60,7 +60,7 @@ func runRecoveryUI(dir, action string) error {
 		if err != nil || !ok {
 			return err
 		}
-		destination := filepath.Join(parent, "OmarchyRestored-"+time.Now().Format("2006-01-02-150405"))
+		destination := filepath.Join(parent, "SavantOSRestored-"+time.Now().Format("2006-01-02-150405"))
 		if msgBox("Restore this backup into a new folder?\n\n"+destination+"\n\nYour current installation and shortcuts will stay unchanged. Only restore backups you trust.", mbYesNo|mbIconQuestion|mbDefbutton2) != idYes {
 			return nil
 		}
@@ -78,7 +78,7 @@ func runRecoveryUI(dir, action string) error {
 			if err := recordShortcutOffer(destination); err != nil {
 				logf("could not record the shortcut offer for %s: %v", destination, err)
 			}
-			infoBox("Restored to:\n\n" + destination + "\n\nOpen Start Omarchy in that folder to use this copy, or Settings to review it first. Your original installation and shortcuts are unchanged.")
+			infoBox("Restored to:\n\n" + destination + "\n\nOpen Start SavantOS in that folder to use this copy, or Settings to review it first. Your original installation and shortcuts are unchanged.")
 		}
 	case "reset":
 		return resetFromSettings(dir)
@@ -92,7 +92,7 @@ func runRecoveryUI(dir, action string) error {
 
 // Backup failure or cancellation must never fall through into reset.
 func confirmResetBackup(dir string) (bool, error) {
-	choice := msgBox("Start over with a clean Omarchy guest?\n\nThis resets the guest account, installed apps, and guest files. Windows shared folders and launcher settings are kept. The old disk will be retained for recovery.\n\nCreate a full backup first?\nYes: choose a backup. No: skip the full backup. Cancel: do nothing.", 3|mbIconQuestion|0x200)
+	choice := msgBox("Start over with a clean SavantOS guest?\n\nThis resets the guest account, installed apps, and guest files. Windows shared folders and launcher settings are kept. The old disk will be retained for recovery.\n\nCreate a full backup first?\nYes: choose a backup. No: skip the full backup. Cancel: do nothing.", 3|mbIconQuestion|0x200)
 	if choice != idYes && choice != idNo {
 		return false, nil
 	}
@@ -106,7 +106,7 @@ func confirmResetBackup(dir string) (bool, error) {
 			return false, err
 		}
 	}
-	if msgBox("Reset the active Omarchy guest now?\n\nThe old disk will remain in the VM folder until you remove it. The new guest needs first-run setup.", mbYesNo|mbIconQuestion|mbDefbutton2) != idYes {
+	if msgBox("Reset the active SavantOS guest now?\n\nThe old disk will remain in the VM folder until you remove it. The new guest needs first-run setup.", mbYesNo|mbIconQuestion|mbDefbutton2) != idYes {
 		return false, nil
 	}
 	return !setupCancelled(), checkSetupCancelled()
@@ -133,20 +133,20 @@ func resetFromSettings(dir string) error {
 		return err
 	}
 	cfg := &config{dir: dir, guestDir: filepath.Join(dir, "guest"), vmDir: filepath.Join(dir, "vm"), disk: filepath.Join(dir, "vm", "disk.raw"), diskFormat: "raw", diskGiB: storage.DiskGiB}
-	beginRecoveryProgress("Preparing a clean Omarchy guest...")
+	beginRecoveryProgress("Preparing a clean SavantOS guest...")
 	old, err := resetStandardDisk(cfg, spec.Runtime.Storage.ExpandedSizeMiB)
 	if err != nil {
 		return err
 	}
 	uiDone()
-	infoBox("Omarchy is ready for a fresh start on its next launch.\n\nThe previous disk is kept at:\n" + old + "\n\nKeep it until you have checked the new guest. It continues to use Windows disk space.")
+	infoBox("SavantOS is ready for a fresh start on its next launch.\n\nThe previous disk is kept at:\n" + old + "\n\nKeep it until you have checked the new guest. It continues to use Windows disk space.")
 	return nil
 }
 
 func reportRecoveryResult(err error) {
 	uiDone()
 	if err != nil && !errors.Is(err, errSetupCancelled) {
-		errorBox("Try Omarchy could not finish this operation.\n\n" + err.Error())
+		errorBox("SavantOS could not finish this operation.\n\n" + err.Error())
 	}
 }
 
@@ -158,11 +158,11 @@ func createRestoredLaunchers(dir string) error {
 		return err
 	}
 	const script = `$ErrorActionPreference='Stop'; $shell=New-Object -ComObject WScript.Shell; ` +
-		`$items=@(@('Start Omarchy.lnk',$env:TRYOMARCHY_RESTORE_ARGS),@('Settings.lnk',($env:TRYOMARCHY_RESTORE_ARGS+' -settings'))); ` +
-		`foreach($item in $items){$path=Join-Path $env:TRYOMARCHY_RESTORE_DIR $item[0]; if(Test-Path -LiteralPath $path){throw 'Shortcut already exists'}; ` +
-		`$link=$shell.CreateShortcut($path); $link.TargetPath=$env:TRYOMARCHY_RESTORE_TARGET; $link.Arguments=$item[1]; $link.WorkingDirectory=$env:TRYOMARCHY_RESTORE_DIR; $link.IconLocation=$env:TRYOMARCHY_RESTORE_TARGET+',0'; $link.Save()}`
+		`$items=@(@('Start SavantOS.lnk',$env:SAVANTOS_RESTORE_ARGS),@('Settings.lnk',($env:SAVANTOS_RESTORE_ARGS+' -settings'))); ` +
+		`foreach($item in $items){$path=Join-Path $env:SAVANTOS_RESTORE_DIR $item[0]; if(Test-Path -LiteralPath $path){throw 'Shortcut already exists'}; ` +
+		`$link=$shell.CreateShortcut($path); $link.TargetPath=$env:SAVANTOS_RESTORE_TARGET; $link.Arguments=$item[1]; $link.WorkingDirectory=$env:SAVANTOS_RESTORE_DIR; $link.IconLocation=$env:SAVANTOS_RESTORE_TARGET+',0'; $link.Save()}`
 	cmd := exec.Command(system32("WindowsPowerShell\\v1.0\\powershell.exe"), "-NoProfile", "-NonInteractive", "-Command", script)
-	cmd.Env = append(os.Environ(), "TRYOMARCHY_RESTORE_DIR="+dir, "TRYOMARCHY_RESTORE_TARGET="+target, "TRYOMARCHY_RESTORE_ARGS="+shortcutArguments(dir))
+	cmd.Env = append(os.Environ(), "SAVANTOS_RESTORE_DIR="+dir, "SAVANTOS_RESTORE_TARGET="+target, "SAVANTOS_RESTORE_ARGS="+shortcutArguments(dir))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("creating restored shortcuts: %w: %s", err, strings.TrimSpace(string(output)))

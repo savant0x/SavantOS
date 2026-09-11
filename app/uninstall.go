@@ -12,17 +12,17 @@ const uninstallRegistryParent = `Software\Microsoft\Windows\CurrentVersion\Unins
 
 func uninstallKeyName(dir, defaultDir string) string {
 	if pathsEqual(dir, defaultDir) {
-		return "TryOmarchy"
+		return "SavantOS"
 	}
 	sum := sha256.Sum256([]byte(strings.ToLower(strings.TrimRight(dir, `\/`))))
-	return "TryOmarchy-" + hex.EncodeToString(sum[:4])
+	return "SavantOS-" + hex.EncodeToString(sum[:4])
 }
 
 func uninstallDisplayName(dir, defaultDir string) string {
 	if pathsEqual(dir, defaultDir) {
-		return "Try Omarchy"
+		return "SavantOS"
 	}
-	return "Try Omarchy (" + dir + ")"
+	return "SavantOS (" + dir + ")"
 }
 
 // uninstallCommand is the string Windows runs from Apps & features. Paths

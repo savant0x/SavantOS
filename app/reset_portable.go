@@ -32,7 +32,7 @@ func resetPortableDisk(cfg *config, expandedBytes int64) error {
 		var err error
 		lock, err = openBackupDisk(cfg.disk)
 		if err != nil {
-			return fmt.Errorf("close Omarchy before resetting: %w", err)
+			return fmt.Errorf("close SavantOS before resetting: %w", err)
 		}
 		defer lock.Close()
 	}

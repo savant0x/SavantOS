@@ -46,11 +46,11 @@ func registerUninstallEntry(target, dir string) error {
 	values := map[string]string{
 		"DisplayName":     uninstallDisplayName(dir, defaultDir),
 		"DisplayVersion":  displayVersion(currentVersion),
-		"Publisher":       "Omacom",
+		"Publisher":       "Savant",
 		"InstallLocation": dir,
 		"DisplayIcon":     target + ",0",
 		"UninstallString": uninstallCommand(target, dir),
-		"URLInfoAbout":    "https://github.com/omacom/try-omarchy-windows",
+		"URLInfoAbout":    "https://github.com/savant0x/SavantOS",
 		"InstallDate":     time.Now().Format("20060102"),
 	}
 	for name, value := range values {
@@ -107,12 +107,12 @@ func regSetDword(key syscall.Handle, name string, value uint32) error {
 func removeLauncherShortcuts(target string) error {
 	const script = `$ErrorActionPreference='Stop'; $shell=New-Object -ComObject WScript.Shell; ` +
 		`$programs=[Environment]::GetFolderPath('Programs'); $desktop=[Environment]::GetFolderPath('DesktopDirectory'); ` +
-		`foreach($path in @((Join-Path $programs 'Try Omarchy.lnk'),(Join-Path $programs 'Try Omarchy Settings.lnk'),(Join-Path $desktop 'Try Omarchy.lnk'))) { ` +
+		`foreach($path in @((Join-Path $programs 'SavantOS.lnk'),(Join-Path $programs 'SavantOS Settings.lnk'),(Join-Path $desktop 'SavantOS.lnk'))) { ` +
 		`if (Test-Path -LiteralPath $path) { $link=$shell.CreateShortcut($path); ` +
-		`if ([StringComparer]::OrdinalIgnoreCase.Equals($link.TargetPath,$env:TRYOMARCHY_SHORTCUT_TARGET)) { Remove-Item -LiteralPath $path -Force } } }`
+		`if ([StringComparer]::OrdinalIgnoreCase.Equals($link.TargetPath,$env:SAVANTOS_SHORTCUT_TARGET)) { Remove-Item -LiteralPath $path -Force } } }`
 	cmd := exec.Command(system32("WindowsPowerShell\\v1.0\\powershell.exe"),
 		"-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
-	cmd.Env = append(os.Environ(), "TRYOMARCHY_SHORTCUT_TARGET="+target)
+	cmd.Env = append(os.Environ(), "SAVANTOS_SHORTCUT_TARGET="+target)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("removing shortcuts: %w: %s", err, strings.TrimSpace(string(output)))
@@ -131,11 +131,11 @@ func runUninstall(dir string) error {
 	if disk := filepath.Join(dir, "vm", "disk.raw"); fileExists(disk) {
 		f, err := openBackupDisk(disk)
 		if err != nil {
-			return fmt.Errorf("close Try Omarchy before removing it: %w", err)
+			return fmt.Errorf("close SavantOS before removing it: %w", err)
 		}
 		f.Close()
 	}
-	choice := msgBox("Remove Try Omarchy from this PC?\n\nThis deletes the Omarchy virtual disk and everything inside it, the downloaded image and runtime, settings, and the launcher in:\n\n"+dir+"\n\nShortcuts and the Apps & features entry are removed. Windows shared folders and the original download are kept.\n\nCreate a full backup first?\nYes: choose a backup. No: skip the backup. Cancel: keep everything.", mbYesNoCancel|mbIconQuestion|mbDefbutton2)
+	choice := msgBox("Remove SavantOS from this PC?\n\nThis deletes the SavantOS virtual disk and everything inside it, the downloaded image and runtime, settings, and the launcher in:\n\n"+dir+"\n\nShortcuts and the Apps & features entry are removed. Windows shared folders and the original download are kept.\n\nCreate a full backup first?\nYes: choose a backup. No: skip the backup. Cancel: keep everything.", mbYesNoCancel|mbIconQuestion|mbDefbutton2)
 	if choice != idYes && choice != idNo {
 		return nil
 	}
@@ -151,7 +151,7 @@ func runUninstall(dir string) error {
 			return err
 		}
 	}
-	if msgBox("Remove Try Omarchy and delete "+dir+" now?", mbYesNo|mbIconQuestion|mbDefbutton2) != idYes {
+	if msgBox("Remove SavantOS and delete "+dir+" now?", mbYesNo|mbIconQuestion|mbDefbutton2) != idYes {
 		return nil
 	}
 	target := filepath.Join(dir, stableLauncherName)
@@ -173,7 +173,7 @@ func runUninstall(dir string) error {
 	if rel, err := filepath.Rel(dir, self); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		// This process runs from inside the folder it must delete. A copy
 		// outside the folder finishes the job after this one exits.
-		helper := filepath.Join(os.TempDir(), fmt.Sprintf("TryOmarchy-uninstall-%d.exe", os.Getpid()))
+		helper := filepath.Join(os.TempDir(), fmt.Sprintf("SavantOS-uninstall-%d.exe", os.Getpid()))
 		if err := copyLauncher(self, helper, replaceLauncher); err != nil {
 			return fmt.Errorf("preparing the removal helper: %w", err)
 		}
@@ -186,7 +186,7 @@ func runUninstall(dir string) error {
 	if err := removeAllWithRetry(dir); err != nil {
 		return err
 	}
-	infoBox("Try Omarchy was removed.")
+	infoBox("SavantOS was removed.")
 	return nil
 }
 
@@ -202,10 +202,10 @@ func finishUninstall(dir string, waitPID int) int {
 	}
 	code := 0
 	if err != nil {
-		errorBox("Try Omarchy could not delete its folder:\n\n" + dir + "\n\n" + err.Error() + "\n\nDelete it by hand to finish removing Try Omarchy.")
+		errorBox("SavantOS could not delete its folder:\n\n" + dir + "\n\n" + err.Error() + "\n\nDelete it by hand to finish removing SavantOS.")
 		code = 1
 	} else {
-		infoBox("Try Omarchy was removed.")
+		infoBox("SavantOS was removed.")
 	}
 	// Started after the message box closes, so the helper file is no longer
 	// in use by the time cmd deletes it.

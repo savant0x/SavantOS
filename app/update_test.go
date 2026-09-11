@@ -4,7 +4,6 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -36,9 +35,9 @@ func signedUpdateServer(t *testing.T, body []byte, mutateSignature bool) (*httpt
 }
 
 func validUpdateJSON(version string) []byte {
-	return []byte(fmt.Sprintf(`{"schema":1,"version":%q,"release":%q,"manifestSHA256":%q,"launcher":{"name":"TryOmarchy.exe","sha256":%q}}`,
+	return []byte(fmt.Sprintf(`{"schema":1,"version":%q,"release":%q,"manifestSHA256":%q,"launcher":{"name":"SavantOS.exe","sha256":%q}}`,
 		version,
-		transferredReleaseBase+version,
+		savantReleaseBase+version,
 		strings.Repeat("a", 64), strings.Repeat("b", 64)))
 }
 
@@ -63,33 +62,11 @@ func TestFetchUpdateManifestRejectsBadSignature(t *testing.T) {
 }
 
 func TestFetchUpdateManifestRejectsUnexpectedRelease(t *testing.T) {
-	body := []byte(`{"schema":1,"version":"v0.0.7-preview","release":"https://example.test/release","manifestSHA256":"` + strings.Repeat("a", 64) + `","launcher":{"name":"TryOmarchy.exe","sha256":"` + strings.Repeat("b", 64) + `"}}`)
+	body := []byte(`{"schema":1,"version":"v0.0.7-preview","release":"https://example.test/release","manifestSHA256":"` + strings.Repeat("a", 64) + `","launcher":{"name":"SavantOS.exe","sha256":"` + strings.Repeat("b", 64) + `"}}`)
 	server, key := signedUpdateServer(t, body, false)
 	defer server.Close()
 	if _, err := fetchUpdateManifest(server.Client(), server.URL+"/update.json", key); err == nil {
 		t.Fatal("unexpected release URL was accepted")
-	}
-}
-
-func TestValidateUpdateManifestAcceptsOfficialRepository(t *testing.T) {
-	var manifest updateManifest
-	if err := json.Unmarshal(validUpdateJSON("v0.0.8-preview"), &manifest); err != nil {
-		t.Fatal(err)
-	}
-	manifest.Release = officialReleaseBase + manifest.Version
-	if err := validateUpdateManifest(&manifest); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestValidateUpdateManifestAcceptsLegacyRepository(t *testing.T) {
-	var manifest updateManifest
-	if err := json.Unmarshal(validUpdateJSON("v0.0.8-preview"), &manifest); err != nil {
-		t.Fatal(err)
-	}
-	manifest.Release = legacyReleaseBase + manifest.Version
-	if err := validateUpdateManifest(&manifest); err != nil {
-		t.Fatal(err)
 	}
 }
 

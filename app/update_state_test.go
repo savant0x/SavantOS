@@ -50,7 +50,7 @@ func TestUpdateCheckThrottle(t *testing.T) {
 }
 
 func TestRestartArgumentsRoundTrip(t *testing.T) {
-	want := []string{"-dir", `C:\Users\Test User\TryOmarchy`, "-fullscreen"}
+	want := []string{"-dir", `C:\Users\Test User\SavantOS`, "-fullscreen"}
 	encoded, err := encodeRestartArgs(want)
 	if err != nil {
 		t.Fatal(err)

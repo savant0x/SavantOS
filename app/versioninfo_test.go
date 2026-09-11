@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -39,7 +40,10 @@ func fixedFileInfo(t *testing.T, syso []byte) (file, product [4]uint16) {
 
 // The version block ships inside a committed resource object, so bumping
 // currentVersion without regenerating it would quietly ship stale metadata to
-// Explorer, Task Manager and the UAC prompt.
+// Explorer, Task Manager and the UAC prompt. Regenerate with:
+//
+//	go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.7.0 \
+//	  -o rsrc_windows_amd64.syso versioninfo.json
 func TestVersionInfoResourceMatchesCurrentVersion(t *testing.T) {
 	parts := regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)`).FindStringSubmatch(currentVersion)
 	if parts == nil {
@@ -63,7 +67,7 @@ func TestVersionInfoResourceMatchesCurrentVersion(t *testing.T) {
 	// matching inside a leftover "v0.0.7-preview".
 	if n := bytes.Count(syso, utf16le(currentVersion+"\x00")); n < 2 {
 		t.Errorf("rsrc_windows_amd64.syso carries %q %d time(s), want it in both FileVersion "+
-			"and ProductVersion - rebuild it from versioninfo.rc", currentVersion, n)
+			"and ProductVersion - regenerate it from versioninfo.json", currentVersion, n)
 	}
 	file, product := fixedFileInfo(t, syso)
 	if file != want {
@@ -73,20 +77,47 @@ func TestVersionInfoResourceMatchesCurrentVersion(t *testing.T) {
 		t.Errorf("compiled PRODUCTVERSION = %v, want %v", product, want)
 	}
 
-	rc, err := os.ReadFile("versioninfo.rc")
+	// versioninfo.json is the source the committed resource is generated from;
+	// it must stay in step with currentVersion and the launcher identity.
+	data, err := os.ReadFile("versioninfo.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	nums := fmt.Sprintf("%s, %s, %s, 0", parts[1], parts[2], parts[3])
-	for _, field := range []string{"FILEVERSION", "PRODUCTVERSION"} {
-		if !bytes.Contains(rc, []byte(field+" "+nums)) {
-			t.Errorf("versioninfo.rc has no %q for currentVersion %q", field+" "+nums, currentVersion)
-		}
+	var vi struct {
+		FixedFileInfo struct {
+			FileVersion    struct{ Major, Minor, Patch, Build int }
+			ProductVersion struct{ Major, Minor, Patch, Build int }
+		} `json:"FixedFileInfo"`
+		StringFileInfo struct {
+			FileVersion      string
+			InternalName     string
+			OriginalFilename string
+			ProductName      string
+			ProductVersion   string
+		} `json:"StringFileInfo"`
 	}
-	for _, field := range []string{"FileVersion", "ProductVersion"} {
-		line := fmt.Sprintf("VALUE %q, %q", field, currentVersion)
-		if !bytes.Contains(rc, []byte(line)) {
-			t.Errorf("versioninfo.rc has no %s", line)
-		}
+	if err := json.Unmarshal(data, &vi); err != nil {
+		t.Fatalf("versioninfo.json: %v", err)
+	}
+	if vi.StringFileInfo.FileVersion != currentVersion || vi.StringFileInfo.ProductVersion != currentVersion {
+		t.Errorf("versioninfo.json version strings are %q/%q, want %q",
+			vi.StringFileInfo.FileVersion, vi.StringFileInfo.ProductVersion, currentVersion)
+	}
+	if got := fmt.Sprintf("%d.%d.%d.%d",
+		vi.FixedFileInfo.FileVersion.Major, vi.FixedFileInfo.FileVersion.Minor,
+		vi.FixedFileInfo.FileVersion.Patch, vi.FixedFileInfo.FileVersion.Build); got != fmt.Sprintf("%s.%s.%s.0", parts[1], parts[2], parts[3]) {
+		t.Errorf("versioninfo.json FileVersion = %s, want %s.%s.%s.0", got, parts[1], parts[2], parts[3])
+	}
+	if vi.FixedFileInfo.ProductVersion != vi.FixedFileInfo.FileVersion {
+		t.Errorf("versioninfo.json ProductVersion %v differs from FileVersion %v",
+			vi.FixedFileInfo.ProductVersion, vi.FixedFileInfo.FileVersion)
+	}
+	if vi.StringFileInfo.OriginalFilename != stableLauncherName {
+		t.Errorf("versioninfo.json OriginalFilename = %q, want stableLauncherName %q",
+			vi.StringFileInfo.OriginalFilename, stableLauncherName)
+	}
+	if vi.StringFileInfo.ProductName != appTitle || vi.StringFileInfo.InternalName != appTitle {
+		t.Errorf("versioninfo.json identity = %q/%q, want appTitle %q",
+			vi.StringFileInfo.ProductName, vi.StringFileInfo.InternalName, appTitle)
 	}
 }

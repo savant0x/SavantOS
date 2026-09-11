@@ -21,12 +21,12 @@ func TestWriteDiagnosticsBundlesLogsStateAndFactsOnly(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("vm/shell.log", "12:00:00 booting "+strings.ToUpper(dir)+" tryomarchy.sshkey=AAA-user-at-pc\n")
+	write("vm/shell.log", "12:00:00 booting "+strings.ToUpper(dir)+" savantos.sshkey=AAA-user-at-pc\n")
 	write("vm/qemu-stderr.log", "WHPX: Failed to enable nested virtualization, hr=80370302\n")
 	write("settings.json", `{"schemaVersion":1,"share":"C:\\Users\\secret\\Work","forwards":["tcp:2222:22"],"sshKey":"C:\\Users\\secret\\.ssh\\id.pub"}`)
 	write("guest/install-state.json", `{"version":1}`)
 	write("runtime/runtime-install-state.json", `{"version":1}`)
-	write("guest/guest-manifest.json", `{"kind":"try-omarchy-guest-artifacts"}`)
+	write("guest/guest-manifest.json", `{"kind":"savantos-guest-artifacts"}`)
 	write("vm/disk.raw", strings.Repeat("x", 4096))
 	write("guest/rootfs.ext4", "not a log")
 	big := bytes.Repeat([]byte("old line\n"), diagnosticTailBytes/9+2000)
@@ -37,7 +37,7 @@ func TestWriteDiagnosticsBundlesLogsStateAndFactsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if filepath.Dir(path) != filepath.Join(dir, "diagnostics") || !strings.HasPrefix(filepath.Base(path), "try-omarchy-diagnostics-") {
+	if filepath.Dir(path) != filepath.Join(dir, "diagnostics") || !strings.HasPrefix(filepath.Base(path), "savantos-diagnostics-") {
 		t.Fatalf("bundle path %s", path)
 	}
 	if _, err := os.Stat(path + ".part"); !os.IsNotExist(err) {

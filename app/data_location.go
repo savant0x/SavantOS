@@ -18,7 +18,7 @@ const (
 
 // Kept as a variable so isolated signed test builds can use their own data
 // directory without changing production behavior.
-var defaultDataDirectoryName = "TryOmarchy"
+var defaultDataDirectoryName = "SavantOS"
 
 type dataLocationPointer struct {
 	Version int    `json:"version"`
@@ -224,7 +224,7 @@ func ensureDataDirectoryWritable(path string) error {
 	if err := os.MkdirAll(path, 0o755); err != nil {
 		return err
 	}
-	f, err := os.CreateTemp(path, ".tryomarchy-write-test-*")
+	f, err := os.CreateTemp(path, ".savantos-write-test-*")
 	if err != nil {
 		return err
 	}

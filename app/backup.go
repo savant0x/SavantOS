@@ -78,7 +78,7 @@ func writeVMBackupProgress(dir, destination string, report backupProgress) error
 	}
 	rel, err := filepath.Rel(root, parent)
 	if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("save the backup outside the Try Omarchy data folder")
+		return fmt.Errorf("save the backup outside the SavantOS data folder")
 	}
 
 	for _, name := range []string{payloadUpdateStateFilename, updateStateFilename} {
@@ -88,7 +88,7 @@ func writeVMBackupProgress(dir, destination string, report backupProgress) error
 	}
 	disk, err := openBackupDisk(filepath.Join(dir, "vm", "disk.raw"))
 	if err != nil {
-		return fmt.Errorf("close Try Omarchy before backing up: %w", err)
+		return fmt.Errorf("close SavantOS before backing up: %w", err)
 	}
 	defer disk.Close()
 	var entries []backupEntry
@@ -140,7 +140,7 @@ func writeVMBackupProgress(dir, destination string, report backupProgress) error
 	if _, err := os.Lstat(destination); !os.IsNotExist(err) {
 		return fmt.Errorf("choose a new backup filename")
 	}
-	f, err := os.CreateTemp(filepath.Dir(destination), ".try-omarchy-backup-*")
+	f, err := os.CreateTemp(filepath.Dir(destination), ".savantos-backup-*")
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func restoreVMBackupProgress(source, destination string, report backupProgress) 
 	if err = requireDiskSpace(filepath.Dir(destination), restoreSpaceEstimate(manifest, files)); err != nil {
 		return err
 	}
-	staging, err := os.MkdirTemp(filepath.Dir(destination), ".try-omarchy-restore-*")
+	staging, err := os.MkdirTemp(filepath.Dir(destination), ".savantos-restore-*")
 	if err != nil {
 		return err
 	}

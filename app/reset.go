@@ -28,7 +28,7 @@ func resetStandardDisk(cfg *config, expandedMiB int64) (string, error) {
 	}
 	lock, err := openBackupDisk(cfg.disk)
 	if err != nil {
-		return "", fmt.Errorf("close Omarchy before resetting: %w", err)
+		return "", fmt.Errorf("close SavantOS before resetting: %w", err)
 	}
 	defer lock.Close()
 	stage, err := os.MkdirTemp(cfg.vmDir, ".reset-staging-*")

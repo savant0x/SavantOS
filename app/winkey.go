@@ -16,7 +16,7 @@ import (
 // to the guest as Super (meta_l) over a dedicated QMP socket. Otherwise the key
 // behaves normally. Pair with SDL_GRAB_KEYBOARD=0 so SDL never installs its own
 // (system-wide) hook. Print Screen gets the same treatment: Windows opens its
-// own screen capture on it system-wide, so Omarchy's screenshot binding would
+// own screen capture on it system-wide, so SavantOS's screenshot binding would
 // otherwise fire together with Snipping Tool.
 
 type forwardedKey struct {
@@ -180,7 +180,7 @@ func runWinKeyQmp() {
 // the next windowed launch if that spot is still on a connected display.
 func runTitleEnforcer(dir string, fullscreen bool) {
 	hInst, _, _ := procGetModuleHandleW.Call(0)
-	appIcon, _, _ := procLoadIconW.Call(hInst, 1) // the embedded Omarchy .ico
+	appIcon, _, _ := procLoadIconW.Call(hInst, 1) // the embedded SavantOS .ico
 	lastPid := uint32(0)
 	maximize := false
 	var restore, last *windowPlacement

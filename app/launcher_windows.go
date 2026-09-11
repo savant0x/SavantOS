@@ -73,27 +73,27 @@ func createLauncherShortcuts(target, dir string, startMenu, desktop bool) error 
 	}
 	const script = `$ErrorActionPreference='Stop'; ` +
 		`$shell=New-Object -ComObject WScript.Shell; ` +
-		`function Add-TryOmarchyShortcut([string]$path,[string]$arguments,[string]$description) { ` +
+		`function Add-SavantOSShortcut([string]$path,[string]$arguments,[string]$description) { ` +
 		`$shortcut=$shell.CreateShortcut($path); ` +
-		`$shortcut.TargetPath=$env:TRYOMARCHY_SHORTCUT_TARGET; ` +
+		`$shortcut.TargetPath=$env:SAVANTOS_SHORTCUT_TARGET; ` +
 		`$shortcut.Arguments=$arguments; ` +
-		`$shortcut.WorkingDirectory=$env:TRYOMARCHY_SHORTCUT_WORKDIR; ` +
-		`$shortcut.IconLocation=$env:TRYOMARCHY_SHORTCUT_TARGET+',0'; ` +
+		`$shortcut.WorkingDirectory=$env:SAVANTOS_SHORTCUT_WORKDIR; ` +
+		`$shortcut.IconLocation=$env:SAVANTOS_SHORTCUT_TARGET+',0'; ` +
 		`$shortcut.Description=$description; $shortcut.Save() }; ` +
-		`if ($env:TRYOMARCHY_SHORTCUT_START -eq '1') { ` +
-		`Add-TryOmarchyShortcut (Join-Path ([Environment]::GetFolderPath('Programs')) 'Try Omarchy.lnk') $env:TRYOMARCHY_SHORTCUT_ARGS 'Run Omarchy on Windows'; ` +
-		`Add-TryOmarchyShortcut (Join-Path ([Environment]::GetFolderPath('Programs')) 'Try Omarchy Settings.lnk') $env:TRYOMARCHY_SETTINGS_ARGS 'Configure Try Omarchy' }; ` +
-		`if ($env:TRYOMARCHY_SHORTCUT_DESKTOP -eq '1') { ` +
-		`Add-TryOmarchyShortcut (Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) 'Try Omarchy.lnk') $env:TRYOMARCHY_SHORTCUT_ARGS 'Run Omarchy on Windows' }`
+		`if ($env:SAVANTOS_SHORTCUT_START -eq '1') { ` +
+		`Add-SavantOSShortcut (Join-Path ([Environment]::GetFolderPath('Programs')) 'SavantOS.lnk') $env:SAVANTOS_SHORTCUT_ARGS 'Run SavantOS on Windows'; ` +
+		`Add-SavantOSShortcut (Join-Path ([Environment]::GetFolderPath('Programs')) 'SavantOS Settings.lnk') $env:SAVANTOS_SETTINGS_ARGS 'Configure SavantOS' }; ` +
+		`if ($env:SAVANTOS_SHORTCUT_DESKTOP -eq '1') { ` +
+		`Add-SavantOSShortcut (Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) 'SavantOS.lnk') $env:SAVANTOS_SHORTCUT_ARGS 'Run SavantOS on Windows' }`
 	cmd := exec.Command(system32("WindowsPowerShell\\v1.0\\powershell.exe"),
 		"-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
 	cmd.Env = append(os.Environ(),
-		"TRYOMARCHY_SHORTCUT_TARGET="+target,
-		"TRYOMARCHY_SHORTCUT_ARGS="+shortcutArguments(dir),
-		"TRYOMARCHY_SETTINGS_ARGS="+settingsShortcutArguments(dir),
-		"TRYOMARCHY_SHORTCUT_WORKDIR="+dir,
-		fmt.Sprintf("TRYOMARCHY_SHORTCUT_START=%d", boolInt(startMenu)),
-		fmt.Sprintf("TRYOMARCHY_SHORTCUT_DESKTOP=%d", boolInt(desktop)),
+		"SAVANTOS_SHORTCUT_TARGET="+target,
+		"SAVANTOS_SHORTCUT_ARGS="+shortcutArguments(dir),
+		"SAVANTOS_SETTINGS_ARGS="+settingsShortcutArguments(dir),
+		"SAVANTOS_SHORTCUT_WORKDIR="+dir,
+		fmt.Sprintf("SAVANTOS_SHORTCUT_START=%d", boolInt(startMenu)),
+		fmt.Sprintf("SAVANTOS_SHORTCUT_DESKTOP=%d", boolInt(desktop)),
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -105,23 +105,23 @@ func createLauncherShortcuts(target, dir string, startMenu, desktop bool) error 
 func ensureSettingsShortcutForExistingInstall(target, dir string) error {
 	const script = `$ErrorActionPreference='Stop'; ` +
 		`$programs=[Environment]::GetFolderPath('Programs'); ` +
-		`$launcher=Join-Path $programs 'Try Omarchy.lnk'; ` +
+		`$launcher=Join-Path $programs 'SavantOS.lnk'; ` +
 		`if (Test-Path -LiteralPath $launcher) { ` +
 		`$shell=New-Object -ComObject WScript.Shell; ` +
 		`$existing=$shell.CreateShortcut($launcher); ` +
-		`if ([StringComparer]::OrdinalIgnoreCase.Equals($existing.TargetPath,$env:TRYOMARCHY_SHORTCUT_TARGET)) { ` +
-		`$shortcut=$shell.CreateShortcut((Join-Path $programs 'Try Omarchy Settings.lnk')); ` +
-		`$shortcut.TargetPath=$env:TRYOMARCHY_SHORTCUT_TARGET; ` +
-		`$shortcut.Arguments=$env:TRYOMARCHY_SETTINGS_ARGS; ` +
-		`$shortcut.WorkingDirectory=$env:TRYOMARCHY_SHORTCUT_WORKDIR; ` +
-		`$shortcut.IconLocation=$env:TRYOMARCHY_SHORTCUT_TARGET+',0'; ` +
-		`$shortcut.Description='Configure Try Omarchy'; $shortcut.Save() } }`
+		`if ([StringComparer]::OrdinalIgnoreCase.Equals($existing.TargetPath,$env:SAVANTOS_SHORTCUT_TARGET)) { ` +
+		`$shortcut=$shell.CreateShortcut((Join-Path $programs 'SavantOS Settings.lnk')); ` +
+		`$shortcut.TargetPath=$env:SAVANTOS_SHORTCUT_TARGET; ` +
+		`$shortcut.Arguments=$env:SAVANTOS_SETTINGS_ARGS; ` +
+		`$shortcut.WorkingDirectory=$env:SAVANTOS_SHORTCUT_WORKDIR; ` +
+		`$shortcut.IconLocation=$env:SAVANTOS_SHORTCUT_TARGET+',0'; ` +
+		`$shortcut.Description='Configure SavantOS'; $shortcut.Save() } }`
 	cmd := exec.Command(system32("WindowsPowerShell\\v1.0\\powershell.exe"),
 		"-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script)
 	cmd.Env = append(os.Environ(),
-		"TRYOMARCHY_SHORTCUT_TARGET="+target,
-		"TRYOMARCHY_SETTINGS_ARGS="+settingsShortcutArguments(dir),
-		"TRYOMARCHY_SHORTCUT_WORKDIR="+dir,
+		"SAVANTOS_SHORTCUT_TARGET="+target,
+		"SAVANTOS_SETTINGS_ARGS="+settingsShortcutArguments(dir),
+		"SAVANTOS_SHORTCUT_WORKDIR="+dir,
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -199,7 +199,7 @@ func offerLauncherShortcuts(dir string) {
 	}
 	if err := createLauncherShortcuts(target, installDir, startMenu, desktop); err != nil {
 		logf("shortcuts: %v", err)
-		errorBox("Try Omarchy is ready, but Windows could not create the requested shortcut. You can keep using the downloaded launcher.\n\n" + err.Error())
+		errorBox("SavantOS is ready, but Windows could not create the requested shortcut. You can keep using the downloaded launcher.\n\n" + err.Error())
 		return
 	}
 	if err := recordShortcutOffer(installDir); err != nil {

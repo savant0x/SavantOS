@@ -15,7 +15,7 @@ func TestLoadSettingsMissingFileIsDefaults(t *testing.T) {
 }
 
 func TestSettingsRoundTrip(t *testing.T) {
-	path := settingsPath(filepath.Join(t.TempDir(), "TryOmarchy"))
+	path := settingsPath(filepath.Join(t.TempDir(), "SavantOS"))
 	in := settings{Fullscreen: true, MemoryMiB: 6144, Share: `C:\Users\me\Work`, SharedFolderPrompted: true,
 		Forwards: []string{"tcp:2222:22", "udp:5000:5000"}, SSHKey: `C:\Users\me\.ssh\work.pub`}
 	if err := saveSettings(path, in); err != nil {

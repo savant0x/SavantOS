@@ -20,14 +20,14 @@ import (
 	"time"
 )
 
-// Try Omarchy for Windows - the native app shell. One exe replacing
-// launch-omarchy.ps1 + winkey-forwarder.ps1 + clipboard-bridge.ps1:
+// SavantOS for Windows - the native app shell. One exe replacing
+// launch-savantos.ps1 + winkey-forwarder.ps1 + clipboard-bridge.ps1:
 // launches QEMU (WINQ-EMU GPU stack when installed, stock CPU fallback),
 // supervises it through WHPX's rough edges, scopes the Windows key to the VM
 // window, keeps the window branded, and bridges the clipboard. The SDL window
 // IS the app - the shell itself shows nothing but error dialogs.
 
-const appTitle = "Try Omarchy"
+const appTitle = "SavantOS"
 
 type config struct {
 	dir, hostDir, payloadDir string
@@ -118,7 +118,7 @@ func finishSetupCancellation(cfg *config, err error) bool {
 	}
 	executable, _ := os.Executable()
 	if cleanupErr := cleanupCancelledSetup(cfg.dir, executable, cancelRemovesAll.Load()); cleanupErr != nil {
-		errorBox(fmt.Sprintf("Setup was cancelled, but some temporary files could not be removed:\n\n%v\n\nOmarchy data folder: %s\n\nKeep this folder. Close Try Omarchy and try again.", cleanupErr, cfg.dir))
+		errorBox(fmt.Sprintf("Setup was cancelled, but some temporary files could not be removed:\n\n%v\n\nSavantOS data folder: %s\n\nKeep this folder. Close SavantOS and try again.", cleanupErr, cfg.dir))
 	}
 	uiDone()
 	return true
@@ -128,9 +128,9 @@ func main() {
 	cfg := &config{}
 	removeDataOnCancel := false
 	defaultDir := filepath.Join(os.Getenv("LOCALAPPDATA"), defaultDataDirectoryName)
-	flag.StringVar(&cfg.dir, "dir", defaultDir, "Try Omarchy data directory (virtual machine, runtime, and settings)")
+	flag.StringVar(&cfg.dir, "dir", defaultDir, "SavantOS data directory (virtual machine, runtime, and settings)")
 	flag.StringVar(&cfg.winqEmu, "winq", `C:\WINQ-EMU`, "WINQ-EMU install path (GPU mode)")
-	flag.StringVar(&cfg.share, "share", "", "Windows folder shared into Omarchy at /mnt/host and as ~/<folder name>")
+	flag.StringVar(&cfg.share, "share", "", "Windows folder shared into SavantOS at /mnt/host and as ~/<folder name>")
 	flag.BoolVar(&cfg.fresh, "fresh", false, "start over and retain the previous writable disk for recovery")
 	flag.BoolVar(&cfg.fullscreen, "fullscreen", false, "start fullscreen (Immersive)")
 	flag.IntVar(&cfg.memOverrideMiB, "memory", 0, "guest RAM in MiB (default: sized to this PC)")
@@ -145,17 +145,17 @@ func main() {
 	flag.BoolVar(&cfg.instant, "instant", false, "skip first-boot questions and use the trial account")
 	flag.BoolVar(&cfg.portable, "portable", false, "run entirely from data and payload folders beside the executable")
 	var forwards forwardList
-	flag.Var(&forwards, "forward", "forward a Windows loopback port into Omarchy, as tcp:2222:22 or 8080:80 (repeatable)")
-	sshPort := flag.Int("ssh", 0, "forward this Windows loopback port to Omarchy's sshd and start sshd for the session")
+	flag.Var(&forwards, "forward", "forward a Windows loopback port into SavantOS, as tcp:2222:22 or 8080:80 (repeatable)")
+	sshPort := flag.Int("ssh", 0, "forward this Windows loopback port to SavantOS's sshd and start sshd for the session")
 	recoveryAction := flag.String("recovery", "", "open backup, restore, reset, or uninstall controls for a stopped standard install")
-	uninstall := flag.Bool("uninstall", false, "remove this Try Omarchy installation: shortcuts, the Apps & features entry, and the data folder")
+	uninstall := flag.Bool("uninstall", false, "remove this SavantOS installation: shortcuts, the Apps & features entry, and the data folder")
 	uninstallFinish := flag.Bool("uninstall-finish", false, "internal: delete the data folder after the launcher inside it exits")
-	reclaim := flag.Bool("reclaim", false, "ask the running Omarchy to zero its free space so the disk file shrinks after shutdown, then exit")
+	reclaim := flag.Bool("reclaim", false, "ask the running SavantOS to zero its free space so the disk file shrinks after shutdown, then exit")
 	backupPath := flag.String("backup", "", "back up a stopped standard VM to a new ZIP file, then exit")
 	restorePath := flag.String("restore", "", "restore a trusted backup into a new folder selected with -dir, then exit")
 	openSettings := flag.Bool("settings", false, "open the settings window, then exit")
 	diagnostics := flag.Bool("diagnostics", false, "write a zip of logs, settings, and machine facts for a bug report, then exit")
-	sshKeyPath := flag.String("ssh-key", "", "public key to authorize for the Omarchy account (default: your ~/.ssh/id_*.pub when -ssh is used)")
+	sshKeyPath := flag.String("ssh-key", "", "public key to authorize for the SavantOS account (default: your ~/.ssh/id_*.pub when -ssh is used)")
 	noUpdate := flag.Bool("no-update", false, "do not check for launcher or guest updates")
 	updateURL := flag.String("update-url", defaultUpdateURL, "authenticated update manifest URL")
 	release := flag.String("release", defaultReleaseURL,
@@ -234,36 +234,36 @@ func main() {
 		cfg.payloadDir = filepath.Join(root, "payload")
 		removeDataOnCancel, err = dataDirectoryEmpty(cfg.dir)
 		if err != nil {
-			fatal("Try Omarchy cannot inspect its portable data location: %v", err)
+			fatal("SavantOS cannot inspect its portable data location: %v", err)
 		}
 		// WHP is a property of this Windows host, so its restart marker must
 		// not travel to another PC with the USB.
-		cfg.hostDir = filepath.Join(os.Getenv("LOCALAPPDATA"), "TryOmarchy", "portable-host")
+		cfg.hostDir = filepath.Join(os.Getenv("LOCALAPPDATA"), "SavantOS", "portable-host")
 	} else {
 		promptForLocation := !maintenance && !*diagnostics && !*applyLauncherUpdateFlag && !*applyLauncherRollbackFlag
 		selected, proceed, err := resolveStandardDataDirectory(
 			defaultDir, cfg.dir, explicitFlags["dir"], promptForLocation, chooseFirstRunDataDirectory,
 		)
 		if err != nil {
-			fatal("Try Omarchy cannot resolve its data location: %v\n\nIf a saved location is damaged, fix or delete %s, then open Try Omarchy again.", err, dataLocationPointerPath(defaultDir))
+			fatal("SavantOS cannot resolve its data location: %v\n\nIf a saved location is damaged, fix or delete %s, then open SavantOS again.", err, dataLocationPointerPath(defaultDir))
 		}
 		if !proceed {
 			return
 		}
 		if !explicitFlags["dir"] && !pathsEqual(selected, defaultDir) {
 			if err := validateStandardDataDrive(selected); err != nil {
-				fatal("The saved Try Omarchy data location is unavailable or incompatible:\n\n%s\n\n%v\n\nReconnect the drive or delete %s to choose another location.", selected, err, dataLocationPointerPath(defaultDir))
+				fatal("The saved SavantOS data location is unavailable or incompatible:\n\n%s\n\n%v\n\nReconnect the drive or delete %s to choose another location.", selected, err, dataLocationPointerPath(defaultDir))
 			}
 		}
 		cfg.dir = selected
 		cfg.hostDir = cfg.dir
 		removeDataOnCancel, err = dataDirectoryEmpty(cfg.dir)
 		if err != nil {
-			fatal("Try Omarchy cannot inspect its data location: %v", err)
+			fatal("SavantOS cannot inspect its data location: %v", err)
 		}
 		if *applyLauncherUpdateFlag || *applyLauncherRollbackFlag {
 			if err := applyLauncherUpdate(cfg.dir, *updateWaitPID, *updateRestartArgs, *applyLauncherRollbackFlag); err != nil {
-				errorBox("Try Omarchy could not finish applying its update.\n\n" + err.Error())
+				errorBox("SavantOS could not finish applying its update.\n\n" + err.Error())
 				os.Exit(1)
 			}
 			return
@@ -305,13 +305,13 @@ func main() {
 			return
 		}
 		if err != nil {
-			errorBox("Try Omarchy could not finish the backup or restore.\n\n" + err.Error())
+			errorBox("SavantOS could not finish the backup or restore.\n\n" + err.Error())
 			os.Exit(1)
 		}
 		if *backupPath != "" {
 			infoBox("Backup saved to:\n\n" + *backupPath + "\n\nIt contains your guest files and settings. Keep it private. Shared Windows folders are not included.")
 		} else {
-			infoBox("Backup restored to:\n\n" + cfg.dir + "\n\nStart Try Omarchy with -dir pointing to this folder. Your original installation was not changed.")
+			infoBox("Backup restored to:\n\n" + cfg.dir + "\n\nStart SavantOS with -dir pointing to this folder. Your original installation was not changed.")
 		}
 		return
 	}
@@ -321,7 +321,7 @@ func main() {
 	if *diagnostics {
 		bundle, err := writeDiagnostics(cfg.dir, launcherFacts(cfg))
 		if err != nil {
-			errorBox("Try Omarchy could not write the diagnostics bundle.\n\n" + err.Error())
+			errorBox("SavantOS could not write the diagnostics bundle.\n\n" + err.Error())
 			os.Exit(1)
 		}
 		infoBox("Diagnostics written to:\n\n" + bundle + "\n\nIt contains redacted settings, recent logs, and machine facts, but no disk images or home-folder files. Review it before attaching it to an issue because logs can still contain local details.")
@@ -344,10 +344,10 @@ func main() {
 			uiDone()
 			return
 		}
-		fatal("Try Omarchy cannot read its settings: %v\n\nFix or delete the file and open Try Omarchy again.", err)
+		fatal("SavantOS cannot read its settings: %v\n\nFix or delete the file and open SavantOS again.", err)
 	}
 	if err := applySettings(cfg, userSettings, explicitFlags, &forwards, sshKeyPath); err != nil {
-		fatal("Try Omarchy cannot use its settings: %v", err)
+		fatal("SavantOS cannot use its settings: %v", err)
 	}
 	if explicitFlags["render"] {
 		mode, err := parseRenderMode(*renderFlag)
@@ -407,11 +407,11 @@ func main() {
 	}
 	payloadsRolledBack, err := rollbackPendingPayloadUpdates(cfg.dir)
 	if err != nil {
-		fatal("Could not recover the previous Omarchy files after an interrupted update: %v", err)
+		fatal("Could not recover the previous SavantOS files after an interrupted update: %v", err)
 	}
 	if payloadsRolledBack {
 		if err := pinRestoredPayloads(cfg.dir, release, sumsSHA256, runtimeRelease, runtimeSumsSHA256); err != nil {
-			fatal("Could not use the restored Omarchy files: %v", err)
+			fatal("Could not use the restored SavantOS files: %v", err)
 		}
 		logf("using restored guest and runtime for this recovery launch")
 	}
@@ -419,7 +419,7 @@ func main() {
 	needsProvisioning := cfg.fresh || !completeAtStart
 	configureSetupCancellation(!completeAtStart && removeDataOnCancel)
 	if err := os.MkdirAll(cfg.vmDir, 0o755); err != nil {
-		fatal("Could not create the Omarchy data directory: %v", err)
+		fatal("Could not create the SavantOS data directory: %v", err)
 	}
 	if err := os.MkdirAll(cfg.hostDir, 0o755); err != nil {
 		fatal("Could not create the Windows host-state directory: %v", err)
@@ -439,9 +439,9 @@ func main() {
 	logf("---- %s starting ----", appTitle)
 
 	// The splash IS the launch experience: it appears here and stays on screen
-	// through every phase until the Omarchy window itself is visible (the
+	// through every phase until the SavantOS window itself is visible (the
 	// title enforcer closes it). Setup must never look like nothing happened.
-	getUI().setStatus("Starting Try Omarchy...")
+	getUI().setStatus("Starting SavantOS...")
 	if err := configureRecommendedSharedFolder(cfg, &userSettings, settingsFile, home, explicitFlags["share"]); err != nil {
 		if finishSetupCancellation(cfg, err) {
 			return
@@ -458,7 +458,7 @@ func main() {
 				fatal("Cannot share %s: %v", cfg.share, shareErr)
 			}
 			logf("shared folder disabled for this launch: %v", shareErr)
-			infoBox("The saved shared folder is unavailable and will not be shared this time. Omarchy will still start.\n\n" + shareErr.Error() + "\n\nChoose another folder from Settings.")
+			infoBox("The saved shared folder is unavailable and will not be shared this time. SavantOS will still start.\n\n" + shareErr.Error() + "\n\nChoose another folder from Settings.")
 			cfg.share = ""
 		} else {
 			cfg.share = validated
@@ -516,7 +516,7 @@ func main() {
 			root := filepath.Join(cfg.dir, "runtime")
 			info, err := os.Stat(filepath.Join(root, "bin", qemuExe))
 			if err != nil || !info.Mode().IsRegular() {
-				fatal("The restored graphics engine is incomplete. Reinstall Try Omarchy or use a working stock QEMU installation.")
+				fatal("The restored graphics engine is incomplete. Reinstall SavantOS or use a working stock QEMU installation.")
 			}
 			gpuRoot = root
 		} else {
@@ -560,7 +560,7 @@ func main() {
 	if payloadsRolledBack {
 		ready, err := installReceiptMatches(cfg.guestDir, *release, *sumsSHA256, installedGuestArtifacts)
 		if err != nil || !ready {
-			fatal("The restored Omarchy image is incomplete. Reinstall Try Omarchy to recover it.")
+			fatal("The restored SavantOS image is incomplete. Reinstall SavantOS to recover it.")
 		}
 	} else {
 		if err := ensureGuest(cfg, *release, *sumsSHA256); err != nil {
@@ -568,14 +568,14 @@ func main() {
 				return
 			}
 			if cfg.portable {
-				fatal("Setting up portable Omarchy failed: %v\n\nThe USB payload may be missing or damaged.", err)
+				fatal("Setting up portable SavantOS failed: %v\n\nThe USB payload may be missing or damaged.", err)
 			}
-			fatal("Setting up the Omarchy image failed: %v\n\n%s", err, setupFailureHelp(err))
+			fatal("Setting up the SavantOS image failed: %v\n\n%s", err, setupFailureHelp(err))
 		}
 	}
 	if cfg.share != "" && !cfg.supportsSharing {
 		logf("shared folder disabled for this launch: selected QEMU has no virtio-9p")
-		infoBox("The shared folder cannot be attached with the available graphics engine. Omarchy will start without it this time.\n\nTry again when the WINQ-EMU runtime is available.")
+		infoBox("The shared folder cannot be attached with the available graphics engine. SavantOS will start without it this time.\n\nTry again when the WINQ-EMU runtime is available.")
 		cfg.share = ""
 	}
 
@@ -594,7 +594,7 @@ func main() {
 	cmdline = strings.ReplaceAll(cmdline, "console=hvc0", "console=ttyS0")
 	cmdline += " vt.global_cursor_default=0"
 	if cfg.instant {
-		cmdline += " tryomarchy.instant=1"
+		cmdline += " savantos.instant=1"
 	}
 	cmdline += sshCmdline(cfg.forwards, cfg.sshKey)
 	cmdline += shareCmdline(cfg.share)
@@ -636,7 +636,7 @@ func main() {
 		cfg.cpus = cfg.cpuOverride
 	}
 	logf("resources: %d of %d logical processors, %d MiB guest RAM", cfg.cpus, runtime.NumCPU(), cfg.memMiB)
-	getUI().setStatus("Starting Omarchy...")
+	getUI().setStatus("Starting SavantOS...")
 	stopTray := startTray(cfg)
 	defer stopTray()
 
@@ -677,7 +677,7 @@ func main() {
 // supervise runs one guest lifetime: launch with the wedge watchdog, watch it
 // until the guest goes down, reap a wedged QEMU. Returns true when the guest
 // rebooted (with -no-reboot a guest reset exits QEMU; relaunching IS the
-// reboot). The two hard-won subtleties from launch-omarchy.ps1 are preserved:
+// reboot). The two hard-won subtleties from launch-savantos.ps1 are preserved:
 // liveness is probed (a QEMU wedged at guest poweroff cannot deliver its
 // SHUTDOWN event), and a read stays permanently pending so a fast exit after
 // guest-reset cannot discard the event (see docs/FINDINGS.md).
@@ -761,7 +761,7 @@ func supervise(cfg *config, cmdline string) bool {
 						logf("QEMU exited at startup - low memory, retrying with %d MiB", cfg.memMiB)
 						break probe
 					}
-					fatal("There isn't enough free memory to start Omarchy right now.\n\nClose some apps and open Try Omarchy again.")
+					fatal("There isn't enough free memory to start SavantOS right now.\n\nClose some apps and open SavantOS again.")
 				}
 				// Broken host GL (remote sessions, ancient drivers) kills the
 				// gl=on display the same way; same binary, CPU args, still up.
@@ -908,13 +908,13 @@ var (
 )
 
 // runLifecycleListener receives the guest's shutdown intent: the image's
-// try-omarchy-reboot-notify unit connects to 10.0.2.2:4450 (this listener via
+// savantos-reboot-notify unit connects to 10.0.2.2:4450 (this listener via
 // user-net) and says "reboot" when the guest is rebooting rather than
 // powering off.
 func runLifecycleListener() {
 	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", lifecyclePort))
 	if err != nil {
-		fatal("Try Omarchy looks like it's already running (port %d is in use).", lifecyclePort)
+		fatal("SavantOS looks like it's already running (port %d is in use).", lifecyclePort)
 	}
 	go func() {
 		for {
@@ -1052,7 +1052,7 @@ func compactAfterShutdown(cfg *config) {
 func sendLifecycleCommand(command string) int {
 	c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", lifecyclePort), 3*time.Second)
 	if err != nil {
-		errorBox("Try Omarchy is not running.")
+		errorBox("SavantOS is not running.")
 		return 1
 	}
 	defer c.Close()

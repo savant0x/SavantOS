@@ -71,12 +71,12 @@ func TestSSHCmdlineOnlyForTCPForwardsToPort22(t *testing.T) {
 	if got := sshCmdline([]portForward{{"udp", 22, 22}, {"tcp", 8080, 80}}, "ssh-ed25519 AAAA x"); got != "" {
 		t.Fatalf("non-ssh forwards requested sshd: %q", got)
 	}
-	if got := sshCmdline([]portForward{{"tcp", 2222, 22}}, ""); got != " tryomarchy.sshd=1" {
+	if got := sshCmdline([]portForward{{"tcp", 2222, 22}}, ""); got != " savantos.sshd=1" {
 		t.Fatalf("keyless request = %q", got)
 	}
 	key := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGxTNqPU2EXAMPLEKEYEXAMPLEKEYEXAMPLEKEYEXAMPLE user@pc"
 	got := sshCmdline([]portForward{{"tcp", 2222, 22}}, key)
-	prefix := " tryomarchy.sshd=1 tryomarchy.sshkey="
+	prefix := " savantos.sshd=1 savantos.sshkey="
 	if !strings.HasPrefix(got, prefix) {
 		t.Fatalf("keyed request = %q", got)
 	}
@@ -85,7 +85,7 @@ func TestSSHCmdlineOnlyForTCPForwardsToPort22(t *testing.T) {
 		t.Fatalf("key round trip failed: %q %v", decoded, err)
 	}
 	for _, word := range strings.Fields(got) {
-		if !strings.HasPrefix(word, "tryomarchy.") || strings.ContainsAny(word, "\t\n\"") {
+		if !strings.HasPrefix(word, "savantos.") || strings.ContainsAny(word, "\t\n\"") {
 			t.Fatalf("unexpected command line word %q in %q", word, got)
 		}
 	}

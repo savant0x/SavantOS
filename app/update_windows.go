@@ -39,7 +39,7 @@ func maybeStartLauncherUpdate(cfg *config, updateURL string, restartArgs []strin
 		return false, nil
 	}
 	ui := getUI()
-	ui.setStatus("Updating Try Omarchy to %s...", manifest.Version)
+	ui.setStatus("Updating SavantOS to %s...", manifest.Version)
 	staged := stagedLauncherPath(cfg.dir, manifest.Version)
 	if err := os.MkdirAll(filepath.Dir(staged), 0o755); err != nil {
 		return false, err
@@ -50,7 +50,7 @@ func maybeStartLauncherUpdate(cfg *config, updateURL string, restartArgs []strin
 	}
 	launcherURL := normalizedRelease(manifest.Release) + "/" + manifest.Launcher.Name
 	if err := ensureVerifiedDownload(downloadClient, launcherURL, staged, manifest.Launcher.SHA256,
-		"Downloading a trusted Try Omarchy update...", ui); err != nil {
+		"Downloading a trusted SavantOS update...", ui); err != nil {
 		return false, err
 	}
 	encodedArgs, err := encodeRestartArgs(restartArgs)

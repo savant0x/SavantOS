@@ -15,7 +15,7 @@ import (
 // 127.0.0.1 only, the guest service must listen on its network interface,
 // and sshd is requested per boot whenever a TCP forward targets guest port
 // 22. The launcher never enables sshd across boots or edits its config; the
-// guest side lives in the factory overlay's try-omarchy-sshd.service.
+// guest side lives in the factory overlay's savantos-sshd.service.
 type portForward struct {
 	proto     string
 	hostPort  int
@@ -49,7 +49,7 @@ func parseForward(value string) (portForward, error) {
 		return f, fmt.Errorf("port forward %q: Windows port %v", value, err)
 	}
 	if f.guestPort, err = parsePort(parts[1]); err != nil {
-		return f, fmt.Errorf("port forward %q: Omarchy port %v", value, err)
+		return f, fmt.Errorf("port forward %q: SavantOS port %v", value, err)
 	}
 	return f, nil
 }
@@ -85,7 +85,7 @@ func (l *forwardList) Set(value string) error {
 
 func (l *forwardList) add(f portForward) error {
 	if f.proto == "tcp" && f.hostPort >= qmpToolsPort && f.hostPort <= agentPort {
-		return fmt.Errorf("windows TCP port %d is reserved by Try Omarchy; choose a port outside %d-%d", f.hostPort, qmpToolsPort, agentPort)
+		return fmt.Errorf("windows TCP port %d is reserved by SavantOS; choose a port outside %d-%d", f.hostPort, qmpToolsPort, agentPort)
 	}
 	for _, existing := range *l {
 		if existing.proto == f.proto && existing.hostPort == f.hostPort {
@@ -151,7 +151,7 @@ func loadPublicKey(path string) (string, error) {
 
 // defaultPublicKey finds the user's usual public key when -ssh is used
 // without -ssh-key. No key is not an error: password login still works
-// until the user hardens sshd inside Omarchy.
+// until the user hardens sshd inside SavantOS.
 func defaultPublicKey(home string) string {
 	for _, name := range []string{"id_ed25519.pub", "id_ecdsa.pub", "id_rsa.pub"} {
 		path := filepath.Join(home, ".ssh", name)
@@ -177,7 +177,7 @@ func resolveSSHPreset(forwards *forwardList, sshPort int, keyPath, home string, 
 	}
 	if !sshRequested(*forwards) {
 		if keyPath != "" && rejectUnusedKey {
-			return "", fmt.Errorf("-ssh-key only makes sense with -ssh or a -forward to Omarchy port 22")
+			return "", fmt.Errorf("-ssh-key only makes sense with -ssh or a -forward to SavantOS port 22")
 		}
 		return "", nil
 	}
@@ -202,9 +202,9 @@ func sshCmdline(forwards []portForward, publicKey string) string {
 	if !sshRequested(forwards) {
 		return ""
 	}
-	words := " tryomarchy.sshd=1"
+	words := " savantos.sshd=1"
 	if publicKey != "" {
-		words += " tryomarchy.sshkey=" + base64.StdEncoding.EncodeToString([]byte(publicKey))
+		words += " savantos.sshkey=" + base64.StdEncoding.EncodeToString([]byte(publicKey))
 	}
 	return words
 }

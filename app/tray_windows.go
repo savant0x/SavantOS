@@ -122,7 +122,7 @@ func runTray(cfg trayLaunchConfig, ready chan<- uintptr, done chan<- struct{}) {
 	defer close(done)
 
 	hInst, _, _ := procGetModuleHandleW.Call(0)
-	className, _ := syscall.UTF16PtrFromString("TryOmarchyTray")
+	className, _ := syscall.UTF16PtrFromString("SavantOSTray")
 	taskbarName, _ := syscall.UTF16PtrFromString("TaskbarCreated")
 	taskbarCreated, _, _ := procRegisterWindowMessage.Call(uintptr(unsafe.Pointer(taskbarName)))
 
@@ -151,7 +151,7 @@ func runTray(cfg trayLaunchConfig, ready chan<- uintptr, done chan<- struct{}) {
 		self, err := os.Executable()
 		if err != nil {
 			running.Store(false)
-			errorBox("Try Omarchy could not open " + flag + ".\n\n" + err.Error())
+			errorBox("SavantOS could not open " + flag + ".\n\n" + err.Error())
 			return
 		}
 		args := []string{}
@@ -165,7 +165,7 @@ func runTray(cfg trayLaunchConfig, ready chan<- uintptr, done chan<- struct{}) {
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 		if err := cmd.Start(); err != nil {
 			running.Store(false)
-			errorBox("Try Omarchy could not open " + flag + ".\n\n" + err.Error())
+			errorBox("SavantOS could not open " + flag + ".\n\n" + err.Error())
 			return
 		}
 		// The tray action is user initiated, but the child has a different PID.
@@ -203,7 +203,7 @@ func runTray(cfg trayLaunchConfig, ready chan<- uintptr, done chan<- struct{}) {
 			text, _ := syscall.UTF16PtrFromString(label)
 			procAppendMenuW.Call(menu, flags, id, uintptr(unsafe.Pointer(text)))
 		}
-		appendItem(mfString, trayCommandShow, "Open Omarchy")
+		appendItem(mfString, trayCommandShow, "Open SavantOS")
 		shareFlags := uintptr(mfString)
 		if cfg.share == "" {
 			shareFlags |= mfGray
@@ -216,7 +216,7 @@ func runTray(cfg trayLaunchConfig, ready chan<- uintptr, done chan<- struct{}) {
 		// has watched the disk file grow and shrink; then this line returns.
 		// appendItem(mfString, trayCommandReclaim, "Reclaim disk space...")
 		appendItem(mfSeparator, 0, "")
-		appendItem(mfString, trayCommandShutdown, "Shut down Omarchy...")
+		appendItem(mfString, trayCommandShutdown, "Shut down SavantOS...")
 
 		var point struct{ x, y int32 }
 		procGetCursorPos.Call(uintptr(unsafe.Pointer(&point)))
@@ -237,14 +237,14 @@ func runTray(cfg trayLaunchConfig, ready chan<- uintptr, done chan<- struct{}) {
 		case trayCommandDiagnose:
 			launchControl("-diagnostics", &diagnosticsOpen)
 		case trayCommandReclaim:
-			if msgBox("Give deleted Omarchy files' space back to Windows?\n\nOmarchy will write zeros over its free space now, which takes a few minutes and briefly fills its disk. The disk file on Windows shrinks the next time Omarchy shuts down.", mbYesNo|mbIconQuestion|mbDefbutton2) == idYes {
+			if msgBox("Give deleted SavantOS files' space back to Windows?\n\nSavantOS will write zeros over its free space now, which takes a few minutes and briefly fills its disk. The disk file on Windows shrinks the next time SavantOS shuts down.", mbYesNo|mbIconQuestion|mbDefbutton2) == idYes {
 				if !requestReclaim() {
-					infoBox("Omarchy is not ready for this yet. It needs the current guest update, a moment after startup, and at least 4 GiB free on the Windows drive; try again shortly.")
+					infoBox("SavantOS is not ready for this yet. It needs the current guest update, a moment after startup, and at least 4 GiB free on the Windows drive; try again shortly.")
 				}
 			}
 		case trayCommandShutdown:
 			if qemuHwnd.Load() == 0 {
-				infoBox("Omarchy is still starting. You can shut it down once its window opens.")
+				infoBox("SavantOS is still starting. You can shut it down once its window opens.")
 			} else {
 				requestQuitConfirm()
 			}

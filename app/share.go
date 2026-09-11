@@ -28,5 +28,5 @@ func shareCmdline(share string) string {
 	if share == "" {
 		return ""
 	}
-	return " tryomarchy.sharename=" + base64.StdEncoding.EncodeToString([]byte(shareLinkName(share)))
+	return " savantos.sharename=" + base64.StdEncoding.EncodeToString([]byte(shareLinkName(share)))
 }

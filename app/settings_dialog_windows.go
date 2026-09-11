@@ -81,7 +81,7 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 		if errors.Is(err, errSetupCancelled) {
 			return false
 		}
-		errorBox("Try Omarchy cannot read its settings:\n\n" + err.Error() + "\n\nFix or delete the file, then open the settings again.")
+		errorBox("SavantOS cannot read its settings:\n\n" + err.Error() + "\n\nFix or delete the file, then open the settings again.")
 		return false
 	}
 
@@ -90,11 +90,11 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 		if errors.Is(err, errSetupCancelled) {
 			return false
 		}
-		errorBox("Try Omarchy cannot read its storage preferences:\n\n" + err.Error())
+		errorBox("SavantOS cannot read its storage preferences:\n\n" + err.Error())
 		return false
 	}
 	hInst, _, _ := procGetModuleHandleW.Call(0)
-	className, _ := syscall.UTF16PtrFromString("TryOmarchySettings")
+	className, _ := syscall.UTF16PtrFromString("SavantOSSettings")
 	var hwnd uintptr
 	var hFull, hMem, hCPUs, hDisk, hShare, hShareOn, hFwd, hKey uintptr
 	var hRenderAuto, hRenderGPU, hRenderCPU uintptr
@@ -122,7 +122,7 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 			text(hMem), text(hCPUs), text(hShare), text(hFwd), text(hKey), render)
 	}
 	browseFolder := func() {
-		if selected, ok := browseForFolder(hwnd, "Choose the Windows folder to share with Omarchy"); ok {
+		if selected, ok := browseForFolder(hwnd, "Choose the Windows folder to share with SavantOS"); ok {
 			setText(hShare, selected)
 			procSendMessageW.Call(hShareOn, bmSetcheck, bstChecked, 0)
 		}
@@ -307,7 +307,7 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 	hShare = mk("EDIT", current.Share, fieldX, y, fieldW-80, 24, wsBorder|wsTabstop|esAutohscroll, settingsShareID)
 	mk("BUTTON", "Browse...", fieldX+fieldW-72, y, 72, 24, wsTabstop, settingsBrowseID)
 	y += 28
-	hShareOn = mk("BUTTON", "Allow Omarchy to read and change this folder", fieldX, y, fieldW, 22,
+	hShareOn = mk("BUTTON", "Allow SavantOS to read and change this folder", fieldX, y, fieldW, 22,
 		bsAutocheckbox|wsTabstop, settingsShareOnID)
 	if current.Share != "" && !current.ShareDisabled {
 		procSendMessageW.Call(hShareOn, bmSetcheck, bstChecked, 0)
@@ -322,7 +322,7 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 	// The two-line key label above is 40 px tall from y+3; start the next
 	// row below it or the label's second line paints over this text.
 	y += 50
-	mk("STATIC", "Changes apply the next time Omarchy starts.",
+	mk("STATIC", "Changes apply the next time SavantOS starts.",
 		left, y, clientW-2*left, 20, ssNoprefix, 0)
 	y += 30
 	mk("STATIC", "Backup and recovery", left, y, clientW-2*left, 20, ssNoprefix, 0)
@@ -338,13 +338,13 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 		}
 	}
 	y += 30
-	help := "Close Omarchy first. Backups use saved settings. Restore creates a separate copy."
+	help := "Close SavantOS first. Backups use saved settings. Restore creates a separate copy."
 	if portable {
 		help = "Backup and recovery controls are available for standard installs."
 	}
 	mk("STATIC", help, left, y, clientW-2*left, 20, ssNoprefix, 0)
 	y += 26
-	uninstallButton := mk("BUTTON", "Remove Try Omarchy...", left, y, 160, 26, wsTabstop, settingsUninstallID)
+	uninstallButton := mk("BUTTON", "Remove SavantOS...", left, y, 160, 26, wsTabstop, settingsUninstallID)
 	if portable {
 		procEnableWindow.Call(uninstallButton, 0)
 	}

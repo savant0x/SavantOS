@@ -5,7 +5,7 @@
 - **Filename:** FID-2026-0910-001-savantos-rebrand-and-governance-scaffold.md
 - **ID:** FID-2026-0910-001
 - **Severity:** high
-- **Status:** fixed
+- **Status:** analyzed
 - **Created:** 2026-09-10
 - **Author:** Orchestrator (Savant)
 
@@ -268,3 +268,53 @@ our identity). Status moves analyzed -> fixed as the sweep commits land.
   inherited code.
 - Cleared from `dev/agenda.md` Waiting-on-operator; lesson recorded in
   `dev/LEARNINGS.md`.
+
+### Crash recovery: session 3 died mid-sweep (2026-09-11, session 4)
+
+- Session 3 went inert ~00:59 2026-09-11 (operator "resume"/"hey" returned
+  empty replies; last instruction — operator banner for the README rewrite —
+  never executed). Forensics were read-only: 4 local commits, nothing pushed
+  (first session, no remote exists); 10 files modified-uncommitted; 5
+  untracked (app/testdata/SHA256SUMS.v0.0.1 all-zero placeholder,
+  app/versioninfo.json, assets/banner.jpg|svg operator content, deadses.md
+  3 MB crash transcript).
+- The tree does NOT compile: install_state.go, install_state_test.go,
+  runtime_state_test.go still reference legacyReleaseBase/
+  transferredReleaseBase removed from update.go by the partial sweep;
+  cmd/sign-update/main_test.go still references the removed verifyBridge;
+  seven files lost leading tabs (gofmt -l). Status reverted fixed →
+  analyzed: the rebrand commits have not landed.
+- Key forensics (no secret material printed): deadses.md and all 66
+  .savant/evidence traces contain no private-key bodies (the "PRIVATE
+  KEY" and "MC4CAQAw" hits are quoted grep commands and regex echoes).
+  The ~/.savantos-keys trio is internally consistent (private PEM derives
+  the public PEM; the b64 file is its PKCS8 DER) and yields public
+  af8f488e7656c550579e81cddb3270720bc8e689f30714d2387d4a116d296626. The
+  f1edc8c2… hex still in update.go is the UPSTREAM omacom key (git log -S:
+  it arrived in baseline commit 2804e7a); the keys commit never ran, so
+  there is no mismatch — af8f488e… is the SavantOS key the keys commit
+  pins.
+- Operator decisions (2026-09-11): salvage & continue — keep the partial
+  sweep, finish per the FID commit sequence; delete deadses.md (crash
+  transcript lineage lastses.md → ses.md → deadses.md, removed before
+  any git add; no .gitignore entry needed); session-3 directives stand.
+- Recovery execution (GREEN, session 4): restore the build by completing
+  the sweep of install_state.go + tests and dropping the verifyBridge
+  tests; gofmt -w the seven dedented files; complete the host identity
+  sweep (appTitle, stableLauncherName, TRYOMARCHY_* env words, OMARCHY
+  splash, tryomarchy.* cmdline words, data-dir/uninstall paths); rename
+  the four host scripts and update callers; sweep scripts/, workflows,
+  docs; sweep guest patches on added lines only (context lines carry
+  upstream truth — patches must apply against the pinned upstream;
+  recorded as a provenance exemption of the remnant gate); regenerate
+  icon.ico from assets/favicon/favicon.ico and the .syso via
+  goversioninfo from versioninfo.json (versioninfo.rc retired); keys
+  commit swaps updatePublicKeyHex to af8f488e… and repoints manifest.go
+  at savant0x v0.0.1 (all-zero placeholder SHA256SUMS keeps first-run
+  fail-closed until the Release workflow publishes the real image);
+  README rewritten with the operator banner and removed from
+  .markdownlintignore; full gates; atomic commits per sequence;
+  Verifier + Adversary audit; closure.
+- Recorder stalled a third time on this update ("read without write");
+  Orchestrator wrote it directly per the recorded precedent. Change set
+  ~50 added lines, under the 100-line escalation threshold.

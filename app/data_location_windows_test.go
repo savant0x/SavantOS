@@ -15,7 +15,7 @@ func TestDataLocationIsLocal(t *testing.T) {
 	if err := validateStandardDataDrive(dir); err != nil {
 		t.Fatalf("temporary directory was not accepted: %v", err)
 	}
-	if dataLocationIsLocal(`\\server\share\TryOmarchy`) {
+	if dataLocationIsLocal(`\\server\share\SavantOS`) {
 		t.Fatal("UNC location was recognized as local")
 	}
 	for _, driveType := range []uintptr{0, 1, 4, 5} {

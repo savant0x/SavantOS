@@ -114,7 +114,7 @@ func TestVMBackupSpaceAndCancellationLeaveNoOutput(t *testing.T) {
 	if _, err := os.Stat(archive); !os.IsNotExist(err) {
 		t.Fatal("published cancelled backup")
 	}
-	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(dir), ".try-omarchy-*"))
+	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(dir), ".savantos-*"))
 	if len(matches) != 0 {
 		t.Fatalf("left temporary files: %v", matches)
 	}
@@ -178,7 +178,7 @@ func TestVMRestoreRejectsDamagedBackupWithoutPublishing(t *testing.T) {
 	if _, err := os.Stat(destination); !os.IsNotExist(err) {
 		t.Fatal("published damaged restore")
 	}
-	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(dir), ".try-omarchy-restore-*"))
+	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(dir), ".savantos-restore-*"))
 	if len(matches) != 0 {
 		t.Fatal("left failed staging directory")
 	}

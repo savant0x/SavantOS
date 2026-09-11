@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// buildQemuArgs is the argument recipe from scripts/launch-omarchy.ps1,
+// buildQemuArgs is the argument recipe from scripts/launch-savantos.ps1,
 // unchanged: GPU mode is WINQ-EMU's stack (patched WHPX survives -cpu host;
 // virtio-vga-gl IS the VGA device, so no -vga none), CPU mode is stock QEMU
 // with the fastest flags upstream WHPX survives (any XSAVE/AVX feature panics
@@ -62,12 +62,12 @@ func buildQemuArgs(cfg *config, cmdline string) []string {
 		"-drive", "file="+qemuOptionValue(cfg.disk)+",format="+cfg.diskFormat+",if=virtio",
 		"-kernel", filepath.Join(cfg.guestDir, "vmlinuz-linux"),
 		"-initrd", filepath.Join(cfg.guestDir, "initramfs-linux.img"),
-		"-append", cmdline+" tryomarchy.render="+render,
+		"-append", cmdline+" savantos.render="+render,
 		"-device", "virtio-keyboard-pci", "-device", "virtio-tablet-pci",
 		"-device", "virtio-net-pci,netdev=n0", "-netdev", netdevArg(cfg.forwards),
 		"-device", "virtio-rng-pci",
 		// The guest must not sleep: a suspended VM leaves the window frozen
-		// with no way back from the keyboard, and Omarchy's power menu
+		// with no way back from the keyboard, and SavantOS's power menu
 		// offers suspend whenever the kernel advertises it. With S3 and S4
 		// off the kernel reports no such state and systemd refuses cleanly.
 		"-global", "ICH9-LPC.disable_s3=1", "-global", "ICH9-LPC.disable_s4=1",
@@ -253,7 +253,7 @@ func prepareDisk(cfg *config, expandedMiB int64) error {
 		return fmt.Errorf("marking disk sparse: %w", err)
 	}
 	ui := getUI()
-	ui.setStatus("Preparing your Omarchy disk...")
+	ui.setStatus("Preparing your SavantOS disk...")
 	st, err := src.Stat()
 	if err != nil {
 		return err

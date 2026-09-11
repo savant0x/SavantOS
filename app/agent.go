@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Host side of the guest agent channel. The guest's try-omarchy-agent service
+// Host side of the guest agent channel. The guest's savantos-agent service
 // connects out to this loopback listener (10.0.2.2 from inside QEMU user
 // networking), the same way the clipboard bridge does, so no extra QEMU device
 // or early chardev connection is involved. One line per message:

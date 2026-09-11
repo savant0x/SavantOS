@@ -11,7 +11,7 @@ import (
 	"unsafe"
 )
 
-// The first-run splash: a borderless dark panel in the Omarchy look - the app
+// The first-run splash: a borderless dark panel in the SavantOS look - the app
 // icon, the wordmark, a live status line and a slim green progress bar. The
 // download goroutine writes atomics; a WM_TIMER repaints from them. Esc or
 // closing cancels the setup (nothing else is running at that point). Drag
@@ -87,7 +87,7 @@ const (
 	imageIcon         = 1
 	diNormal          = 0x0003
 
-	// The Omarchy look (Tokyo Night-ish, matching the boot splash). COLORREF
+	// The SavantOS look (Tokyo Night-ish, matching the boot splash). COLORREF
 	// is 0x00BBGGRR.
 	colBg    = 0x00261B1A // RGB(26,27,38)
 	colBgBar = 0x003C2A28 // RGB(40,42,60)
@@ -129,7 +129,7 @@ type progressUI struct {
 }
 
 // THE app has ONE splash (launch-UX requirement: it appears at launch and
-// stays visible until the Omarchy window itself is on screen - setup must
+// stays visible until the SavantOS window itself is on screen - setup must
 // never look like nothing is happening). The singleton is also what makes the
 // Win32 side correct: the window class registers once with one wndproc; with
 // per-phase windows, every window after the first ran the FIRST window's
@@ -201,7 +201,7 @@ func (ui *progressUI) confirmCancel(hCancel uintptr) bool {
 	if ui.canceling.Load() {
 		return true
 	}
-	message := "Cancel Try Omarchy setup?\n\nUnfinished setup files will be removed. An existing working installation will be kept."
+	message := "Cancel SavantOS setup?\n\nUnfinished setup files will be removed. An existing working installation will be kept."
 	if custom, ok := ui.cancelMessage.Load().(string); ok {
 		message = custom
 	}
@@ -234,7 +234,7 @@ func (ui *progressUI) run() {
 	greenBrush, _, _ := procCreateSolidBrush.Call(colGreen)
 	barBgBrush, _, _ := procCreateSolidBrush.Call(colBgBar)
 
-	className, _ := syscall.UTF16PtrFromString("TryOmarchySetup")
+	className, _ := syscall.UTF16PtrFromString("SavantOSSetup")
 	var hHead, hTag, hText, hAccountInfo, hSuperInfo uintptr
 	var hKeySpace, hKeyK, hKeyReturn, hKeyW uintptr
 	var hLabelMenu, hLabelKeys, hLabelTerminal, hLabelClose, hCancel uintptr
@@ -265,10 +265,10 @@ func (ui *progressUI) run() {
 		}
 		switch promptKind {
 		case setupPromptProvision:
-			setText(hPromptOption1, mark(primary)+"  INSTANT TRIAL  (omarchy / omarchy)")
+			setText(hPromptOption1, mark(primary)+"  INSTANT TRIAL  (savant / savant)")
 			setText(hPromptOption2, mark(!primary)+"  CHOOSE MY USERNAME AND PASSWORD")
 		case setupPromptSharedFolder:
-			setText(hPromptOption1, mark(primary)+"  CREATE OMARCHY SHARED  (RECOMMENDED)")
+			setText(hPromptOption1, mark(primary)+"  CREATE SAVANTOS SHARED  (RECOMMENDED)")
 			setText(hPromptOption2, mark(!primary)+"  NOT NOW")
 		case setupPromptShortcuts:
 			setText(hPromptOption1, mark(primary)+"  START MENU")
@@ -337,9 +337,9 @@ func (ui *progressUI) run() {
 					setText(hPromptBody, "Start instantly, or create your own Linux account.")
 				case setupPromptSharedFolder:
 					setText(hPromptTitle, "SHARE FILES WITH WINDOWS")
-					setText(hPromptBody, "Omarchy can read and change only the folder created for sharing.")
+					setText(hPromptBody, "SavantOS can read and change only the folder created for sharing.")
 				case setupPromptShortcuts:
-					setText(hPromptTitle, "KEEP TRY OMARCHY HANDY")
+					setText(hPromptTitle, "KEEP TRY SAVANTOS HANDY")
 					setText(hPromptBody, "Choose where you want a launcher shortcut.")
 				}
 				setOptionText()
@@ -496,12 +496,13 @@ func (ui *progressUI) run() {
 			wsChild|wsVisible|ssNoprefix|extraStyle, uintptr(x), uintptr(y), uintptr(cx), uintptr(cy), hwnd, id, hInst, 0)
 		return hw
 	}
-	hHead = mk("OMARCHY", 144, 66, 300, 52, 0, 0)
-	hTag = mk("Beautiful, Modern & Opinionated Linux", 146, 118, 320, 22, 0, 0)
+	hHead = mk("SAVANTOS", 144, 66, 300, 52, 0, 0)
+	hTag = mk("Sovereign agentic OS host for Windows", 146, 118, 320, 22, 0, 0)
 	hText = mk("Preparing...", 40, 174, windowW-80, 22, 0, 0)
 	// Starter keybindings on screen during the boot wait (the #1 field
 	// complaint: an hour lost guessing tiling WM keys once the VM appears and
-	// this window closes). Binds verified against Omarchy v4.0.1 defaults.
+	// this window closes). Binds verified against the shipped guest desktop
+	// defaults.
 	hAccountInfo = mk("", 40, 230, windowW-80, 22, 0, 0)
 	hSuperInfo = mk("On Linux, the Windows key is called SUPER", 40, 256, windowW-80, 22, 0, 0)
 	hKeySpace = mk("SUPER+SPACE", 40, 286, 108, 20, 0, 0)

@@ -36,7 +36,7 @@ func ensureGuest(cfg *config, release, sumsSHA256 string) error {
 	}
 
 	ui := getUI()
-	ui.setStatus("Preparing an Omarchy image update...")
+	ui.setStatus("Preparing an SavantOS image update...")
 	staged := filepath.Join(cfg.dir, "guest.next")
 	if err := os.RemoveAll(staged); err != nil {
 		return err
@@ -97,10 +97,10 @@ func ensureGuestFiles(cfg *config, release, sumsSHA256 string) error {
 			return err
 		}
 		dest := filepath.Join(cfg.guestDir, name)
-		status := fmt.Sprintf("Downloading Omarchy (%d of %d)...", i+1, len(downloadedGuestArtifacts)+1)
+		status := fmt.Sprintf("Downloading SavantOS (%d of %d)...", i+1, len(downloadedGuestArtifacts)+1)
 		var installErr error
 		if cfg.portable {
-			status = fmt.Sprintf("Checking portable Omarchy (%d of %d)...", i+1, len(downloadedGuestArtifacts)+1)
+			status = fmt.Sprintf("Checking portable SavantOS (%d of %d)...", i+1, len(downloadedGuestArtifacts)+1)
 			installErr = ensureVerifiedPortableCopy(filepath.Join(cfg.payloadDir, name), dest, sums[name], status, ui)
 		} else {
 			installErr = ensureVerifiedDownload(client, normalizedRelease(release)+"/"+name, dest, sums[name], status, ui)
@@ -122,7 +122,7 @@ func ensureGuestFiles(cfg *config, release, sumsSHA256 string) error {
 	}
 	rootfs := filepath.Join(cfg.guestDir, "rootfs.ext4")
 	if _, err := os.Lstat(rootfs); err == nil {
-		ui.setStatus("Checking the cached Omarchy system...")
+		ui.setStatus("Checking the cached SavantOS system...")
 	}
 	rootfsOK, err := verifyFileSHA256(rootfs, sums["rootfs.ext4"], ui.setProgress)
 	if err != nil {
@@ -141,10 +141,10 @@ func ensureGuestFiles(cfg *config, release, sumsSHA256 string) error {
 			return err
 		}
 		if err := requireDiskSpace(cfg.guestDir, required); err != nil {
-			return fmt.Errorf("preflighting Omarchy storage: %w", err)
+			return fmt.Errorf("preflighting SavantOS storage: %w", err)
 		}
 		if cfg.portable {
-			ui.setStatus("Checking the portable Omarchy system...")
+			ui.setStatus("Checking the portable SavantOS system...")
 			ok, err := verifyFileSHA256(zst, sums["rootfs.ext4.zst"], ui.setProgress)
 			if err != nil {
 				return fmt.Errorf("checking rootfs.ext4.zst: %w", err)
@@ -153,14 +153,14 @@ func ensureGuestFiles(cfg *config, release, sumsSHA256 string) error {
 				return fmt.Errorf("checksum mismatch for rootfs.ext4.zst")
 			}
 		} else if err := ensureVerifiedDownload(client, normalizedRelease(release)+"/rootfs.ext4.zst", zst,
-			sums["rootfs.ext4.zst"], fmt.Sprintf("Downloading Omarchy (%d of %d)...",
+			sums["rootfs.ext4.zst"], fmt.Sprintf("Downloading SavantOS (%d of %d)...",
 				len(downloadedGuestArtifacts)+1, len(downloadedGuestArtifacts)+1), ui); err != nil {
 			return fmt.Errorf("preparing rootfs.ext4.zst: %w", err)
 		}
 		if err := requireDiskSpace(cfg.guestDir, rootfsAllocated+diskSpaceReserve); err != nil {
-			return fmt.Errorf("preflighting Omarchy unpack: %w", err)
+			return fmt.Errorf("preflighting SavantOS unpack: %w", err)
 		}
-		ui.setStatus("Unpacking the Omarchy system...")
+		ui.setStatus("Unpacking the SavantOS system...")
 		if err := decompress(zst, rootfs, sums["rootfs.ext4"], ui); err != nil {
 			return fmt.Errorf("unpacking rootfs: %w", err)
 		}
@@ -171,7 +171,7 @@ func ensureGuestFiles(cfg *config, release, sumsSHA256 string) error {
 	if removeZst {
 		os.Remove(zst) // Keep only the unpacked image after a successful install.
 	}
-	ui.setStatus("Ready - starting Omarchy...")
+	ui.setStatus("Ready - starting SavantOS...")
 	ui.setProgress(1, 1)
 	return sleepDuringSetup(700 * time.Millisecond)
 }
@@ -295,7 +295,7 @@ func decompress(src, dest, wantSum string, ui *progressUI) error {
 	if err := out.Close(); err != nil {
 		return err
 	}
-	ui.setStatus("Checking the unpacked Omarchy system...")
+	ui.setStatus("Checking the unpacked SavantOS system...")
 	ok, err := verifyFileSHA256(tmp, wantSum, ui.setProgress)
 	if err != nil {
 		return err

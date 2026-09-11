@@ -32,10 +32,10 @@ func TestXKBForKLIDPrefersFullIdentifiers(t *testing.T) {
 }
 
 func TestHostLocaleCmdlineOnlyCarriesValidValues(t *testing.T) {
-	if got := hostLocaleCmdline("America/New_York", "de", "", ""); got != " tryomarchy.tz=America/New_York tryomarchy.kb=de" {
+	if got := hostLocaleCmdline("America/New_York", "de", "", ""); got != " savantos.tz=America/New_York savantos.kb=de" {
 		t.Fatalf("plain: %q", got)
 	}
-	if got := hostLocaleCmdline("Europe/Berlin", "us", "intl", ""); got != " tryomarchy.tz=Europe/Berlin tryomarchy.kb=us:intl" {
+	if got := hostLocaleCmdline("Europe/Berlin", "us", "intl", ""); got != " savantos.tz=Europe/Berlin savantos.kb=us:intl" {
 		t.Fatalf("variant: %q", got)
 	}
 	if got := hostLocaleCmdline("", "", "", ""); got != "" {
@@ -48,7 +48,7 @@ func TestHostLocaleCmdlineOnlyCarriesValidValues(t *testing.T) {
 			}
 		}
 	}
-	if got := hostLocaleCmdline("../etc", "us", "", ""); got != " tryomarchy.kb=us" {
+	if got := hostLocaleCmdline("../etc", "us", "", ""); got != " savantos.kb=us" {
 		t.Fatalf("a bad zone must not drop the keyboard: %q", got)
 	}
 }
@@ -68,7 +68,7 @@ func TestPosixLocaleForWindows(t *testing.T) {
 			t.Errorf("%q: got %q, want %q", name, got, want)
 		}
 	}
-	if got := hostLocaleCmdline("Europe/Berlin", "de", "", "de_DE"); got != " tryomarchy.tz=Europe/Berlin tryomarchy.locale=de_DE tryomarchy.kb=de" {
+	if got := hostLocaleCmdline("Europe/Berlin", "de", "", "de_DE"); got != " savantos.tz=Europe/Berlin savantos.locale=de_DE savantos.kb=de" {
 		t.Fatalf("locale on the command line: %q", got)
 	}
 }

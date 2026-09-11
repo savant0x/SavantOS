@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	stableLauncherName  = "TryOmarchy.exe"
+	stableLauncherName  = "SavantOS.exe"
 	shortcutOfferMarker = "shortcuts-offered-v1"
 )
 

@@ -87,7 +87,7 @@ func chooseRecoveryPath(owner uintptr, title, filename string, save, folder bool
 		}
 	}
 	if !folder {
-		label, _ := syscall.UTF16PtrFromString("Omarchy backups (*.zip)")
+		label, _ := syscall.UTF16PtrFromString("SavantOS backups (*.zip)")
 		pattern, _ := syscall.UTF16PtrFromString("*.zip")
 		filter := struct{ label, pattern *uint16 }{label, pattern}
 		if err = recoveryCOMError(recoveryCOMCall(dialog, 4, 1, uintptr(unsafe.Pointer(&filter)))); err != nil {

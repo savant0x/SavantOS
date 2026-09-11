@@ -16,13 +16,11 @@ import (
 )
 
 const (
-	currentVersion         = "v0.0.14-preview"
-	defaultUpdateURL       = "https://github.com/omacom/try-omarchy-windows/releases/latest/download/update-v2.json"
-	legacyReleaseBase      = "https://github.com/tsouth89/try-omarchy-windows/releases/download/"
-	transferredReleaseBase = "https://github.com/omacom/try-omarchy-windows/releases/download/"
-	officialReleaseBase    = "https://github.com/omacom/omarchy-win/releases/download/"
-	maxUpdateManifestLen   = 64 << 10
-	maxUpdateSignatureLen  = 4 << 10
+	currentVersion        = "v0.0.1"
+	defaultUpdateURL      = "https://github.com/savant0x/SavantOS/releases/latest/download/update-v2.json"
+	savantReleaseBase     = "https://github.com/savant0x/SavantOS/releases/download/"
+	maxUpdateManifestLen  = 64 << 10
+	maxUpdateSignatureLen = 4 << 10
 	// Rotating the private half requires shipping a launcher that trusts both
 	// the old and new keys before publishing manifests signed only by the new
 	// key. The release workflow keeps the private key in the protected release
@@ -101,8 +99,7 @@ func validateUpdateManifest(manifest *updateManifest) error {
 		return fmt.Errorf("invalid update version %q", manifest.Version)
 	}
 	release := normalizedRelease(manifest.Release)
-	if release != legacyReleaseBase+manifest.Version && release != transferredReleaseBase+manifest.Version &&
-		release != officialReleaseBase+manifest.Version {
+	if release != savantReleaseBase+manifest.Version {
 		return fmt.Errorf("update release URL does not match version")
 	}
 	if !validSHA256(manifest.ManifestSHA256) || !validSHA256(manifest.Launcher.SHA256) {

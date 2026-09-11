@@ -11,15 +11,15 @@ const (
 	provisionModeFilename = "provision-mode"
 	provisionModePersonal = "personal"
 	provisionModeInstant  = "instant"
-	trialUsername         = "omarchy"
-	trialPassword         = "omarchy"
+	trialUsername         = "savant"
+	trialPassword         = "savant"
 )
 
 func provisionAccountHint(instant bool) string {
 	if instant {
 		return "Trial account: " + trialUsername + "    Password: " + trialPassword
 	}
-	return "Use the username and password you choose inside Omarchy"
+	return "Use the username and password you choose inside SavantOS"
 }
 
 func readProvisionMode(dir string) (string, bool) {

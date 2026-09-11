@@ -63,7 +63,7 @@ func requestQuitConfirm() {
 
 // runCloseGuard owns the confirmation dialog and the graceful shutdown.
 func runCloseGuard() {
-	text, _ := syscall.UTF16PtrFromString("Shut down Omarchy?\n\nAnything unsaved inside Omarchy will be lost.")
+	text, _ := syscall.UTF16PtrFromString("Shut down SavantOS?\n\nAnything unsaved inside SavantOS will be lost.")
 	caption, _ := syscall.UTF16PtrFromString(appTitle)
 	for range confirmQuit {
 		if confirmOpen.Swap(true) {

@@ -16,7 +16,7 @@ import (
 )
 
 // First-run machine setup: everything bootstrap.ps1 did, done by the app
-// itself so tryomarchy.com can honestly say "download one file and open it".
+// itself so setup is one downloaded file, opened once.
 // Two machine-wide pieces are handled here:
 //
 //   - Windows Hypervisor Platform. Checked unprivileged via WinHvPlatform.dll
@@ -26,15 +26,9 @@ import (
 //     and Windows then needs its one restart.
 //   - QEMU. A portable WINQ-EMU tree (the validated GPU stack, same bin/
 //     layout as C:\WINQ-EMU) is downloaded from the release into
-//     %LOCALAPPDATA%\TryOmarchy\runtime, SHA256-verified like the image.
+//     %LOCALAPPDATA%\SavantOS\runtime, SHA256-verified like the image.
 //     Existing installs (C:\WINQ-EMU, stock QEMU from the old bootstrap)
 //     still win, so nothing already set up changes behavior.
-
-const (
-	legacyRuntimeRelease  = "https://github.com/tsouth89/try-omarchy-windows/releases/download/v0.0.6-preview"
-	legacyRuntimeManifest = "83f4a9cda6ee621c1e3ed756282aed18ca4dc719524d269ea6bbb76ff102229a"
-	legacyRuntimeArchive  = "bc4575388cb81caf2c55960d25484177253fc60a4c4faa58c30e884555d076c8"
-)
 
 var (
 	winhv                   = syscall.NewLazyDLL("WinHvPlatform.dll")
@@ -189,14 +183,14 @@ func ensureWHP(cfg *config) {
 		uptimeMs, _, _ := procGetTickCount64.Call()
 		bootTime := time.Now().Add(-time.Duration(uptimeMs) * time.Millisecond)
 		if st.ModTime().Before(bootTime) {
-			fatal("Windows' virtualization is switched on, but your PC's hardware virtualization looks disabled.\n\nEnable it in your PC's BIOS/UEFI settings (usually called Intel VT-x, AMD-V, or SVM), then start Try Omarchy again.")
+			fatal("Windows' virtualization is switched on, but your PC's hardware virtualization looks disabled.\n\nEnable it in your PC's BIOS/UEFI settings (usually called Intel VT-x, AMD-V, or SVM), then start SavantOS again.")
 		}
 		if msgBox("Windows still needs to restart once to finish setting up. Restart now?", mbYesNo|mbIconQuestion) == idYes {
 			restartWindows()
 		}
 		os.Exit(0)
 	}
-	if msgBox("Try Omarchy uses virtualization that Windows already includes (the same feature WSL2 uses), but it isn't switched on yet.\n\nWindows will ask for permission, and will need to restart once. Ready?", mbOkCancel|mbIconInfo) != idOk {
+	if msgBox("SavantOS uses virtualization that Windows already includes (the same feature WSL2 uses), but it isn't switched on yet.\n\nWindows will ask for permission, and will need to restart once. Ready?", mbOkCancel|mbIconInfo) != idOk {
 		os.Exit(0)
 	}
 	logf("enabling WHP (elevated dism)")
@@ -208,13 +202,13 @@ func ensureWHP(cfg *config) {
 		fatal("Couldn't switch on Windows' virtualization: %v", err)
 	}
 	if code == errorCancelled {
-		fatal("Try Omarchy can't run without Windows' virtualization. Start it again when you're ready to allow it.")
+		fatal("SavantOS can't run without Windows' virtualization. Start it again when you're ready to allow it.")
 	}
 	if code != 0 && code != dismRebootRequired {
 		fatal("Windows couldn't enable its virtualization feature (error %d).\n\nYou can enable it manually: Windows Features > Windows Hypervisor Platform.", code)
 	}
 	if err := os.WriteFile(marker, []byte(time.Now().Format(time.RFC3339)+"\n"), 0o644); err != nil {
-		fatal("Try Omarchy enabled Windows' virtualization but could not record that setup needs a restart: %v", err)
+		fatal("SavantOS enabled Windows' virtualization but could not record that setup needs a restart: %v", err)
 	}
 	logf("WHP enable requested (dism exit %d)", code)
 	if code == 0 && whpPresent() {
@@ -257,19 +251,6 @@ func ensureRuntime(cfg *config, release, sumsSHA256 string) (string, error) {
 	}
 	executable := filepath.Join(root, "bin", "qemu-system-x86_64w.exe")
 	_, executableErr := os.Stat(executable)
-	_, receiptErr := os.Stat(filepath.Join(root, runtimeReceiptFilename))
-	if executableErr == nil && os.IsNotExist(receiptErr) {
-		// Migrate the runtime installed by v0.0.6 and earlier. It came from the
-		// same authenticated archive, but those launchers did not retain a
-		// receipt for future release comparisons.
-		if err := writeRuntimeReceipt(root, legacyRuntimeRelease, legacyRuntimeManifest, legacyRuntimeArchive); err != nil {
-			return "", err
-		}
-		if normalizedRelease(release) == legacyRuntimeRelease &&
-			normalizedSHA256(sumsSHA256) == legacyRuntimeManifest && archiveSHA == legacyRuntimeArchive {
-			return root, nil
-		}
-	}
 	updating := executableErr == nil
 	zipPath := filepath.Join(cfg.dir, runtimeZip)
 	removeZip := true

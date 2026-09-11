@@ -20,10 +20,10 @@ func TestRestoredShortcutsTargetOnlyRestoredFolder(t *testing.T) {
 	if err := createRestoredLaunchers(dir); err != nil {
 		t.Fatal(err)
 	}
-	const script = `$ErrorActionPreference='Stop'; $shell=New-Object -ComObject WScript.Shell; $links=@(foreach($name in @('Start Omarchy.lnk','Settings.lnk')){ $link=$shell.CreateShortcut((Join-Path $env:TRYOMARCHY_TEST_DIR $name)); [pscustomobject]@{Name=$name;Target=$link.TargetPath;Arguments=$link.Arguments;Directory=$link.WorkingDirectory} }); ConvertTo-Json -Compress -InputObject $links`
+	const script = `$ErrorActionPreference='Stop'; $shell=New-Object -ComObject WScript.Shell; $links=@(foreach($name in @('Start SavantOS.lnk','Settings.lnk')){ $link=$shell.CreateShortcut((Join-Path $env:SAVANTOS_TEST_DIR $name)); [pscustomobject]@{Name=$name;Target=$link.TargetPath;Arguments=$link.Arguments;Directory=$link.WorkingDirectory} }); ConvertTo-Json -Compress -InputObject $links`
 
 	cmd := exec.Command(system32("WindowsPowerShell\\v1.0\\powershell.exe"), "-NoProfile", "-NonInteractive", "-Command", script)
-	cmd.Env = append(os.Environ(), "TRYOMARCHY_TEST_DIR="+dir)
+	cmd.Env = append(os.Environ(), "SAVANTOS_TEST_DIR="+dir)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -56,7 +56,7 @@ func TestRestoredShortcutsTargetOnlyRestoredFolder(t *testing.T) {
 		wantArgs := `-dir "` + dir + `"`
 		if link.Name == "Settings.lnk" {
 			wantArgs += " -settings"
-		} else if link.Name != "Start Omarchy.lnk" {
+		} else if link.Name != "Start SavantOS.lnk" {
 			t.Fatalf("unexpected shortcut %q", link.Name)
 		}
 		if link.Arguments != wantArgs {

@@ -12,7 +12,7 @@ import (
 // owning process's exe (QEMU's logo, for the VM window). The documented way to
 // rebrand a window you don't own is the window property store: give it our
 // AppUserModelID and Relaunch* properties, and the taskbar shows our icon and
-// name (and pins/relaunches through TryOmarchy.exe).
+// name (and pins/relaunches through SavantOS.exe).
 
 var (
 	ole32                           = syscall.NewLazyDLL("ole32.dll")
@@ -59,7 +59,7 @@ func comCall(obj uintptr, method int, args ...uintptr) uintptr {
 	return r
 }
 
-// setTaskbarIdentity brands hwnd's taskbar presence as Try Omarchy. Call once
+// setTaskbarIdentity brands hwnd's taskbar presence as SavantOS. Call once
 // per window; failures are logged and harmless (worst case: QEMU's icon).
 func setTaskbarIdentity(hwnd uintptr) {
 	exe, err := os.Executable()
@@ -81,7 +81,7 @@ func setTaskbarIdentity(hwnd uintptr) {
 		key := propertyKey{appUserModelFmtid, pid}
 		comCall(ps, 6, uintptr(unsafe.Pointer(&key)), uintptr(unsafe.Pointer(&pv))) // SetValue
 	}
-	set(pidAppUserModelID, "SouthForge.TryOmarchy")
+	set(pidAppUserModelID, "Savant.SavantOS")
 	set(pidRelaunchCommand, `"`+exe+`"`)
 	set(pidRelaunchDisplayName, appTitle)
 	set(pidRelaunchIcon, exe+",0")

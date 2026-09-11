@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	appTitle = "Try Omarchy"
+	appTitle = "SavantOS"
 )
 
 type config struct {
@@ -345,11 +345,11 @@ func TestBuildQemuArgsUsesTheChosenCPUCountAndHostMem(t *testing.T) {
 
 func TestBuildQemuArgsTellsTheGuestTheRenderingPath(t *testing.T) {
 	cfg := &config{vmDir: "/vm", guestDir: "/guest", disk: "/vm/disk.raw", diskFormat: "raw", memMiB: 4096, audio: "none", useGpu: true}
-	if args := strings.Join(buildQemuArgs(cfg, "root=/dev/vda"), " "); !strings.Contains(args, "root=/dev/vda tryomarchy.render=gpu ") {
+	if args := strings.Join(buildQemuArgs(cfg, "root=/dev/vda"), " "); !strings.Contains(args, "root=/dev/vda savantos.render=gpu ") {
 		t.Fatalf("gpu marker missing: %s", args)
 	}
 	cfg.useGpu = false
-	if args := strings.Join(buildQemuArgs(cfg, "root=/dev/vda"), " "); !strings.Contains(args, "tryomarchy.render=cpu ") {
+	if args := strings.Join(buildQemuArgs(cfg, "root=/dev/vda"), " "); !strings.Contains(args, "savantos.render=cpu ") {
 		t.Fatalf("cpu marker missing: %s", args)
 	}
 }

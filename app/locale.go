@@ -251,13 +251,13 @@ func posixLocaleForWindows(name string) string {
 func hostLocaleCmdline(zone, layout, variant, locale string) string {
 	words := ""
 	if zone != "" && validZoneName.MatchString(zone) {
-		words += " tryomarchy.tz=" + zone
+		words += " savantos.tz=" + zone
 	}
 	if locale != "" && validLocaleName.MatchString(locale) {
-		words += " tryomarchy.locale=" + locale
+		words += " savantos.locale=" + locale
 	}
 	if layout != "" && validLayoutName.MatchString(layout) && validVariantName.MatchString(variant) {
-		words += " tryomarchy.kb=" + layout
+		words += " savantos.kb=" + layout
 		if variant != "" {
 			words += ":" + variant
 		}
