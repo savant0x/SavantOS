@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="230" viewBox="0 0 850 230" role="img" aria-label="SavantOS — sovereign agentic OS host for Windows">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#18faf9" stop-opacity="0.13"/>
+      <stop offset="55%" stop-color="#18faf9" stop-opacity="0.045"/>
+      <stop offset="100%" stop-color="#050508" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="850" height="230" fill="#050508"/>
+  <rect width="850" height="230" fill="url(#glow)"/>
+
+  <!-- horizon -->
+  <line x1="0" y1="172" x2="325" y2="172" stroke="#20202a" stroke-width="1"/>
+  <line x1="525" y1="172" x2="850" y2="172" stroke="#20202a" stroke-width="1"/>
+  <line x1="325" y1="172" x2="525" y2="172" stroke="#18faf9" stroke-width="1.5" stroke-opacity="0.55"/>
+
+  <!-- perspective floor rays -->
+  <g stroke="#18faf9" stroke-width="1">
+    <line x1="425" y1="172" x2="-175" y2="230" stroke-opacity="0.10"/>
+    <line x1="425" y1="172" x2="0" y2="230" stroke-opacity="0.09"/>
+    <line x1="425" y1="172" x2="150" y2="230" stroke-opacity="0.08"/>
+    <line x1="425" y1="172" x2="290" y2="230" stroke-opacity="0.07"/>
+    <line x1="425" y1="172" x2="425" y2="230" stroke-opacity="0.14"/>
+    <line x1="425" y1="172" x2="560" y2="230" stroke-opacity="0.07"/>
+    <line x1="425" y1="172" x2="700" y2="230" stroke-opacity="0.08"/>
+    <line x1="425" y1="172" x2="850" y2="230" stroke-opacity="0.09"/>
+    <line x1="425" y1="172" x2="1025" y2="230" stroke-opacity="0.10"/>
+    <line x1="0" y1="188" x2="850" y2="188" stroke-opacity="0.09"/>
+    <line x1="0" y1="207" x2="850" y2="207" stroke-opacity="0.06"/>
+    <line x1="0" y1="226" x2="850" y2="226" stroke-opacity="0.04"/>
+  </g>
+
+  <!-- circuit nodes, left -->
+  <g stroke="#18faf9" stroke-width="1">
+    <line x1="58" y1="42" x2="112" y2="64" stroke-opacity="0.18"/>
+    <line x1="112" y1="64" x2="42" y2="88" stroke-opacity="0.18"/>
+    <line x1="42" y1="88" x2="58" y2="42" stroke-opacity="0.14"/>
+    <circle cx="58" cy="42" r="3.5" fill="#18faf9" fill-opacity="0.35" stroke="none"/>
+    <circle cx="112" cy="64" r="3.5" fill="#18faf9" fill-opacity="0.35" stroke="none"/>
+    <circle cx="42" cy="88" r="3.5" fill="#18faf9" fill-opacity="0.35" stroke="none"/>
+    <circle cx="58" cy="42" r="7" fill="none" stroke-opacity="0.22"/>
+    <circle cx="112" cy="64" r="11" fill="none" stroke-opacity="0.10"/>
+  </g>
+
+  <!-- circuit nodes, right -->
+  <g stroke="#18faf9" stroke-width="1">
+    <line x1="792" y1="42" x2="738" y2="64" stroke-opacity="0.18"/>
+    <line x1="738" y1="64" x2="808" y2="88" stroke-opacity="0.18"/>
+    <line x1="808" y1="88" x2="792" y2="42" stroke-opacity="0.14"/>
+    <circle cx="792" cy="42" r="3.5" fill="#18faf9" fill-opacity="0.35" stroke="none"/>
+    <circle cx="738" cy="64" r="3.5" fill="#18faf9" fill-opacity="0.35" stroke="none"/>
+    <circle cx="808" cy="88" r="3.5" fill="#18faf9" fill-opacity="0.35" stroke="none"/>
+    <circle cx="792" cy="42" r="7" fill="none" stroke-opacity="0.22"/>
+    <circle cx="738" cy="64" r="11" fill="none" stroke-opacity="0.10"/>
+  </g>
+
+  <!-- wordmark: glow pass + crisp pass -->
+  <text x="425" y="97" text-anchor="middle" font-family="system-ui, 'Segoe UI', sans-serif"
+        font-size="62" font-weight="700" letter-spacing="2" fill="#18faf9"
+        filter="url(#soft)" opacity="0.55">SavantOS</text>
+  <text x="425" y="97" text-anchor="middle" font-family="system-ui, 'Segoe UI', sans-serif"
+        font-size="62" font-weight="700" letter-spacing="2" fill="#18faf9">SavantOS</text>
+
+  <!-- tagline -->
+  <text x="425" y="135" text-anchor="middle" font-family="system-ui, 'Segoe UI', sans-serif"
+        font-size="19" font-weight="600" letter-spacing="0.5"
+        fill="#e4e4e8">Sovereign agentic OS host for Windows</text>
+
+  <!-- sub-line -->
+  <text x="425" y="159" text-anchor="middle" font-family="system-ui, 'Segoe UI', sans-serif"
+        font-size="12.5" letter-spacing="1.2"
+        fill="#8f8f99">Signed self-updating launcher · QEMU/WHPX · Linux desktop guest · ECHO Protocol</text>
+</svg>

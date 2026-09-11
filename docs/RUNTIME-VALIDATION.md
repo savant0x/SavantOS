@@ -5,7 +5,7 @@ runtime pin unchanged until all of these pass on supported Windows versions.
 
 - `qemu-system-x86_64.exe --version` reports QEMU 11.0.0.
 - `qemu-system-x86_64.exe -accel help` lists WHPX.
-- Try Omarchy reaches the desktop using the rebuilt ZIP.
+- SavantOS reaches the desktop using the rebuilt ZIP.
 - Venus Vulkan starts on a supported GPU, including the existing GPU probe.
 - CPU rendering still takes over when the GPU probe is forced to fail.
 - Keyboard input, scoped Windows key handling, clipboard, audio, and sharing work.

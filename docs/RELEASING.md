@@ -1,4 +1,4 @@
-# Releasing Try Omarchy
+# Releasing SavantOS
 
 Releases use a two-phase GitHub Actions workflow so the signed launcher can pin
 the guest manifest produced for that same release without rewriting source code
@@ -56,14 +56,14 @@ After the manifest pin is pushed:
    `gh release download TAG --dir candidate-assets`.
 3. Serve that folder over loopback on the test PC. For example, from the asset
    folder run `py -m http.server 18080 --bind 127.0.0.1`.
-4. Close Try Omarchy and copy `%LOCALAPPDATA%\TryOmarchy` to a separate test
+4. Close SavantOS and copy `%LOCALAPPDATA%\SavantOS` to a separate test
    directory. Never use the only copy of a real guest for candidate testing.
 5. Start the signed candidate with the copied data directory and the local
    payload:
 
    ```powershell
-   .\TryOmarchy.exe `
-     -dir C:\TryOmarchyCandidate `
+   .\SavantOS.exe `
+     -dir C:\SavantOSCandidate `
      -release http://127.0.0.1:18080 `
      -sums-sha256 SHA256SUMS_DIGEST `
      -runtime-release http://127.0.0.1:18080 `

@@ -1,6 +1,6 @@
 # VM backup and restore
 
-Try Omarchy provides backup, restore, and reset controls in Settings for
+SavantOS provides backup, restore, and reset controls in Settings for
 stopped standard installs. Portable installs are not supported yet. These
 operations are separate from
 [configuration export](MIGRATION.md), which transfers your setup to a physical
@@ -9,13 +9,13 @@ Omarchy installation.
 ## Use Settings
 
 Open Settings and use **Back up**, **Restore**, or **Reset guest** under Backup
-and recovery. Close the Omarchy VM first. Recovery uses the settings already
+and recovery. Close the SavantOS VM first. Recovery uses the settings already
 saved on disk; edits in the Settings window remain available after the operation.
 
 - **Back up** opens the Windows save dialog. Choose a new ZIP filename outside
   the installation folder.
 - **Restore** asks for a backup and a parent folder, then creates a separate
-  restored installation. It adds **Start Omarchy** and **Settings** shortcuts
+  restored installation. It adds **Start SavantOS** and **Settings** shortcuts
   inside that new folder. Existing Windows shortcuts are unchanged.
 - **Reset guest** offers a full backup first, then asks for confirmation. A
   failed or cancelled backup stops the reset. The factory disk is prepared
@@ -39,15 +39,15 @@ until you configure them again.
 
 ## Create a backup from PowerShell
 
-Shut down Omarchy and close the launcher first. From PowerShell:
+Shut down SavantOS and close the launcher first. From PowerShell:
 
 ```powershell
-.\TryOmarchy.exe -backup "D:\Backups\omarchy.zip"
+.\SavantOS.exe -backup "D:\Backups\savantos.zip"
 ```
 
 The destination folder must already exist on an NTFS or ReFS drive, outside the
-Try Omarchy data folder. Choose a new filename; an existing backup is never
-overwritten. Add `-dir "D:\TryOmarchy"` if you normally use an explicit data path.
+SavantOS data folder. Choose a new filename; an existing backup is never
+overwritten. Add `-dir "D:\SavantOS"` if you normally use an explicit data path.
 
 The ZIP includes the writable disk, factory image, matching kernel and initramfs,
 bundled runtime when present, and launcher settings. Shared Windows folders,
@@ -64,11 +64,11 @@ backup finishes.
 
 ## Restore to a separate folder
 
-Close Try Omarchy, then choose a folder that does not exist. Its parent must
+Close SavantOS, then choose a folder that does not exist. Its parent must
 already exist on an NTFS or ReFS drive:
 
 ```powershell
-.\TryOmarchy.exe -restore "D:\Backups\omarchy.zip" -dir "D:\OmarchyRestored"
+.\SavantOS.exe -restore "D:\Backups\savantos.zip" -dir "D:\SavantOSRestored"
 ```
 
 Restore checks and extracts files into a temporary folder before publishing the
@@ -78,7 +78,7 @@ backup unchanged. It never replaces an existing data folder.
 Start the restored copy explicitly:
 
 ```powershell
-.\TryOmarchy.exe -dir "D:\OmarchyRestored"
+.\SavantOS.exe -dir "D:\SavantOSRestored"
 ```
 
 This does not change the default installation location or existing shortcuts.

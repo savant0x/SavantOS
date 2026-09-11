@@ -1,5 +1,10 @@
 # Technical findings
 
+> **Provenance banner (2026-09-11):** findings dated before the fork (below,
+> plus their dates) were recorded while this codebase was the upstream
+> try-omarchy-windows project; upstream product and builder names in those
+> records are historical facts, not current identity.
+
 Working notes on what's proven, what bit us, and the fixes. Dates are 2026-08.
 
 ## WHPX boot recipe (proven)
@@ -140,7 +145,7 @@ reports the hypervisor present and QEMU boots the guest normally — because
 WinHvPlatform.dll ships with the OS. Consequences:
 
 - On machines with Memory Integrity on — the DEFAULT on new Windows 11
-  machines — Try Omarchy needs **no setup at all**: no feature enable, no UAC,
+  machines — SavantOS needs **no setup at all**: no feature enable, no UAC,
   no restart. Download, open, desktop. The WHP-enable flow is a fallback for
   machines with VBS off and no WSL2/Hyper-V.
 - The app's functional probe (WHvGetCapability, not feature state) is the
@@ -215,13 +220,13 @@ launch froze at ~1.4s into kernel boot (possibly leaked WHPX partition state);
 killing that one and launching again booted clean in ~20s.
 
 Mitigation: launch with `-no-reboot` so a guest-initiated reset exits QEMU instead of
-wedging it (now in launch-omarchy.ps1). The app shell must treat guest reboot as
+wedging it (now in launch-savantos.ps1). The app shell must treat guest reboot as
 "QEMU exits → relaunch", e.g. via `-action reboot=shutdown` + QMP RESET/SHUTDOWN
 events if it needs to distinguish reboot from poweroff.
 
 ## VENUS MILESTONE HIT (2026-08-27, bare-metal laptop, WINQ-EMU Alpha 10)
 
-`scripts/launch-omarchy-gpu.ps1` = our direct-kernel-boot recipe + WINQ-EMU's
+`scripts/launch-savantos-gpu.ps1` = our direct-kernel-boot recipe + WINQ-EMU's
 graphics stack (binary at `C:\WINQ-EMU\bin\qemu-system-x86_64.exe`, QEMU 11.0 +
 their patch series, virglrenderer 1.3.0). Verified on the Ryzen 5 5625U / Radeon
 iGPU:
@@ -256,7 +261,7 @@ to every guest-initiated reset/poweroff on stock QEMU 11.1.0.
 With `-no-reboot`, QEMU exits almost immediately after a guest reset; the abortive
 socket close (RST) throws away unread data in the peer's receive buffer, so a
 supervisor that sleeps-then-reads sometimes never sees the SHUTDOWN event and
-cannot tell reboot from poweroff. Fix in launch-omarchy.ps1: keep an async
+cannot tell reboot from poweroff. Fix in launch-savantos.ps1: keep an async
 ReadLine permanently pending on the QMP socket - the event is consumed the moment
 it arrives, before the RST can eat it.
 
@@ -303,10 +308,10 @@ Two more shell-era findings the same night:
   `virtio-sound-pci,audiodev=snd`. On machines with no DirectSound device at
   all (VMs, some remote sessions) QEMU then exits at startup - the shell
   detects that and relaunches with `-audiodev none` so the app still works,
-  just silent. (The unified launch-omarchy.ps1 shipped this bug; real laptops
+  just silent. (The unified launch-savantos.ps1 shipped this bug; real laptops
   masked it because QEMU's default backend happened to work there.)
 - **A reboot-wedged QEMU also loses the serial file's final flush**, so the
   kernel's "reboot: Restarting system" line cannot be sniffed to tell reboot
   from poweroff after the fact. The image now closes this properly: a shutdown
-  unit (try-omarchy-reboot-notify, guest-build patch 0004) reports reboot
+  unit (savantos-reboot-notify, guest-build patch 0004) reports reboot
   intent to the shell on lifecycle port 4450 while the network is still up.

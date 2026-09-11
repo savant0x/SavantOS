@@ -23,7 +23,7 @@ GPU rendering or CPU fallback:
 Results and steps for any failure:
 ```
 
-Use diagnostics from the tray or `TryOmarchy.exe -diagnostics` for failures.
+Use diagnostics from the tray or `SavantOS.exe -diagnostics` for failures.
 Review the zip before attaching it; logs can contain local paths and other
 personal details. Do not upload the guest disk or a full backup.
 
@@ -56,12 +56,12 @@ personal details. Do not upload the guest disk or a full backup.
   including AltGr and dead keys.
 - [ ] Close the VM window at a moved, non-maximized size; the next launch opens
   it there. Unplug the monitor it was on; the next launch opens maximized.
-- [ ] `TryOmarchy.exe -reclaim` after deleting a large file in Omarchy;
+- [ ] `SavantOS.exe -reclaim` after deleting a large file in Omarchy;
   after shutdown the disk file is smaller and Windows free space never fell
   below 4 GiB during the pass. Repeat with Settings showing the new size.
 - [ ] Settings: Rendering set to CPU and back to Automatic takes effect on the
   next launch; Guest CPUs shows the automatic choice for this PC.
-- [ ] Remove Try Omarchy from Apps & features on a copied install; the folder,
+- [ ] Remove SavantOS from Apps & features on a copied install; the folder,
   its shortcuts, and its entry are gone and the original install still runs.
 
 ## Hardware matrix facts to record
@@ -86,7 +86,7 @@ Create a few identifiable files before each test and compare them afterwards.
 Use the copied guest for interruption and low-space tests.
 
 - [ ] A copied pre-transfer installation updates through its original signed
-  feed into the Omacom candidate. Record starting and target versions, release
+  feed into the release candidate. Record starting and target versions, release
   URLs and redirects, signature verification, and preserved files. Force a
   rollback and confirm the copied installation still boots. Local candidate
   tests do not replace checking the public URLs after publication.
@@ -98,7 +98,7 @@ Use the copied guest for interruption and low-space tests.
 - [ ] Grow the disk, verify capacity inside Omarchy with `df -h /`, and check the
   files. Lowering the preference and rolling back the launcher never shrink it.
 - [ ] From Settings, back up a stopped VM, cancel an operation, and restore a
-  separate copy. Verify its Start Omarchy and Settings shortcuts point to that
+  separate copy. Verify its Start SavantOS and Settings shortcuts point to that
   copy, then boot it and compare the guest files.
 - [ ] Reset from Settings after taking a backup. Confirm first-run setup on the
   next launch and that the previous disk is retained under `vm/before-reset-*`.

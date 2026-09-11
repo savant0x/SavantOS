@@ -1,7 +1,7 @@
-# Moving a Try Omarchy setup to a real Omarchy install
+# Moving a SavantOS setup to a real Omarchy install
 
-Try Omarchy is disposable by design: deleting `%LOCALAPPDATA%\TryOmarchy` is
-the uninstall. If the trial wins you over, `try-omarchy-export` carries the
+SavantOS is disposable by design: deleting `%LOCALAPPDATA%\SavantOS` is
+the uninstall. If the trial wins you over, `savantos-export` carries the
 parts worth keeping to a bare-metal Omarchy install.
 
 ## Export inside Omarchy
@@ -9,11 +9,11 @@ parts worth keeping to a bare-metal Omarchy install.
 Open a terminal (SUPER+RETURN) and run:
 
 ```bash
-try-omarchy-export
+savantos-export
 ```
 
-It writes `omarchy-export-<date>.tar.gz` to the shared Windows folder when
-Try Omarchy was started with `-share`, otherwise to your home folder. Pass a
+It writes `savantos-export-<date>.tar.gz` to the shared Windows folder when
+SavantOS was started with `-share`, otherwise to your home folder. Pass a
 directory to choose another place. The archive contains:
 
 - `home/`: an allowlist of Omarchy, Hyprland, terminal, bar, notification,
@@ -37,13 +37,13 @@ Copy the archive over (USB stick, the shared folder, `scp` through the SSH
 preset), then as the user who should receive the configuration:
 
 ```bash
-tar -xzf omarchy-export-<date>.tar.gz
-cd omarchy-export-<date>
+tar -xzf savantos-export-<date>.tar.gz
+cd savantos-export-<date>
 ./restore.sh
 ```
 
 The script backs up anything it replaces under
-`~/.omarchy-restore-backup/<time>`, installs the repository packages with
+`~/.savantos-restore-backup/<time>`, installs the repository packages with
 pacman and the AUR packages with yay, and selects your theme. Log out and back
 in afterwards so Hyprland and the shell pick up the restored configuration.
 

@@ -23,8 +23,8 @@ guest changes.
 The executable is started with `-portable` and expects this sibling layout:
 
 ```text
-TryOmarchy-Portable/
-|-- TryOmarchy.exe
+SavantOS-Portable/
+|-- SavantOS.exe
 |-- payload/
 |   |-- SHA256SUMS
 |   |-- winq-emu-alpha10-portable.zip
@@ -64,7 +64,7 @@ new payload.
 From Command Prompt in the portable folder:
 
 ```bat
-TryOmarchy.exe -portable
+SavantOS.exe -portable
 ```
 
 Shut Omarchy down from its system menu and wait for the QEMU window to close

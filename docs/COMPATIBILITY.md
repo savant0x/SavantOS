@@ -1,6 +1,6 @@
 # App compatibility
 
-Try Omarchy runs the full x86_64 Arch Linux environment used by Omarchy. It is
+SavantOS runs the full x86_64 Arch Linux environment used by Omarchy. It is
 not a reduced web demo or a compatibility layer.
 
 ## What works
@@ -21,7 +21,7 @@ not a reduced web demo or a compatibility layer.
   runtime, and guest image are all x86_64, and setup stops with an explanation
   instead of blaming virtualization settings.
 - GPU acceleration depends on the patched WINQ-EMU runtime and compatible
-  Windows graphics drivers. Try Omarchy falls back to CPU rendering when that
+  Windows graphics drivers. SavantOS falls back to CPU rendering when that
   path is unavailable.
 - USB devices, host webcams, and arbitrary PCI devices are not passed through.
 - Networking uses QEMU NAT. Services inside the guest are not exposed to the Windows network automatically.
@@ -36,11 +36,11 @@ not a reduced web demo or a compatibility layer.
   existing disks. Forcing a different kernel package into the guest leaves it
   out of sync with those boot files.
 - Configuration export and restore are available through
-  `try-omarchy-export`; see [the migration guide](MIGRATION.md). Development
+  `savantos-export`; see [the migration guide](MIGRATION.md). Development
   builds also support [stopped-VM backup and restore](BACKUP.md) from Settings
   or command-line options. Reset can retain the old disk and offer a full
   backup first. Snapshots are not available yet.
 
 Compatibility varies with Windows, CPU, GPU, and driver combinations. When
-reporting a problem, include those details and whether Try Omarchy selected
+reporting a problem, include those details and whether SavantOS selected
 GPU or CPU rendering.
