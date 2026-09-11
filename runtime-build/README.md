@@ -1,6 +1,6 @@
 # Source-built WINQ-EMU runtime
 
-This recipe builds Try Omarchy's Windows QEMU runtime from the exact QEMU and
+This recipe builds SavantOS's Windows QEMU runtime from the exact QEMU and
 virglrenderer fork commits in `sources.lock.json`. It produces:
 
 - `winq-emu-alpha10-portable.zip`, a drop-in replacement for the current runtime

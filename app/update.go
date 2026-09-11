@@ -24,8 +24,9 @@ const (
 	// Rotating the private half requires shipping a launcher that trusts both
 	// the old and new keys before publishing manifests signed only by the new
 	// key. The release workflow keeps the private key in the protected release
-	// environment.
-	updatePublicKeyHex = "f1edc8c2fc8fc8a7a108832eb93a9d9f2f8c07c5547fc4e4cb805c3b1615c9cd"
+	// environment (SAVANTOS_UPDATE_SIGNING_KEY); the keypair is generated and
+	// stored outside this repository.
+	updatePublicKeyHex = "af8f488e7656c550579e81cddb3270720bc8e689f30714d2387d4a116d296626"
 )
 
 var releaseVersionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-preview)?$`)

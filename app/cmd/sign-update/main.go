@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-const expectedPublicKeyHex = "f1edc8c2fc8fc8a7a108832eb93a9d9f2f8c07c5547fc4e4cb805c3b1615c9cd"
+const expectedPublicKeyHex = "af8f488e7656c550579e81cddb3270720bc8e689f30714d2387d4a116d296626"
 
 type updateManifest struct {
 	Schema         int    `json:"schema"`
