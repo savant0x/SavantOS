@@ -371,6 +371,9 @@ Attribution audit (operator directive: Savant naming permitted, foreign
 agent branding prohibited): commit messages and the tracked tree scanned
 for Codebuff/Freebuff/other-agent identifiers — none present; committer
 identity savant0x throughout; this FID's Author field neutralized to
-"Savant". Final state: seven commits on main, none pushed; the remote is
-created after this FID closes. FID status → closed and archived per the
+"Savant". Final state: ten commits on main, pushed to the public
+github.com/savant0x/SavantOS repository on 2026-09-11 (the operator had
+created the empty repository during the crashed session and set its
+visibility to public by intent; HEAD parity local == remote verified at
+8e8ec99). FID status → closed and archived per the
 Recorder protocol.

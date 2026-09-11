@@ -41,7 +41,10 @@
 3. [x] Docs sweep, README rewrite, provenance banner, V1-READINESS deletion.
 4. [x] Keys commit: rotate update trust anchors, repoint manifest.go.
 5. [x] Attribution audit and closure (FID, CHANGELOG, agenda, summary).
-6. [ ] Create savant0x/SavantOS on GitHub and push main.
+1. [x] Create savant0x/SavantOS on GitHub and push main. (Done: the
+       repository already existed, created by the operator during the
+       crashed session; pushed as PUBLIC per the operator's explicit
+       direction — the earlier "private" note is superseded.)
 
 ---
 
@@ -153,16 +156,18 @@
 
 ### Priority Tasks
 
-1. [ ] Create savant0x/SavantOS on GitHub (private) and push main using
-       the operator token from `.env.local` (never printed).
-2. [ ] Release workflow: build and publish the first factory guest image;
+1. [ ] Release workflow: build and publish the first factory guest image;
        load `SAVANTOS_UPDATE_SIGNING_KEY` into the release environment.
 
 ### Blockers
 
-- Push requires the operator's GitHub token (available in `.env.local`).
+- None. The lineage is published.
 
 ### Notes for Next Agent
+
+- The repository is PUBLIC by operator decision — treat every push as a
+  public disclosure; the attribution and secrets audits run before every
+  push stay mandatory.
 
 - Read `dev/echo-v0.1.2-single-agent.md` before any git action: the agent
   never executes destructive git operations without operator approval,
