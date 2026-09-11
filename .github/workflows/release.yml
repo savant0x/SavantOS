@@ -15,6 +15,13 @@ on:
         description: Release tag, for example v0.0.12-preview or v1.0.0
         required: true
         type: string
+      signing:
+        description: Authenticode path for the launcher (azure Trusted Signing, or none for an unsigned launcher; the update feeds stay Ed25519-signed either way)
+        required: true
+        type: choice
+        options:
+          - azure
+          - none
 
 concurrency:
   group: release
@@ -275,6 +282,7 @@ jobs:
           go build -trimpath -ldflags '-H windowsgui -s -w' -o ../release/SavantOS.exe .
 
       - name: Sign in to Azure with OIDC
+        if: inputs.signing == 'azure'
         uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -282,6 +290,7 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign launcher
+        if: inputs.signing == 'azure'
         uses: Azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
         with:
           endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
@@ -296,9 +305,11 @@ jobs:
         shell: pwsh
         run: |
           $exe = 'release/SavantOS.exe'
-          $signature = Get-AuthenticodeSignature $exe
-          if ($signature.Status -ne 'Valid') {
-            throw "Authenticode verification failed: $($signature.StatusMessage)"
+          if ('${{ inputs.signing }}' -eq 'azure') {
+            $signature = Get-AuthenticodeSignature $exe
+            if ($signature.Status -ne 'Valid') {
+              throw "Authenticode verification failed: $($signature.StatusMessage)"
+            }
           }
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  SavantOS.exe" | Set-Content release/SavantOS.exe.sha256 -Encoding ascii
