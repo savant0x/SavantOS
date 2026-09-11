@@ -18,7 +18,7 @@ const maxSumsBytes = 1 << 20
 // with -ldflags -X. Normal builds retain these production defaults.
 var (
 	defaultReleaseURL        = "https://github.com/savant0x/SavantOS/releases/download/v0.0.1"
-	defaultSumsSHA256        = "c4d36c4d52cf549ba90cf0050ce082d51b62d4de7bbdc995b7960b4cbc0e18ad"
+	defaultSumsSHA256        = "3b106a44fa0324dfc88dd674e9f3758b4e9d2e27c066673fdb04c9c5eb357185"
 	defaultRuntimeReleaseURL = ""
 	defaultRuntimeSumsSHA256 = ""
 )
