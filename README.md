@@ -15,11 +15,64 @@ default.
 
 Download, boot, Hyprland.
 
-**Status: working end to end on real hardware; rebranding milestone.** The
-launcher now pins its trust anchors and release URLs to
-`savant0x/SavantOS` at `v0.0.1` and fails closed until the release workflow
-publishes the first SavantOS factory image. This repository is a hard fork of
+**Status: working end to end on real hardware.** The launcher pins its trust
+anchors and release URLs to `savant0x/SavantOS`; the first SavantOS factory
+image shipped as [v0.0.1](https://github.com/savant0x/SavantOS/releases/latest)
+on 2026-09-11. This repository is a hard fork of
 Try Omarchy for Windows — see [provenance](#provenance-and-credits).
+
+## Install
+
+**Requirements:** Windows 10 or 11 (Home or Pro), a 64-bit CPU with
+virtualization enabled in your firmware, and space on a local NTFS or ReFS
+drive for the guest image and virtual disk. If WSL2 runs on your machine, the
+Hypervisor Platform is already there. No Hyper-V role, no partitions, no
+reboot-into-Linux.
+
+**1. Download the launcher** (~8 MB) from the latest release:
+
+```text
+https://github.com/savant0x/SavantOS/releases/latest/download/SavantOS.exe
+```
+
+**2. Verify the checksum.** The launcher digest-verifies everything else it
+downloads, so the exe is the only file you check yourself. In the download
+folder:
+
+```powershell
+$expected = (Get-Content SavantOS.exe.sha256).Trim() -split '\s+' | Select-Object -First 1
+if ((Get-FileHash SavantOS.exe -Algorithm SHA256).Hash -ieq $expected) { 'checksum OK' } else { 'MISMATCH - do not run' }
+```
+
+or, in Git Bash: `sha256sum -c SavantOS.exe.sha256`.
+
+**3. Double-click `SavantOS.exe`.** Windows may show a one-time
+"Windows protected your PC" prompt while the launcher is unsigned — choose
+**More info → Run anyway**.
+
+### First run
+
+- **Pick a data location.** The default is `%LOCALAPPDATA%\SavantOS`; another
+  local drive works too and a small pointer stays behind so later launches
+  find it. Everything lives in this one folder — delete it and SavantOS is
+  gone.
+- **One permission prompt, one restart** if the Windows Hypervisor Platform
+  is not enabled yet; the launcher enables it for you.
+- **The launcher downloads and verifies the payload** — the GPU runtime
+  (~84 MB) and the guest image (~1.7 GB) — against a SHA256 digest pinned in
+  its own source, then boots straight to the Omarchy desktop (a few seconds
+  on mid-range hardware).
+- **Pick an account:** the instant trial (`savant` / `savant`, disposable,
+  passwordless sudo) or the normal personalized setup. SDDM autologins
+  either way.
+- **Shortcuts are optional.** After setup the launcher keeps a stable copy in
+  the data folder and can add Start-menu and Desktop shortcuts; later
+  launches skip every step above and go straight to the desktop.
+
+Updates are self-served: the launcher checks GitHub, verifies every download
+against its pinned digests and Ed25519-signed manifests, and stages updates
+atomically with rollback. To check the wiring without updating anything, run
+`SavantOS.exe -diagnostics` for a redacted support zip.
 
 ## What works today
 
