@@ -16,11 +16,11 @@ index 80a7d93..b3dc207 100755
 --- a/guest/factory-overlay/usr/local/lib/try-omarchy/agent
 +++ b/guest/factory-overlay/usr/local/lib/try-omarchy/agent
 @@ -10,12 +10,50 @@ set -u
- host=${TRY_OMARCHY_AGENT_HOST:-10.0.2.2}
- port=${TRY_OMARCHY_AGENT_PORT:-4451}
- set_time=${TRY_OMARCHY_SET_TIME:-date -s}
+ host=${TRY_SAVANTOS_AGENT_HOST:-10.0.2.2}
+ port=${TRY_SAVANTOS_AGENT_PORT:-4451}
+ set_time=${TRY_SAVANTOS_SET_TIME:-date -s}
 -version=1
-+fill_dir=${TRY_OMARCHY_FILL_DIR:-/var/tmp}
++fill_dir=${TRY_SAVANTOS_FILL_DIR:-/var/tmp}
 +version=2
  max_drift=2
 +# Space left free while zero-filling, so running programs keep working.
@@ -45,7 +45,7 @@ index 80a7d93..b3dc207 100755
 +  fi
 +  count=$((avail_mib - fill_reserve_mib))
 +  ((count > budget_mib)) && count=$budget_mib
-+  fill_file="$fill_dir/try-omarchy-zero-fill"
++  fill_file="$fill_dir/savantos-zero-fill"
 +  rm -f "$fill_file"
 +  if dd if=/dev/zero of="$fill_file" bs=1M count="$count" status=none 2>/dev/null; then
 +    sync
@@ -92,21 +92,21 @@ index a71d3fc..4d01bf2 100644
 +        fill_dir = self.root / "fill"
 +        fill_dir.mkdir()
 +        self.fake("df", 'echo "Avail"; echo " 2048"')
-+        self.fake("dd", 'echo "dd $@" >> "$CALLS"; touch "$FILL/try-omarchy-zero-fill"')
++        self.fake("dd", 'echo "dd $@" >> "$CALLS"; touch "$FILL/savantos-zero-fill"')
 +        self.fake("sync", "true")
 +        result = subprocess.run([str(AGENT), "--handle"], input="zero-fill 1000\n",
-+                                env=dict(self.env, CALLS=str(self.log), FILL=str(fill_dir), TRY_OMARCHY_FILL_DIR=str(fill_dir)),
++                                env=dict(self.env, CALLS=str(self.log), FILL=str(fill_dir), TRY_SAVANTOS_FILL_DIR=str(fill_dir)),
 +                                capture_output=True, text=True, timeout=30)
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertIn("count=1000", self.calls())
-+        self.assertFalse((fill_dir / "try-omarchy-zero-fill").exists())
++        self.assertFalse((fill_dir / "savantos-zero-fill").exists())
 +        self.assertEqual(result.stdout.strip(), "zero-fill done")
 +
 +    def test_zero_fill_refuses_when_the_disk_is_nearly_full(self) -> None:
 +        self.fake("df", 'echo "Avail"; echo " 300"')
 +        self.fake("dd", 'echo "dd $@" >> "$CALLS"')
 +        result = subprocess.run([str(AGENT), "--handle"], input="zero-fill 8192\n",
-+                                env=dict(self.env, CALLS=str(self.log), TRY_OMARCHY_FILL_DIR=str(self.root)),
++                                env=dict(self.env, CALLS=str(self.log), TRY_SAVANTOS_FILL_DIR=str(self.root)),
 +                                capture_output=True, text=True, timeout=30)
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertEqual(self.calls(), "")

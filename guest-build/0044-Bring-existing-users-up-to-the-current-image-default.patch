@@ -5,35 +5,35 @@ Subject: [PATCH] Bring existing users up to the current image defaults at boot
 
 Image updates never touch home directories, so disks from older releases kept whatever their skeleton had. A boot service, shipped in the compat overlay, now replaces monitors.lua when it is still the untouched skeleton (Omarchy's default plus any version of the QEMU profile block), removes the seeded no-gaps and aspect-ratio toggles when they are still the seeded copies, and switches on the suspend-off toggle. It runs once per integration revision. Revision 12.
 ---
- .../try-omarchy-catch-up.service              |  1 +
- .../system/try-omarchy-catch-up.service       | 11 +++
+ .../savantos-catch-up.service              |  1 +
+ .../system/savantos-catch-up.service       | 11 +++
  .../usr/local/lib/try-omarchy/catch-up        | 81 +++++++++++++++++++
  .../hypr-monitors-qemu.append.lua             | 42 ++++++++++
  guest/scripts/finalize-rootfs.sh              |  6 +-
  guest/tests/test_overlay_scripts.py           | 66 +++++++++++++++
  guest/tests/verify.py                         |  8 +-
  7 files changed, 213 insertions(+), 2 deletions(-)
- create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-catch-up.service
- create mode 100644 guest/factory-overlay/etc/systemd/system/try-omarchy-catch-up.service
+ create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-catch-up.service
+ create mode 100644 guest/factory-overlay/etc/systemd/system/savantos-catch-up.service
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/catch-up
  create mode 100644 guest/factory-overlay/usr/share/try-omarchy/skel-fragments/hypr-monitors-qemu.append.lua
 
-diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-catch-up.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-catch-up.service
+diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-catch-up.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-catch-up.service
 new file mode 120000
 index 0000000..f7196b6
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-catch-up.service
++++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-catch-up.service
 @@ -0,0 +1 @@
-+../try-omarchy-catch-up.service
++../savantos-catch-up.service
 \ No newline at end of file
-diff --git a/guest/factory-overlay/etc/systemd/system/try-omarchy-catch-up.service b/guest/factory-overlay/etc/systemd/system/try-omarchy-catch-up.service
+diff --git a/guest/factory-overlay/etc/systemd/system/savantos-catch-up.service b/guest/factory-overlay/etc/systemd/system/savantos-catch-up.service
 new file mode 100644
 index 0000000..5ec130a
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/try-omarchy-catch-up.service
++++ b/guest/factory-overlay/etc/systemd/system/savantos-catch-up.service
 @@ -0,0 +1,11 @@
 +[Unit]
-+Description=Bring existing Try Omarchy users up to the current image defaults
++Description=Bring existing SavantOS users up to the current image defaults
 +After=local-fs.target
 +Before=display-manager.service
 +
@@ -62,12 +62,12 @@ index 0000000..96d04b5
 +# Runs once per integration revision, before the display manager.
 +set -euo pipefail
 +
-+revision_file=${TRY_OMARCHY_COMPAT_VERSION:-/usr/share/try-omarchy/compat-version}
-+state_dir=${TRY_OMARCHY_STATE_DIR:-/var/lib/try-omarchy}
-+fragment=${TRY_OMARCHY_QEMU_FRAGMENT:-/usr/share/try-omarchy/skel-fragments/hypr-monitors-qemu.append.lua}
-+omarchy_default=${TRY_OMARCHY_OMARCHY_MONITORS:-/usr/share/omarchy/config/hypr/monitors.lua}
-+toggle_templates=${TRY_OMARCHY_TOGGLE_TEMPLATES:-/usr/share/omarchy/default/hypr/toggles}
-+homes=${TRY_OMARCHY_HOMES:-/home}
++revision_file=${TRY_SAVANTOS_COMPAT_VERSION:-/usr/share/try-omarchy/compat-version}
++state_dir=${TRY_SAVANTOS_STATE_DIR:-/var/lib/savantos}
++fragment=${TRY_SAVANTOS_QEMU_FRAGMENT:-/usr/share/try-omarchy/skel-fragments/hypr-monitors-qemu.append.lua}
++omarchy_default=${TRY_SAVANTOS_OMARCHY_MONITORS:-/usr/share/omarchy/config/hypr/monitors.lua}
++toggle_templates=${TRY_SAVANTOS_TOGGLE_TEMPLATES:-/usr/share/omarchy/default/hypr/toggles}
++homes=${TRY_SAVANTOS_HOMES:-/home}
 +
 +revision=$(cut -d: -f1 "$revision_file" 2>/dev/null || echo 0)
 +marker="$state_dir/catch-up-revision"
@@ -174,7 +174,7 @@ index 0000000..a4c1b3c
 +-- On CPU rendering (llvmpipe) every animation frame is CPU time the desktop
 +-- feels. Start with animations off; looknfeel.lua loads after this file, so
 +-- an explicit choice there still wins.
-+if omarchy_kernel_option_enabled("tryomarchy.render=cpu") then
++if omarchy_kernel_option_enabled("savantos.render=cpu") then
 +  hl.config({ animations = { enabled = false } })
 +end
 +-- END OMARCHY QEMU PROFILE
@@ -183,17 +183,17 @@ index eb23b44..25c91fc 100755
 --- a/guest/scripts/finalize-rootfs.sh
 +++ b/guest/scripts/finalize-rootfs.sh
 @@ -66,6 +66,9 @@ compat_paths=(
-   etc/systemd/system/sysinit.target.wants/try-omarchy-host-locale.service
-   etc/systemd/system/try-omarchy-agent.service
-   etc/systemd/system/multi-user.target.wants/try-omarchy-agent.service
-+  etc/systemd/system/try-omarchy-catch-up.service
-+  etc/systemd/system/multi-user.target.wants/try-omarchy-catch-up.service
+   etc/systemd/system/sysinit.target.wants/savantos-host-locale.service
+   etc/systemd/system/savantos-agent.service
+   etc/systemd/system/multi-user.target.wants/savantos-agent.service
++  etc/systemd/system/savantos-catch-up.service
++  etc/systemd/system/multi-user.target.wants/savantos-catch-up.service
 +  usr/share/try-omarchy/skel-fragments/hypr-monitors-qemu.append.lua
-   etc/systemd/user/try-omarchy-share-link.service
-   etc/systemd/user/graphical-session.target.wants/try-omarchy-share-link.service
-   etc/systemd/user/try-omarchy-factory-update-notice.service
+   etc/systemd/user/savantos-share-link.service
+   etc/systemd/user/graphical-session.target.wants/savantos-share-link.service
+   etc/systemd/user/savantos-factory-update-notice.service
 @@ -73,6 +76,7 @@ compat_paths=(
-   usr/local/bin/try-omarchy-export
+   usr/local/bin/savantos-export
    usr/local/lib/try-omarchy/agent
    usr/local/lib/try-omarchy/apply-host-locale
 +  usr/local/lib/try-omarchy/catch-up
@@ -219,7 +219,7 @@ index c65bea4..2137d09 100644
  AGENT = OVERLAY / "usr/local/lib/try-omarchy/agent"
 +CATCH_UP = OVERLAY / "usr/local/lib/try-omarchy/catch-up"
 +FRAGMENT = OVERLAY / "usr/share/try-omarchy/skel-fragments/hypr-monitors-qemu.append.lua"
- EXPORT = OVERLAY / "usr/local/bin/try-omarchy-export"
+ EXPORT = OVERLAY / "usr/local/bin/savantos-export"
  
  def generated_key(directory: Path) -> str:
 @@ -461,3 +463,67 @@ class AgentTests(OverlayCase):
@@ -251,9 +251,9 @@ index c65bea4..2137d09 100644
 +        self.state = self.root / "state"
 +
 +    def run_catch_up(self) -> subprocess.CompletedProcess:
-+        return self.run_script(CATCH_UP, TRY_OMARCHY_COMPAT_VERSION=str(self.version), TRY_OMARCHY_STATE_DIR=str(self.state),
-+                               TRY_OMARCHY_QEMU_FRAGMENT=str(FRAGMENT), TRY_OMARCHY_OMARCHY_MONITORS=str(self.default),
-+                               TRY_OMARCHY_TOGGLE_TEMPLATES=str(self.templates), TRY_OMARCHY_HOMES=str(self.homes))
++        return self.run_script(CATCH_UP, TRY_SAVANTOS_COMPAT_VERSION=str(self.version), TRY_SAVANTOS_STATE_DIR=str(self.state),
++                               TRY_SAVANTOS_QEMU_FRAGMENT=str(FRAGMENT), TRY_SAVANTOS_OMARCHY_MONITORS=str(self.default),
++                               TRY_SAVANTOS_TOGGLE_TEMPLATES=str(self.templates), TRY_SAVANTOS_HOMES=str(self.homes))
 +
 +    def seed_toggles(self) -> None:
 +        for name in ("flags", "window-no-gaps", "single-window-aspect-ratio"):
@@ -302,7 +302,7 @@ index 19c5019..3c830f8 100755
 +        "compat_revision=12" in finalize_rootfs
 +        and "usr/local/lib/try-omarchy/catch-up" in finalize_rootfs
 +        and "usr/share/try-omarchy/skel-fragments/hypr-monitors-qemu.append.lua" in finalize_rootfs
-         and "etc/systemd/user/omarchy-fcitx5.service.d/10-try-omarchy.conf" in finalize_rootfs
+         and "etc/systemd/user/omarchy-fcitx5.service.d/10-savantos.conf" in finalize_rootfs
          and "usr/local/lib/try-omarchy/agent" in finalize_rootfs
          and "compat_revision" in finalize_rootfs.split("compat-version")[0]
 @@ -333,6 +335,10 @@ def main() -> None:
@@ -314,7 +314,7 @@ index 19c5019..3c830f8 100755
 +        "the compat overlay carries the current QEMU profile fragment",
 +    )
      check(
-         'omarchy_kernel_option_enabled("tryomarchy.render=cpu")' in monitor_fragment
+         'omarchy_kernel_option_enabled("savantos.render=cpu")' in monitor_fragment
          and "animations = { enabled = false }" in monitor_fragment,
 -- 
 2.55.0

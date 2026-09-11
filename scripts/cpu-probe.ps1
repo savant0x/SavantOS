@@ -14,7 +14,7 @@ $candidates = @(
     'max'
 )
 foreach ($c in $candidates) {
-    $err = "C:\tryomarchy\probe-err.log"
+    $err = "C:\savantos\probe-err.log"
     $p = Start-Process -FilePath $qemu -ArgumentList @(
         '-accel','whpx','-machine','q35','-cpu',$c,'-smp','2','-m','512',
         '-display','none','-vga','none','-net','none'

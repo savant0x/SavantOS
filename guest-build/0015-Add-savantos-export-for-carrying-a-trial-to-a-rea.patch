@@ -1,7 +1,7 @@
 From 25739168fe018e3fbd5a1473cf0201157d3839ae Mon Sep 17 00:00:00 2001
 From: Tyler South <tsouth2@gmail.com>
 Date: Wed, 2 Sep 2026 13:57:33 -0400
-Subject: [PATCH] Add try-omarchy-export for carrying a trial to a real install
+Subject: [PATCH] Add savantos-export for carrying a trial to a real install
 
 Archives ~/.config and the other home configuration, the current theme,
 and the packages added beyond the factory image (split into repository and
@@ -9,16 +9,16 @@ AUR lists), with a restore.sh that replays them on a bare-metal Omarchy
 install. Writes to the Windows share when mounted. Keys, password stores,
 browser profiles, and caches stay out.
 ---
- .../usr/local/bin/try-omarchy-export          | 157 ++++++++++++++++++
+ .../usr/local/bin/savantos-export          | 157 ++++++++++++++++++
  guest/tests/verify.py                         |  10 ++
  2 files changed, 167 insertions(+)
- create mode 100755 guest/factory-overlay/usr/local/bin/try-omarchy-export
+ create mode 100755 guest/factory-overlay/usr/local/bin/savantos-export
 
-diff --git a/guest/factory-overlay/usr/local/bin/try-omarchy-export b/guest/factory-overlay/usr/local/bin/try-omarchy-export
+diff --git a/guest/factory-overlay/usr/local/bin/savantos-export b/guest/factory-overlay/usr/local/bin/savantos-export
 new file mode 100755
 index 0000000..cca469b
 --- /dev/null
-+++ b/guest/factory-overlay/usr/local/bin/try-omarchy-export
++++ b/guest/factory-overlay/usr/local/bin/savantos-export
 @@ -0,0 +1,157 @@
 +#!/bin/bash
 +# Export the parts of this trial worth carrying to a real Omarchy install:
@@ -27,16 +27,16 @@ index 0000000..cca469b
 +# inside it, to the shared Windows folder when one is mounted, otherwise to
 +# the home directory. Secrets are left out on purpose.
 +#
-+# Usage: try-omarchy-export [DESTINATION-DIRECTORY]
++# Usage: savantos-export [DESTINATION-DIRECTORY]
 +set -euo pipefail
 +
 +usage() {
-+  echo "Usage: try-omarchy-export [DESTINATION-DIRECTORY]"
++  echo "Usage: savantos-export [DESTINATION-DIRECTORY]"
 +  echo "Default destination: /mnt/host when the Windows share is mounted, else \$HOME."
 +}
 +
 +fail() {
-+  echo "try-omarchy-export: $*" >&2
++  echo "savantos-export: $*" >&2
 +  exit 1
 +}
 +
@@ -61,7 +61,7 @@ index 0000000..cca469b
 +[[ -f $factory_lock ]] || fail "factory package list not found: $factory_lock"
 +
 +stamp=$(date +%Y%m%d-%H%M%S)
-+name="omarchy-export-$stamp"
++name="savantos-export-$stamp"
 +work=$(mktemp -d)
 +trap 'rm -rf "$work"' EXIT
 +stage="$work/$name"
@@ -107,7 +107,7 @@ index 0000000..cca469b
 +
 +cat >"$stage/manifest.json" <<EOF
 +{
-+  "kind": "try-omarchy-export",
++  "kind": "savantos-export",
 +  "schemaVersion": 1,
 +  "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
 +  "omarchyVersion": "$(cat /usr/share/omarchy/version 2>/dev/null || echo unknown)",
@@ -120,12 +120,12 @@ index 0000000..cca469b
 +
 +cat >"$stage/restore.sh" <<'RESTORE'
 +#!/bin/bash
-+# Restore a Try Omarchy export on a real Omarchy install. Run it as the user
++# Restore a SavantOS export on a real Omarchy install. Run it as the user
 +# who should receive the configuration, from the extracted export directory.
-+# It backs up anything it replaces under ~/.omarchy-restore-backup/<time>.
++# It backs up anything it replaces under ~/.savantos-restore-backup/<time>.
 +set -euo pipefail
 +here=$(cd "$(dirname "$0")" && pwd)
-+backup="$HOME/.omarchy-restore-backup/$(date +%Y%m%d-%H%M%S)"
++backup="$HOME/.savantos-restore-backup/$(date +%Y%m%d-%H%M%S)"
 +mkdir -p "$backup"
 +
 +# Dotfiles are replaced as units. ~/.config and ~/.local/share are merged one
@@ -185,7 +185,7 @@ index a304319..2159022 100755
          "the sshd request is per boot and leaves sshd configuration alone",
      )
  
-+    exporter = GUEST / "factory-overlay/usr/local/bin/try-omarchy-export"
++    exporter = GUEST / "factory-overlay/usr/local/bin/savantos-export"
 +    export_text = read(exporter)
 +    check(
 +        exporter.stat().st_mode & stat.S_IXUSR != 0

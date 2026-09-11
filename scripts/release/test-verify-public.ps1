@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $verifier = Join-Path $PSScriptRoot 'verify-public.ps1'
-$root = Join-Path ([System.IO.Path]::GetTempPath()) "try-omarchy-verifier-test-$([guid]::NewGuid())"
+$root = Join-Path ([System.IO.Path]::GetTempPath()) "savantos-verifier-test-$([guid]::NewGuid())"
 $previousTemp = $env:RUNNER_TEMP
 New-Item -ItemType Directory -Path "$root/release", "$root/app/testdata", "$root/temp" -Force | Out-Null
 $env:RUNNER_TEMP = "$root/temp"
@@ -15,8 +15,8 @@ function global:curl.exe {
     $attempt = if ($url -match 'attempt=(\d+)') { [int]$Matches[1] } else { 1 }
     $global:LASTEXITCODE = 0
     $failure = switch ($global:downloadCase) {
-        'launcher-failure' { $name -eq 'TryOmarchy.exe' }
-        'stale-launcher' { $name -eq 'TryOmarchy.exe' -and $attempt -gt 1 }
+        'launcher-failure' { $name -eq 'SavantOS.exe' }
+        'stale-launcher' { $name -eq 'SavantOS.exe' -and $attempt -gt 1 }
         'metadata-failure' { $name -eq 'update-v2.json' }
         'signature-failure' { $name -eq 'update.json.sig' }
         'sums-failure' { $name -eq 'SHA256SUMS' }
@@ -27,15 +27,15 @@ function global:curl.exe {
     if ($args -contains '--head') { return }
     $destination = $args[[array]::IndexOf($args, '--output') + 1]
     Copy-Item -LiteralPath "release/$name" -Destination $destination
-    if ($global:downloadCase -eq 'stale-launcher' -and $name -eq 'TryOmarchy.exe.sha256' -and $attempt -eq 1) {
+    if ($global:downloadCase -eq 'stale-launcher' -and $name -eq 'SavantOS.exe.sha256' -and $attempt -eq 1) {
         Set-Content -LiteralPath $destination -Value ('0' * 64)
     }
 }
 
 try {
-    Set-Content release/TryOmarchy.exe 'test launcher'
-    $hash = (Get-FileHash release/TryOmarchy.exe).Hash.ToLowerInvariant()
-    Set-Content release/TryOmarchy.exe.sha256 "$hash  TryOmarchy.exe"
+    Set-Content release/SavantOS.exe 'test launcher'
+    $hash = (Get-FileHash release/SavantOS.exe).Hash.ToLowerInvariant()
+    Set-Content release/SavantOS.exe.sha256 "$hash  SavantOS.exe"
     $metadata = @{version = 'v1.0.0'; launcher = @{sha256 = $hash}} | ConvertTo-Json -Compress
     foreach ($feed in @('update.json', 'update-v2.json')) {
         Set-Content "release/$feed" $metadata
@@ -65,10 +65,10 @@ try {
 
     $global:downloadCase = 'success'
     $global:downloadURLs.Clear()
-    & $verifier -Tag v1.0.0 -Latest -Repository tsouth89/try-omarchy-windows -Attempts 1 -RetryDelaySeconds 0 | Out-Null
+    & $verifier -Tag v1.0.0 -Latest -Repository savant0x/SavantOS -Attempts 1 -RetryDelaySeconds 0 | Out-Null
     if ($global:downloadURLs.Count -ne 6) { throw 'Latest did not check all launcher and feed assets' }
     foreach ($url in $global:downloadURLs) {
-        if (-not $url.StartsWith('https://github.com/tsouth89/try-omarchy-windows/releases/latest/download/')) {
+        if (-not $url.StartsWith('https://github.com/savant0x/SavantOS/releases/latest/download/')) {
             throw "Unexpected legacy Latest URL: $url"
         }
     }

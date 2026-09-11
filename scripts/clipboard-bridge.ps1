@@ -1,4 +1,4 @@
-# Clipboard bridge (host side) - two-way text clipboard sync with the Omarchy guest.
+# Clipboard bridge (host side) - two-way text clipboard sync with the SavantOS guest.
 # Counterpart: scripts/guest/clipboard-bridge.sh (runs inside the guest session).
 # Transport is plain TCP through QEMU's user-mode network - the guest reaches the
 # host as 10.0.2.2, so this works identically on stock QEMU and WINQ-EMU, GL or not

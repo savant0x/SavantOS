@@ -14,7 +14,7 @@ feature that needs raw input devices is installed, the rule upstream's owner
 provisioning adopted in this release.
 ---
  guest/Containerfile                           |  9 +++++++
- .../lib/try-omarchy/provision-instant-trial   |  7 ++++++
+ .../lib/savantos/provision-instant-trial   |  7 ++++++
  guest/keys/omarchy-pkgs.asc                   | 15 +++++++++++
  guest/pacman-x86_64.conf                      |  1 -
  guest/scripts/fetch-source.sh                 | 25 +++++++++++--------

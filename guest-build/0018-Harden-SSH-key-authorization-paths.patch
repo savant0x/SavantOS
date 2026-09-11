@@ -70,7 +70,7 @@ index 8bc4fe3..291bbd9 100644
 +        victim = self.root / "victim"
 +        victim.mkdir()
 +        self.authorized.parent.symlink_to(victim, target_is_directory=True)
-+        result = self.run_request(f"tryomarchy.sshd=1 tryomarchy.sshkey={b64(self.key)}")
++        result = self.run_request(f"savantos.sshd=1 savantos.sshkey={b64(self.key)}")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertFalse((victim / "authorized_keys").exists())
 +        self.assertIn("refusing unsafe SSH directory", result.stderr)
@@ -81,7 +81,7 @@ index 8bc4fe3..291bbd9 100644
 +        victim.write_text("keep\n")
 +        self.authorized.parent.mkdir()
 +        self.authorized.symlink_to(victim)
-+        result = self.run_request(f"tryomarchy.sshd=1 tryomarchy.sshkey={b64(self.key)}")
++        result = self.run_request(f"savantos.sshd=1 savantos.sshkey={b64(self.key)}")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertEqual(victim.read_text(), "keep\n")
 +        self.assertIn("refusing unsafe authorized_keys", result.stderr)

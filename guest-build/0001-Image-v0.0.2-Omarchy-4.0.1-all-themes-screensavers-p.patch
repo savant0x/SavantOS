@@ -7,7 +7,7 @@ Subject: [PATCH 1/4] Image v0.0.2: Omarchy 4.0.1, all themes, screensavers,
 ---
  .../etc/systemd/system/mnt-host.mount         | 15 +++++++
  .../multi-user.target.wants/mnt-host.mount    |  1 +
- .../20-try-omarchy.conf                       |  5 +++
+ .../20-savantos.conf                       |  5 +++
  .../etc/systemd/user/clipboard-bridge.service | 12 ++++++
  .../clipboard-bridge.service                  |  1 +
  .../usr/local/bin/clipboard-bridge            | 39 +++++++++++++++++++
@@ -20,7 +20,7 @@ Subject: [PATCH 1/4] Image v0.0.2: Omarchy 4.0.1, all themes, screensavers,
  12 files changed, 133 insertions(+), 22 deletions(-)
  create mode 100644 guest/factory-overlay/etc/systemd/system/mnt-host.mount
  create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/mnt-host.mount
- create mode 100644 guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf
+ create mode 100644 guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf
  create mode 100644 guest/factory-overlay/etc/systemd/user/clipboard-bridge.service
  create mode 120000 guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/clipboard-bridge.service
  create mode 100755 guest/factory-overlay/usr/local/bin/clipboard-bridge
@@ -36,7 +36,7 @@ index 0000000..586b2df
 +# mount tag "hostshare"). The condition keeps boots without -Share clean: no
 +# 9p device, no mount attempt, no failed unit.
 +[Unit]
-+Description=Host shared folder (Try Omarchy -Share)
++Description=Host shared folder (SavantOS -Share)
 +ConditionPathExistsGlob=/sys/bus/virtio/devices/*/mount_tag
 +
 +[Mount]
@@ -55,11 +55,11 @@ index 0000000..9191775
 @@ -0,0 +1 @@
 +../mnt-host.mount
 \ No newline at end of file
-diff --git a/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf
+diff --git a/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf
 new file mode 100644
 index 0000000..6cd0cfa
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf
++++ b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf
 @@ -0,0 +1,5 @@
 +# In this guest the VM window is the auth boundary (like upstream's encrypted
 +# installs), so keep the autologin provisioning writes instead of letting the
@@ -73,7 +73,7 @@ index 0000000..1e4a53d
 +++ b/guest/factory-overlay/etc/systemd/user/clipboard-bridge.service
 @@ -0,0 +1,12 @@
 +[Unit]
-+Description=Clipboard bridge to the Windows host (Try Omarchy)
++Description=Clipboard bridge to the Windows host (SavantOS)
 +After=graphical-session.target
 +PartOf=graphical-session.target
 +

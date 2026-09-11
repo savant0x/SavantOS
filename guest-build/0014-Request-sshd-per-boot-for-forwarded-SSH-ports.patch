@@ -4,41 +4,41 @@ Date: Wed, 2 Sep 2026 13:56:22 -0400
 Subject: [PATCH] Request sshd per boot for forwarded SSH ports
 
 The launcher forwards loopback ports into the guest and sets
-tryomarchy.sshd=1 whenever a TCP forward targets port 22. A oneshot unit
+savantos.sshd=1 whenever a TCP forward targets port 22. A oneshot unit
 gated on that kernel flag starts sshd for the boot and authorizes the
 launcher-supplied public key for the provisioned account. It never enables
 sshd across boots and never edits sshd_config; upstream's
 omarchy-setup-security-sshd stays the way to make SSH permanent or key-only.
 ---
- .../try-omarchy-sshd.service                  |  1 +
- .../systemd/system/try-omarchy-sshd.service   | 14 ++++++
+ .../savantos-sshd.service                  |  1 +
+ .../systemd/system/savantos-sshd.service   | 14 ++++++
  .../usr/local/lib/try-omarchy/request-sshd    | 45 +++++++++++++++++++
  guest/tests/verify.py                         | 14 ++++++
  4 files changed, 74 insertions(+)
- create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-sshd.service
- create mode 100644 guest/factory-overlay/etc/systemd/system/try-omarchy-sshd.service
+ create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-sshd.service
+ create mode 100644 guest/factory-overlay/etc/systemd/system/savantos-sshd.service
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/request-sshd
 
-diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-sshd.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-sshd.service
+diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-sshd.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-sshd.service
 new file mode 120000
 index 0000000..676f513
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-sshd.service
++++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-sshd.service
 @@ -0,0 +1 @@
-+../try-omarchy-sshd.service
++../savantos-sshd.service
 \ No newline at end of file
-diff --git a/guest/factory-overlay/etc/systemd/system/try-omarchy-sshd.service b/guest/factory-overlay/etc/systemd/system/try-omarchy-sshd.service
+diff --git a/guest/factory-overlay/etc/systemd/system/savantos-sshd.service b/guest/factory-overlay/etc/systemd/system/savantos-sshd.service
 new file mode 100644
 index 0000000..e80631c
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/try-omarchy-sshd.service
++++ b/guest/factory-overlay/etc/systemd/system/savantos-sshd.service
 @@ -0,0 +1,14 @@
-+# Per-boot SSH request from the Try Omarchy launcher. Only boots whose kernel
-+# command line carries tryomarchy.sshd=1 (a host port forwarded to guest port
++# Per-boot SSH request from the SavantOS launcher. Only boots whose kernel
++# command line carries savantos.sshd=1 (a host port forwarded to guest port
 +# 22) reach ExecStart; every other boot leaves sshd untouched and inactive.
 +[Unit]
 +Description=Start sshd for boots that forward a host port to guest port 22
-+ConditionKernelCommandLine=tryomarchy.sshd=1
++ConditionKernelCommandLine=savantos.sshd=1
 +After=network.target omarchy-provision-owner.service
 +
 +[Service]
@@ -54,7 +54,7 @@ index 0000000..53937e5
 +++ b/guest/factory-overlay/usr/local/lib/try-omarchy/request-sshd
 @@ -0,0 +1,45 @@
 +#!/bin/bash
-+# Runs only on boots whose kernel command line carries tryomarchy.sshd=1,
++# Runs only on boots whose kernel command line carries savantos.sshd=1,
 +# which the launcher sets when a host port is forwarded to guest port 22.
 +# Starts sshd for this boot and, when the launcher supplied a public key,
 +# authorizes it for the provisioned account. It never enables sshd across
@@ -65,7 +65,7 @@ index 0000000..53937e5
 +key=""
 +for word in $(</proc/cmdline); do
 +  case $word in
-+    tryomarchy.sshkey=*) key=${word#tryomarchy.sshkey=} ;;
++    savantos.sshkey=*) key=${word#savantos.sshkey=} ;;
 +  esac
 +done
 +
@@ -106,11 +106,11 @@ index 0160372..a304319 100755
          "the welcome service is limited to explicit instant-mode guests",
      )
  
-+    sshd_unit = read(GUEST / "factory-overlay/etc/systemd/system/try-omarchy-sshd.service")
++    sshd_unit = read(GUEST / "factory-overlay/etc/systemd/system/savantos-sshd.service")
 +    sshd_request = read(GUEST / "factory-overlay/usr/local/lib/try-omarchy/request-sshd")
 +    check(
-+        "ConditionKernelCommandLine=tryomarchy.sshd=1" in sshd_unit
-+        and (GUEST / "factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-sshd.service").is_symlink(),
++        "ConditionKernelCommandLine=savantos.sshd=1" in sshd_unit
++        and (GUEST / "factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-sshd.service").is_symlink(),
 +        "sshd starts only on boots that explicitly request it",
 +    )
 +    check(

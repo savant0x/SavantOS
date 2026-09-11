@@ -5,39 +5,39 @@ Subject: [PATCH] Link the shared folder into the home directory under its own
  name
 
 The launcher names its -Share folder on the kernel command line
-(tryomarchy.sharename, base64). A per-login user unit links ~/<name> to
+(savantos.sharename, base64). A per-login user unit links ~/<name> to
 /mnt/host, removes the link on launches that share nothing, and never
 replaces a real folder with content.
 ---
- .../try-omarchy-share-link.service            |  1 +
- .../user/try-omarchy-share-link.service       | 13 ++++
+ .../savantos-share-link.service            |  1 +
+ .../user/savantos-share-link.service       | 13 ++++
  .../usr/local/lib/try-omarchy/share-link      | 69 +++++++++++++++++++
  guest/tests/verify.py                         | 11 +++
  4 files changed, 94 insertions(+)
- create mode 120000 guest/factory-overlay/etc/systemd/user/default.target.wants/try-omarchy-share-link.service
- create mode 100644 guest/factory-overlay/etc/systemd/user/try-omarchy-share-link.service
+ create mode 120000 guest/factory-overlay/etc/systemd/user/default.target.wants/savantos-share-link.service
+ create mode 100644 guest/factory-overlay/etc/systemd/user/savantos-share-link.service
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/share-link
 
-diff --git a/guest/factory-overlay/etc/systemd/user/default.target.wants/try-omarchy-share-link.service b/guest/factory-overlay/etc/systemd/user/default.target.wants/try-omarchy-share-link.service
+diff --git a/guest/factory-overlay/etc/systemd/user/default.target.wants/savantos-share-link.service b/guest/factory-overlay/etc/systemd/user/default.target.wants/savantos-share-link.service
 new file mode 120000
 index 0000000..46ecef6
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/user/default.target.wants/try-omarchy-share-link.service
++++ b/guest/factory-overlay/etc/systemd/user/default.target.wants/savantos-share-link.service
 @@ -0,0 +1 @@
-+../try-omarchy-share-link.service
++../savantos-share-link.service
 \ No newline at end of file
-diff --git a/guest/factory-overlay/etc/systemd/user/try-omarchy-share-link.service b/guest/factory-overlay/etc/systemd/user/try-omarchy-share-link.service
+diff --git a/guest/factory-overlay/etc/systemd/user/savantos-share-link.service b/guest/factory-overlay/etc/systemd/user/savantos-share-link.service
 new file mode 100644
 index 0000000..7347927
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/user/try-omarchy-share-link.service
++++ b/guest/factory-overlay/etc/systemd/user/savantos-share-link.service
 @@ -0,0 +1,13 @@
 +# Links the launcher's -Share folder into the home directory under its own
 +# name (see /usr/local/lib/try-omarchy/share-link). Runs once per login.
 +[Unit]
-+Description=Link the Windows shared folder into the home directory (Try Omarchy)
-+ConditionKernelCommandLine=|tryomarchy.sharename
-+ConditionPathExists=|%h/.local/state/try-omarchy/share-link
++Description=Link the Windows shared folder into the home directory (SavantOS)
++ConditionKernelCommandLine=|savantos.sharename
++ConditionPathExists=|%h/.local/state/savantos/share-link
 +
 +[Service]
 +Type=oneshot
@@ -52,17 +52,17 @@ index 0000000..0f2a063
 +++ b/guest/factory-overlay/usr/local/lib/try-omarchy/share-link
 @@ -0,0 +1,69 @@
 +#!/bin/bash
-+# Runs in the user session (try-omarchy-share-link.service). The launcher
++# Runs in the user session (savantos-share-link.service). The launcher
 +# mounts its -Share folder at /mnt/host and names it on the kernel command
-+# line (tryomarchy.sharename=<base64 folder name>). This links that folder
++# line (savantos.sharename=<base64 folder name>). This links that folder
 +# into the home directory under the same name, so C:\Users\me\Work shows up
 +# as ~/Work, and removes the link again on boots that share nothing. Only a
 +# link this script created, an empty directory, or a dangling link is ever
 +# replaced; a real folder with content is left alone.
 +set -euo pipefail
 +
-+cmdline_file=${TRY_OMARCHY_CMDLINE:-/proc/cmdline}
-+state_dir="$HOME/.local/state/try-omarchy"
++cmdline_file=${TRY_SAVANTOS_CMDLINE:-/proc/cmdline}
++state_dir="$HOME/.local/state/savantos"
 +state_file="$state_dir/share-link"
 +mount_point=/mnt/host
 +
@@ -84,7 +84,7 @@ index 0000000..0f2a063
 +encoded=""
 +for word in $(<"$cmdline_file"); do
 +  case $word in
-+    tryomarchy.sharename=*) encoded=${word#tryomarchy.sharename=} ;;
++    savantos.sharename=*) encoded=${word#savantos.sharename=} ;;
 +  esac
 +done
 +[[ -n $encoded ]] || exit 0
@@ -129,13 +129,13 @@ index 2159022..17e0495 100755
      )
  
 +    share_link = read(GUEST / "factory-overlay/usr/local/lib/try-omarchy/share-link")
-+    share_unit = read(GUEST / "factory-overlay/etc/systemd/user/try-omarchy-share-link.service")
++    share_unit = read(GUEST / "factory-overlay/etc/systemd/user/savantos-share-link.service")
 +    check(
-+        "tryomarchy.sharename" in share_unit
++        "savantos.sharename" in share_unit
 +        and "ln -s" in share_link
 +        and "rmdir" in share_link
 +        and "rm -rf" not in share_link
-+        and (GUEST / "factory-overlay/etc/systemd/user/default.target.wants/try-omarchy-share-link.service").is_symlink(),
++        and (GUEST / "factory-overlay/etc/systemd/user/default.target.wants/savantos-share-link.service").is_symlink(),
 +        "the share link only ever replaces its own link or an empty directory",
 +    )
 +

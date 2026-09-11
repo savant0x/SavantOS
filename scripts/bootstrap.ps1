@@ -1,12 +1,12 @@
-# Try Omarchy for Windows - developer-preview bootstrap.
+# SavantOS for Windows - developer-preview bootstrap.
 # Idempotent; rerun after the WHP reboot if prompted.
 # Works without Administrator when the machine-wide pieces (WHP feature, QEMU) are
 # already in place - only those two need elevation; the guest image and zstd are
 # per-user. Admin is required the FIRST time on a machine.
 #   powershell -ExecutionPolicy Bypass -File bootstrap.ps1
-param([string]$Dir = "$env:LOCALAPPDATA\TryOmarchy")
+param([string]$Dir = "$env:LOCALAPPDATA\SavantOS")
 $ErrorActionPreference = 'Stop'
-$release = 'https://github.com/omacom/try-omarchy-windows/releases/download/v0.0.3-preview'
+$release = 'https://github.com/savant0x/SavantOS/releases/download/v0.0.1'
 
 $id = [Security.Principal.WindowsIdentity]::GetCurrent()
 $isAdmin = ([Security.Principal.WindowsPrincipal]$id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -70,8 +70,8 @@ if (-not (Test-Path (Join-Path $g 'rootfs.ext4'))) {
 }
 
 Write-Host ''
-Write-Host 'Done. Boot Omarchy with:' -ForegroundColor Green
-Write-Host '  powershell -ExecutionPolicy Bypass -File launch-omarchy.ps1'
+Write-Host 'Done. Boot SavantOS with:' -ForegroundColor Green
+Write-Host '  powershell -ExecutionPolicy Bypass -File launch-savantos.ps1'
 if (Test-Path 'C:\WINQ-EMU\bin\qemu-system-x86_64w.exe') {
     Write-Host 'WINQ-EMU detected: the launcher will use GPU acceleration (virgl + Venus).'
 } else {

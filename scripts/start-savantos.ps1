@@ -1,10 +1,10 @@
-# Start the Omarchy guest under WHPX and keep it running while this session lives.
-# Disk persists at C:\tryomarchy\vm\disk.raw (prepared by boot-omarchy-test.ps1).
+# Start the SavantOS guest under WHPX and keep it running while this session lives.
+# Disk persists at C:\savantos\vm\disk.raw (prepared by boot-savantos-test.ps1).
 $ErrorActionPreference = 'Stop'
-$g = '\\host.lan\Data\tryomarchy\guest'
-$wd = 'C:\tryomarchy'
+$g = '\\host.lan\Data\savantos\guest'
+$wd = 'C:\savantos'
 $disk = Join-Path $wd 'vm\disk.raw'
-if (-not (Test-Path $disk)) { throw 'disk.raw missing; run boot-omarchy-test.ps1 first' }
+if (-not (Test-Path $disk)) { throw 'disk.raw missing; run boot-savantos-test.ps1 first' }
 
 $spec = Get-Content (Join-Path $g 'build-spec.json') | ConvertFrom-Json
 $cmdline = ($spec.runtime.kernelCommandLine -replace 'console=hvc0', 'console=ttyS0 console=tty1') + ' systemd.debug-shell=1'
@@ -23,12 +23,12 @@ $qemuArgs = @(
     '-device','virtio-rng-pci',
     '-display','vnc=127.0.0.1:7',
     '-qmp','tcp:127.0.0.1:4445,server=on,wait=off',
-    '-serial',"file:$wd\omarchy-serial.log"
+    '-serial',"file:$wd\savantos-serial.log"
 )
 $p = Start-Process -FilePath 'C:\Program Files\qemu\qemu-system-x86_64.exe' `
-    -ArgumentList $qemuArgs -RedirectStandardError "$wd\omarchy-qemu-err.log" `
-    -RedirectStandardOutput "$wd\omarchy-qemu-out.log" -PassThru -WindowStyle Hidden
-Write-Host "OMARCHY-RUNNING pid $($p.Id)"
+    -ArgumentList $qemuArgs -RedirectStandardError "$wd\savantos-qemu-err.log" `
+    -RedirectStandardOutput "$wd\savantos-qemu-out.log" -PassThru -WindowStyle Hidden
+Write-Host "SAVANTOS-RUNNING pid $($p.Id)"
 Wait-Process -Id $p.Id
-Write-Host "OMARCHY-EXITED code $($p.ExitCode)"
-Get-Content "$wd\omarchy-qemu-err.log" -ErrorAction SilentlyContinue | Select-Object -Last 5
+Write-Host "SAVANTOS-EXITED code $($p.ExitCode)"
+Get-Content "$wd\savantos-qemu-err.log" -ErrorAction SilentlyContinue | Select-Object -Last 5

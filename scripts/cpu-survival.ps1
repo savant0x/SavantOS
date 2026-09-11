@@ -1,7 +1,7 @@
 # For each CPU candidate: boot Alpine under WHPX, check the guest SURVIVES 75s of
 # real boot load (Skylake-Client-v3 passes launch but dies mid-boot).
 $ErrorActionPreference = 'Stop'
-$wd = 'C:\tryomarchy'
+$wd = 'C:\savantos'
 $candidates = @(
     'qemu64,+ssse3,+sse4.1,+sse4.2,+popcnt',
     'qemu64,+ssse3,+sse4.1,+sse4.2,+popcnt,+aes,+xsave,+avx',

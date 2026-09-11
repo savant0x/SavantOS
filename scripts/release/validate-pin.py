@@ -33,7 +33,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("tag")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
-    parser.add_argument("--repository", default="omacom/try-omarchy-windows")
+    parser.add_argument("--repository", default="savant0x/SavantOS")
     args = parser.parse_args()
 
     if not TAG_RE.fullmatch(args.tag):

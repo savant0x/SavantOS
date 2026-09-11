@@ -1,4 +1,4 @@
-# QMP driver for the running Omarchy guest (port 4445).
+# QMP driver for the running SavantOS guest (port 4445).
 # Usage: qmp.ps1 shot NAME | type STRING | key NAME[,NAME...] | status
 param([Parameter(Mandatory)][string]$op, [string]$arg = '')
 $ErrorActionPreference = 'Stop'

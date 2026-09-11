@@ -46,7 +46,7 @@ class PrepareAssetsTests(unittest.TestCase):
             lock = root / "runtime.lock.json"
             lock.write_text(json.dumps(entries), encoding="utf-8")
             env = os.environ.copy()
-            env["TRYOMARCHY_RUNTIME_LOCK"] = str(lock)
+            env["SAVANTOS_RUNTIME_LOCK"] = str(lock)
 
             result = subprocess.run(
                 ["bash", str(SCRIPT), str(artifacts)],

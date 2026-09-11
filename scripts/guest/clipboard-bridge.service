@@ -1,5 +1,5 @@
 [Unit]
-Description=Clipboard bridge to the Windows host (Try Omarchy)
+Description=Clipboard bridge to the Windows host (SavantOS)
 After=graphical-session.target
 PartOf=graphical-session.target
 

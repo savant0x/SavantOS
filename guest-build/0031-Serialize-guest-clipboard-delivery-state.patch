@@ -1,5 +1,5 @@
 From f3749f22552fdfa08037603c576e74401c3e490d Mon Sep 17 00:00:00 2001
-From: Try Omarchy Release <actions@users.noreply.github.com>
+From: SavantOS Release <actions@users.noreply.github.com>
 Date: Fri, 4 Sep 2026 22:00:04 -0400
 Subject: [PATCH] Serialize guest clipboard delivery state
 
@@ -78,7 +78,7 @@ index 2ae5994..777e13d 100644
 @@ -57,3 +57,81 @@ class ClipboardTests(unittest.TestCase):
          self.assertEqual(self.push(b'x' * (8388608 + 1)).returncode, 0)
          self.assertFalse(self.capture.exists())
-         self.assertEqual(list((self.root / 'try-omarchy-clipboard').glob('outgoing.*')), [])
+         self.assertEqual(list((self.root / 'savantos-clipboard').glob('outgoing.*')), [])
 +
 +    def receive(self, data):
 +        return subprocess.run(['sh', str(BRIDGE), '--receive'], input=data,
@@ -98,7 +98,7 @@ index 2ae5994..777e13d 100644
 +        copy.write_text('#!/bin/sh\ncat > /dev/null\nexit 1\n')
 +        copy.chmod(0o755)
 +        self.assertNotEqual(self.receive(b'host text').returncode, 0)
-+        self.assertFalse((self.root / 'try-omarchy-clipboard/last_content').exists())
++        self.assertFalse((self.root / 'savantos-clipboard/last_content').exists())
 +
 +    def test_push_completion_cannot_overwrite_newer_receive(self):
 +        import time
@@ -125,7 +125,7 @@ index 2ae5994..777e13d 100644
 +            # Wait until receive has consumed its input, then release the slow
 +            # send. Both operations must finish with B as the current state.
 +            deadline = time.monotonic() + 3
-+            state = self.root / 'try-omarchy-clipboard'
++            state = self.root / 'savantos-clipboard'
 +            while len(list(state.glob('outgoing.*'))) < 2 and time.monotonic() < deadline:
 +                time.sleep(0.01)
 +            self.assertEqual(len(list(state.glob('outgoing.*'))), 2)
@@ -153,7 +153,7 @@ index 2ae5994..777e13d 100644
 +        timeout.write_text('#!/bin/sh\ncat > /dev/null\nexit 124\n')
 +        timeout.chmod(0o755)
 +        self.assertEqual(self.push(b'retry after timeout').returncode, 1)
-+        self.assertFalse((self.root / 'try-omarchy-clipboard/last_content').exists())
++        self.assertFalse((self.root / 'savantos-clipboard/last_content').exists())
 +        timeout.unlink()
 +        self.assertEqual(self.push(b'retry after timeout').returncode, 0)
 +        self.assertEqual(self.capture.read_bytes(), base64.b64encode(b'retry after timeout') + b'\n')

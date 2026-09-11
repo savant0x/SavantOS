@@ -1,5 +1,5 @@
 From fa3149205a58e52a418463ae259daf0483e3a23d Mon Sep 17 00:00:00 2001
-From: Try Omarchy Release <actions@users.noreply.github.com>
+From: SavantOS Release <actions@users.noreply.github.com>
 Date: Sun, 30 Aug 2026 11:04:43 -0400
 Subject: [PATCH] Make clipboard bridge survive session timing
 
@@ -43,7 +43,7 @@ index a299b12..41bd351 100755
 +PULL_PORT=4449
 +
 +XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-+STATE=$XDG_RUNTIME_DIR/try-omarchy-clipboard
++STATE=$XDG_RUNTIME_DIR/savantos-clipboard
 +export XDG_RUNTIME_DIR STATE
 +umask 077
  mkdir -p "$STATE"

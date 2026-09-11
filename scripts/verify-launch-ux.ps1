@@ -1,6 +1,6 @@
 # Launch-UX regression checker. Run while the VM is up; exits nonzero on any FAIL.
 # The contract (settled 2026-08-28 after hands-on feedback - do not regress):
-#   - windowless QEMU binary (no console window), window titled "Try Omarchy"
+#   - windowless QEMU binary (no console window), window titled "SavantOS"
 #   - window opens MAXIMIZED (taskbar visible; never fullscreen by default)
 #   - one guest-rendered mouse cursor, without SDL forcing a second host cursor
 #   - guest console sized to the maximized client area (video=WxH on the cmdline)
@@ -20,13 +20,13 @@ if ($null -eq $p) { exit 1 }
 $titleReady = $false
 for ($attempt = 0; $attempt -lt 8; $attempt++) {
     $p.Refresh()
-    if ($p.MainWindowTitle -eq 'Try Omarchy') {
+    if ($p.MainWindowTitle -eq 'SavantOS') {
         $titleReady = $true
         break
     }
     Start-Sleep -Milliseconds 250
 }
-Check 'window titled "Try Omarchy"' $titleReady
+Check 'window titled "SavantOS"' $titleReady
 Check 'window is maximized (not fullscreen, not floating)' ([UxCheck.Native]::IsZoomed($p.MainWindowHandle))
 
 $cl = (Get-CimInstance Win32_Process -Filter "ProcessId=$($p.Id)").CommandLine

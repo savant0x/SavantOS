@@ -1,4 +1,4 @@
-# QMP driver for the running Omarchy guest (port 4445).
+# QMP driver for the running SavantOS guest (port 4445).
 # Usage: qmp.ps1 shot NAME | type STRING | key NAME[,NAME...] | status
 param([Parameter(Mandatory)][string]$op, [string]$arg = '')
 $ErrorActionPreference = 'Stop'
@@ -20,10 +20,10 @@ function Send-Keys([string[]]$qcodes) {
 
 switch ($op) {
     'shot' {
-        $w.WriteLine("{`"execute`":`"screendump`",`"arguments`":{`"filename`":`"C:\\tryomarchy\\$arg.ppm`"}}")
+        $w.WriteLine("{`"execute`":`"screendump`",`"arguments`":{`"filename`":`"C:\\savantos\\$arg.ppm`"}}")
         Start-Sleep -Milliseconds 1500
         try { Write-Host $r.ReadLine() } catch {}
-        Copy-Item "C:\tryomarchy\$arg.ppm" "\\host.lan\Data\tryomarchy\$arg.ppm" -Force
+        Copy-Item "C:\savantos\$arg.ppm" "\\host.lan\Data\savantos\$arg.ppm" -Force
         Write-Host "shot $arg"
     }
     'type' {

@@ -1,5 +1,5 @@
-# Try Omarchy for Windows - launcher (developer preview).
-# Boots Omarchy in an SDL window. GPU-accelerated (WINQ-EMU: virgl + Venus Vulkan)
+# SavantOS for Windows - launcher (developer preview).
+# Boots SavantOS in an SDL window. GPU-accelerated (WINQ-EMU: virgl + Venus Vulkan)
 # when WINQ-EMU is installed at C:\WINQ-EMU, CPU rendering (llvmpipe) otherwise.
 #
 # Supervises the VM so users never deal with WHPX's rough edges:
@@ -10,11 +10,11 @@
 #   - guest reboot (SHUTDOWN reason guest-reset under -no-reboot) relaunches the VM.
 # Uses the windowless qemu-system-x86_64w.exe so no console window ever appears;
 # QEMU's own messages go to vm\qemu.log. The winkey-forwarder (hidden) scopes the
-# Windows key to the VM window and keeps the window titled "Try Omarchy".
+# Windows key to the VM window and keeps the window titled "SavantOS".
 #
-#   powershell -ExecutionPolicy Bypass -File launch-omarchy.ps1 [-Fullscreen] [-Fresh] [-NoGpu] [-HostCursor]
+#   powershell -ExecutionPolicy Bypass -File launch-savantos.ps1 [-Fullscreen] [-Fresh] [-NoGpu] [-HostCursor]
 param(
-    [string]$Dir = "$env:LOCALAPPDATA\TryOmarchy",
+    [string]$Dir = "$env:LOCALAPPDATA\SavantOS",
     [string]$WinqEmu = 'C:\WINQ-EMU',
     [switch]$Fullscreen,
     [switch]$Fresh,    # discard the writable disk and start over
@@ -95,7 +95,7 @@ $qemuArgs = @(
     # In-guest reboot/poweroff wedges upstream WHPX (vCPUs never return from system
     # reset). Exit instead; the supervisor loop below relaunches on guest reset.
     '-no-reboot',
-    '-name', 'Try Omarchy'
+    '-name', 'SavantOS'
 )
 if ($useGpu) {
     # WINQ-EMU's patched WHPX survives -cpu host (XSAVE/AVX included); virtio-vga-gl
@@ -133,7 +133,7 @@ if ($Share) {
 if ($Fullscreen) { $qemuArgs += '-full-screen' }
 $argStr = ($qemuArgs | ForEach-Object { if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ } }) -join ' '
 
-Add-Type -MemberDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);' -Name Native -Namespace TryOmarchy
+Add-Type -MemberDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);' -Name Native -Namespace SavantOS
 
 function Connect-Qmp([int]$port, [int]$readTimeoutMs) {
     # Full handshake (greeting + qmp_capabilities). Returns $null unless QEMU's main
@@ -173,7 +173,7 @@ try {
         # --- launch, with wedge watchdog ---
         $qmp = $null
         for ($attempt = 1; $attempt -le 4; $attempt++) {
-            Write-Host "Booting Omarchy - $mode (Ctrl+Alt+G toggles mouse grab, Ctrl+Alt+F fullscreen)..."
+            Write-Host "Booting SavantOS - $mode (Ctrl+Alt+G toggles mouse grab, Ctrl+Alt+F fullscreen)..."
             $proc = Start-Process -FilePath $qemu -ArgumentList $argStr -PassThru
             $deadline = (Get-Date).AddSeconds(30)
             while ($null -eq $qmp -and (Get-Date) -lt $deadline -and -not $proc.HasExited) {
@@ -193,7 +193,7 @@ try {
             for ($i = 0; $i -lt 10; $i++) {
                 $proc.Refresh()
                 if ($proc.MainWindowHandle -ne [IntPtr]::Zero) {
-                    [TryOmarchy.Native]::ShowWindow($proc.MainWindowHandle, 3) | Out-Null   # SW_MAXIMIZE
+                    [SavantOS.Native]::ShowWindow($proc.MainWindowHandle, 3) | Out-Null   # SW_MAXIMIZE
                     break
                 }
                 Start-Sleep -Milliseconds 500

@@ -20,13 +20,13 @@ PY
 source_url=${source_fields[0]}
 source_commit=${source_fields[1]}
 
-work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/try-omarchy-lock-refresh.XXXXXX")
+work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/savantos-lock-refresh.XXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 git -C "$work" init --quiet
 git -C "$work" remote add origin "$source_url"
 git -C "$work" fetch --quiet --depth=1 origin "$source_commit"
 git -C "$work" checkout --quiet --detach FETCH_HEAD
-git -C "$work" config user.name "Try Omarchy Release"
+git -C "$work" config user.name "SavantOS Release"
 git -C "$work" config user.email "actions@users.noreply.github.com"
 git -C "$work" am --quiet "$repo_root"/guest-build/*.patch
 

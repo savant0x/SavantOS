@@ -43,7 +43,7 @@ source_url=${source_fields[0]}
 source_commit=${source_fields[1]}
 [[ $source_commit =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid guest source commit" >&2; exit 1; }
 
-work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/try-omarchy-guest-source.XXXXXX")
+work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/savantos-guest-source.XXXXXX")
 cleanup() {
   rm -rf -- "$work"
 }
@@ -54,7 +54,7 @@ git -C "$work" remote add origin "$source_url"
 git -C "$work" fetch --quiet --depth=1 origin "$source_commit"
 git -C "$work" checkout --quiet --detach FETCH_HEAD
 test "$(git -C "$work" rev-parse HEAD)" = "$source_commit"
-git -C "$work" config user.name "Try Omarchy Release"
+git -C "$work" config user.name "SavantOS Release"
 git -C "$work" config user.email "actions@users.noreply.github.com"
 git -C "$work" am "$repo_root"/guest-build/*.patch
 

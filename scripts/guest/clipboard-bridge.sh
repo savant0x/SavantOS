@@ -7,7 +7,7 @@ PUSH_PORT=4448
 PULL_PORT=4449
 
 XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-STATE=$XDG_RUNTIME_DIR/try-omarchy-clipboard
+STATE=$XDG_RUNTIME_DIR/savantos-clipboard
 export XDG_RUNTIME_DIR STATE
 umask 077
 mkdir -p "$STATE"

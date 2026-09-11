@@ -1,5 +1,5 @@
 From 2d048dc5dea78b93367d01499f818ca245aa4161 Mon Sep 17 00:00:00 2001
-From: Try Omarchy Release <actions@users.noreply.github.com>
+From: SavantOS Release <actions@users.noreply.github.com>
 Date: Sun, 30 Aug 2026 19:10:26 -0400
 Subject: [PATCH] Refresh guest package lock for nautilus 50.3 and fd 10.5
 

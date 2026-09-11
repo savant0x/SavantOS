@@ -14,9 +14,9 @@ import time
 from pathlib import Path
 
 
-SUCCESS = b"TRYOMARCHY_SMOKE:omarchy:instant-trial"
+SUCCESS = b"SAVANTOS_SMOKE:savant:instant-trial"
 # Facts the built image must satisfy, checked from inside the booted guest
-# and reported on the serial console as TRYOMARCHY_FACT:<name>:<value>.
+# and reported on the serial console as SAVANTOS_FACT:<name>:<value>.
 FACT_CHECKS = {
     "clang": "command -v clang >/dev/null 2>&1 && echo present || echo missing",
     "yay": "pacman -Q yay >/dev/null 2>&1 && echo present || echo missing",
@@ -25,11 +25,11 @@ FACT_CHECKS = {
     "recorder": "pacman -Q gpu-screen-recorder >/dev/null 2>&1 && echo present || echo missing",
     "foreign": "pacman -Qmq 2>/dev/null | wc -l",
     "sshd": "systemctl is-active sshd 2>/dev/null || true",
-    "omarchy-repo-signed": "grep -A2 '^\\[omarchy\\]' /etc/pacman.conf | grep -q TrustAll && echo no || echo yes",
+    "savantos-repo-signed": "grep -A2 '^\\[savantos\\]' /etc/pacman.conf | grep -q TrustAll && echo no || echo yes",
     "input-group": "id -nG | tr ' ' '\\n' | grep -qx input && echo yes || echo no",
     "compat-version": "test \"$(cat /usr/share/try-omarchy/compat-version)\" = \"12:$(uname -r)\" && echo yes || echo no",
     "kernel-modules": "test -f /usr/lib/modules/$(uname -r)/modules.dep.bin && echo yes || echo no",
-    "ready-service": "systemctl is-enabled try-omarchy-ready.service 2>/dev/null || true",
+    "ready-service": "systemctl is-enabled savantos-ready.service 2>/dev/null || true",
 }
 EXPECTED_FACTS = {
     "clang": "present",
@@ -39,7 +39,7 @@ EXPECTED_FACTS = {
     "recorder": "present",
     "foreign": "0",
     "sshd": "inactive",
-    "omarchy-repo-signed": "yes",
+    "savantos-repo-signed": "yes",
     "input-group": "no",
     "compat-version": "yes",
     "kernel-modules": "yes",
@@ -56,7 +56,7 @@ def parse_facts(transcript: bytes) -> dict[str, str]:
     """
     facts = {}
     for name, value in re.findall(
-        r"TRYOMARCHY_FACT:([A-Za-z0-9-]+):([^\s\x1b'\"\\]+)(?=\s|\x1b|$)",
+        r"SAVANTOS_FACT:([A-Za-z0-9-]+):([^\s\x1b'\"\\]+)(?=\s|\x1b|$)",
         transcript.decode("utf-8", errors="replace"),
     ):
         if "%" not in value:
@@ -76,7 +76,7 @@ def main() -> None:
     spec = json.loads((args.artifacts / "build-spec.json").read_text(encoding="utf-8"))
     cmdline = spec["runtime"]["kernelCommandLine"]
     cmdline = cmdline.replace("console=tty0 ", "").replace("console=hvc0", "console=ttyS0")
-    cmdline += " tryomarchy.instant=1 systemd.unit=multi-user.target"
+    cmdline += " savantos.instant=1 systemd.unit=multi-user.target"
 
     command = [
         "qemu-system-x86_64",
@@ -161,14 +161,14 @@ def main() -> None:
 
                 login_prompt = transcript.rfind(b"login:")
                 if login_prompt > last_login_prompt and login_attempts < 20:
-                    process.stdin.write(b"omarchy\n")
+                    process.stdin.write(b"savant\n")
                     process.stdin.flush()
                     login_attempts += 1
                     last_login_prompt = login_prompt
 
                 password_prompt = transcript.rfind(b"Password:")
                 if password_prompt > last_password_prompt:
-                    process.stdin.write(b"omarchy\n")
+                    process.stdin.write(b"savant\n")
                     process.stdin.flush()
                     password_sent_at = time.monotonic()
                     password_offset = len(transcript)
@@ -183,12 +183,12 @@ def main() -> None:
                 and time.monotonic() - password_sent_at >= 3
             ):
                 checks = "; ".join(
-                    f"printf 'TRYOMARCHY_FACT:{name}:%s\\n' \"$({command})\"" for name, command in FACT_CHECKS.items()
+                    f"printf 'SAVANTOS_FACT:{name}:%s\\n' \"$({command})\"" for name, command in FACT_CHECKS.items()
                 )
                 process.stdin.write(
                     (checks + "; ").encode()
-                    + b"printf 'TRYOMARCHY_SMOKE:%s:%s\\n' \"$(id -un)\" "
-                    b"\"$(cat /var/lib/try-omarchy/provision-mode 2>/dev/null)\"; "
+                    + b"printf 'SAVANTOS_SMOKE:%s:%s\\n' \"$(id -un)\" "
+                    b"\"$(cat /var/lib/savantos/provision-mode 2>/dev/null)\"; "
                     b"sudo systemctl poweroff\n"
                 )
                 process.stdin.flush()

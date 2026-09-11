@@ -5,33 +5,33 @@ Subject: [PATCH 4/4] Guest reboot-notify unit: report reboot intent to the
  shell (port 4450)
 
 ---
- .../try-omarchy-reboot-notify.service            |  1 +
- .../system/try-omarchy-reboot-notify.service     | 16 ++++++++++++++++
+ .../savantos-reboot-notify.service            |  1 +
+ .../system/savantos-reboot-notify.service     | 16 ++++++++++++++++
  .../usr/local/lib/try-omarchy/reboot-notify      |  8 ++++++++
  3 files changed, 25 insertions(+)
- create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-reboot-notify.service
- create mode 100644 guest/factory-overlay/etc/systemd/system/try-omarchy-reboot-notify.service
+ create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-reboot-notify.service
+ create mode 100644 guest/factory-overlay/etc/systemd/system/savantos-reboot-notify.service
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/reboot-notify
 
-diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-reboot-notify.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-reboot-notify.service
+diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-reboot-notify.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-reboot-notify.service
 new file mode 120000
 index 0000000..2bd8950
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-reboot-notify.service
++++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-reboot-notify.service
 @@ -0,0 +1 @@
-+../try-omarchy-reboot-notify.service
++../savantos-reboot-notify.service
 \ No newline at end of file
-diff --git a/guest/factory-overlay/etc/systemd/system/try-omarchy-reboot-notify.service b/guest/factory-overlay/etc/systemd/system/try-omarchy-reboot-notify.service
+diff --git a/guest/factory-overlay/etc/systemd/system/savantos-reboot-notify.service b/guest/factory-overlay/etc/systemd/system/savantos-reboot-notify.service
 new file mode 100644
 index 0000000..1e0b84b
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/try-omarchy-reboot-notify.service
++++ b/guest/factory-overlay/etc/systemd/system/savantos-reboot-notify.service
 @@ -0,0 +1,16 @@
-+# Reports reboot intent to the Try Omarchy shell at shutdown. Started (as a
++# Reports reboot intent to the SavantOS shell at shutdown. Started (as a
 +# no-op) with the network up; its ExecStop therefore runs BEFORE the network
 +# is torn down during shutdown, while 10.0.2.2 is still reachable.
 +[Unit]
-+Description=Tell the Try Omarchy shell when a reboot (not poweroff) starts
++Description=Tell the SavantOS shell when a reboot (not poweroff) starts
 +After=network.target NetworkManager.service
 +
 +[Service]
@@ -50,7 +50,7 @@ index 0000000..3a206e9
 +++ b/guest/factory-overlay/usr/local/lib/try-omarchy/reboot-notify
 @@ -0,0 +1,8 @@
 +#!/bin/bash
-+# Runs at shutdown (ExecStop of try-omarchy-reboot-notify.service). When the
++# Runs at shutdown (ExecStop of savantos-reboot-notify.service). When the
 +# guest is REBOOTING (not powering off), tell the host shell on the lifecycle
 +# port so it relaunches QEMU - a QEMU wedged during guest reset under stock
 +# WHPX delivers no SHUTDOWN event, so QMP alone cannot tell the two apart.

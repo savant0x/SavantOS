@@ -3,27 +3,27 @@ From: Tyler South <tsouth2@gmail.com>
 Date: Wed, 2 Sep 2026 14:49:12 -0400
 Subject: [PATCH] Test the overlay scripts unprivileged with fake system tools
 
-share-link, request-sshd, try-omarchy-export and its restore.sh now have
+share-link, request-sshd, savantos-export and its restore.sh now have
 behavioral tests under guest/tests, run by guest/test and therefore by the
 guest-contract CI job. The scripts gained two testability seams: ownership
 changes only as root, and an override for the factory package list.
 ---
- .../usr/local/bin/try-omarchy-export          |   2 +-
+ .../usr/local/bin/savantos-export          |   2 +-
  .../usr/local/lib/try-omarchy/request-sshd    |   9 +-
  guest/tests/test_overlay_scripts.py           | 233 ++++++++++++++++++
  3 files changed, 240 insertions(+), 4 deletions(-)
  create mode 100644 guest/tests/test_overlay_scripts.py
 
-diff --git a/guest/factory-overlay/usr/local/bin/try-omarchy-export b/guest/factory-overlay/usr/local/bin/try-omarchy-export
+diff --git a/guest/factory-overlay/usr/local/bin/savantos-export b/guest/factory-overlay/usr/local/bin/savantos-export
 index cca469b..6520e4a 100755
---- a/guest/factory-overlay/usr/local/bin/try-omarchy-export
-+++ b/guest/factory-overlay/usr/local/bin/try-omarchy-export
+--- a/guest/factory-overlay/usr/local/bin/savantos-export
++++ b/guest/factory-overlay/usr/local/bin/savantos-export
 @@ -35,7 +35,7 @@ if [[ -z $destination ]]; then
  fi
  [[ -d $destination && -w $destination ]] || fail "destination is not a writable directory: $destination"
  
 -factory_lock=/usr/share/try-omarchy/packages.lock.txt
-+factory_lock=${TRY_OMARCHY_FACTORY_LOCK:-/usr/share/try-omarchy/packages.lock.txt}
++factory_lock=${TRY_SAVANTOS_FACTORY_LOCK:-/usr/share/try-omarchy/packages.lock.txt}
  [[ -f $factory_lock ]] || fail "factory package list not found: $factory_lock"
  
  stamp=$(date +%Y%m%d-%H%M%S)
@@ -72,7 +72,7 @@ index 0000000..8bc4fe3
 +OVERLAY = Path(__file__).resolve().parents[1] / "factory-overlay"
 +SHARE_LINK = OVERLAY / "usr/local/lib/try-omarchy/share-link"
 +REQUEST_SSHD = OVERLAY / "usr/local/lib/try-omarchy/request-sshd"
-+EXPORT = OVERLAY / "usr/local/bin/try-omarchy-export"
++EXPORT = OVERLAY / "usr/local/bin/savantos-export"
 +
 +def generated_key(directory: Path) -> str:
 +    """A real key: the guest validates the blob with ssh-keygen, so a made-up
@@ -107,7 +107,7 @@ index 0000000..8bc4fe3
 +        if cmdline is not None:
 +            cmdline_file = self.root / "cmdline"
 +            cmdline_file.write_text(cmdline + "\n")
-+            env["TRY_OMARCHY_CMDLINE"] = str(cmdline_file)
++            env["TRY_SAVANTOS_CMDLINE"] = str(cmdline_file)
 +        return subprocess.run([str(script), *args], env=env, capture_output=True, text=True, timeout=60)
 +
 +
@@ -115,10 +115,10 @@ index 0000000..8bc4fe3
 +    def setUp(self) -> None:
 +        super().setUp()
 +        self.fake("mountpoint", 'exit 0')
-+        self.state = self.home / ".local/state/try-omarchy/share-link"
++        self.state = self.home / ".local/state/savantos/share-link"
 +
 +    def test_links_the_share_under_its_name_and_records_it(self) -> None:
-+        result = self.run_script(SHARE_LINK, cmdline=f"root=/dev/vda tryomarchy.sharename={b64('Work')}")
++        result = self.run_script(SHARE_LINK, cmdline=f"root=/dev/vda savantos.sharename={b64('Work')}")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        link = self.home / "Work"
 +        self.assertTrue(link.is_symlink())
@@ -126,7 +126,7 @@ index 0000000..8bc4fe3
 +        self.assertEqual(self.state.read_text().strip(), str(link))
 +
 +    def test_removes_its_link_on_a_launch_without_a_share(self) -> None:
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        result = self.run_script(SHARE_LINK, cmdline="root=/dev/vda")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertFalse((self.home / "Work").exists())
@@ -136,7 +136,7 @@ index 0000000..8bc4fe3
 +    def test_never_replaces_a_folder_with_content(self) -> None:
 +        (self.home / "Work").mkdir()
 +        (self.home / "Work/mine.txt").write_text("keep")
-+        result = self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        result = self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertFalse((self.home / "Work").is_symlink())
 +        self.assertEqual((self.home / "Work/mine.txt").read_text(), "keep")
@@ -144,18 +144,18 @@ index 0000000..8bc4fe3
 +
 +    def test_replaces_an_empty_folder(self) -> None:
 +        (self.home / "Work").mkdir()
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertTrue((self.home / "Work").is_symlink())
 +
 +    def test_rejects_names_that_escape_the_home_directory(self) -> None:
 +        for bad in ("../evil", "a/b", ".", "..", "", "x\x01y"):
-+            result = self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64(bad)}")
++            result = self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64(bad)}")
 +            self.assertEqual(result.returncode, 0, bad)
 +            self.assertFalse(list(self.home.iterdir()), f"{bad!r} created {list(self.home.iterdir())}")
 +
 +    def test_does_nothing_when_the_share_is_not_mounted(self) -> None:
 +        self.fake("mountpoint", "exit 1")
-+        result = self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        result = self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertEqual(result.returncode, 0)
 +        self.assertFalse((self.home / "Work").exists())
 +
@@ -186,14 +186,14 @@ index 0000000..8bc4fe3
 +                              capture_output=True, text=True, timeout=60)
 +
 +    def test_starts_sshd_for_the_boot_only(self) -> None:
-+        result = self.run_request("root=/dev/vda tryomarchy.sshd=1")
++        result = self.run_request("root=/dev/vda savantos.sshd=1")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertEqual(self.log.read_text().strip(), "systemctl start --no-block sshd.service")
 +        self.assertFalse(self.authorized.exists())
 +
 +    def test_authorizes_the_supplied_key_once(self) -> None:
 +        for _ in range(2):
-+            result = self.run_request(f"tryomarchy.sshd=1 tryomarchy.sshkey={b64(self.key)}")
++            result = self.run_request(f"savantos.sshd=1 savantos.sshkey={b64(self.key)}")
 +            self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertEqual(self.authorized.read_text(), self.key + "\n")
 +        self.assertEqual(oct(self.authorized.stat().st_mode & 0o777), "0o600")
@@ -203,7 +203,7 @@ index 0000000..8bc4fe3
 +    def test_ignores_a_malformed_key_but_still_starts_sshd(self) -> None:
 +        for bad in ("not a key", "-----BEGIN OPENSSH PRIVATE KEY-----", "ssh-dss AAAA x", "ssh-ed25519 AAAA x\nssh-ed25519 BBBB y"):
 +            self.log.write_text("")
-+            result = self.run_request(f"tryomarchy.sshd=1 tryomarchy.sshkey={b64(bad)}")
++            result = self.run_request(f"savantos.sshd=1 savantos.sshkey={b64(bad)}")
 +            self.assertEqual(result.returncode, 0, result.stderr)
 +            self.assertFalse(self.authorized.exists(), bad)
 +            self.assertIn("sshd.service", self.log.read_text())
@@ -228,9 +228,9 @@ index 0000000..8bc4fe3
 +    def export(self) -> Path:
 +        dest = self.root / "dest"
 +        dest.mkdir()
-+        result = self.run_script(EXPORT, str(dest), TRY_OMARCHY_FACTORY_LOCK=str(self.lock))
++        result = self.run_script(EXPORT, str(dest), TRY_SAVANTOS_FACTORY_LOCK=str(self.lock))
 +        self.assertEqual(result.returncode, 0, result.stderr)
-+        archives = list(dest.glob("omarchy-export-*.tar.gz"))
++        archives = list(dest.glob("savantos-export-*.tar.gz"))
 +        self.assertEqual(len(archives), 1)
 +        return archives[0]
 +
@@ -269,15 +269,15 @@ index 0000000..8bc4fe3
 +            self.fake(tool, f'echo "{tool} $*" >>"{self.log}"')
 +        with tarfile.open(archive) as tar:
 +            tar.extractall(real)
-+        restore = next(real.glob("omarchy-export-*/restore.sh"))
++        restore = next(real.glob("savantos-export-*/restore.sh"))
 +        result = subprocess.run(["bash", str(restore)], env=dict(self.env, HOME=str(real)), cwd=real,
 +                                capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertEqual((real / ".config/hypr/monitors.conf").read_text(), "monitor=,preferred\n")
 +        self.assertEqual((real / ".config/keep/k").read_text(), "keepme")
 +        self.assertEqual((real / ".bashrc").read_text(), "export PS1=x\n")
-+        backups = sorted(p.relative_to(next((real / ".omarchy-restore-backup").iterdir())).as_posix()
-+                         for p in (real / ".omarchy-restore-backup").rglob("*") if p.is_file())
++        backups = sorted(p.relative_to(next((real / ".savantos-restore-backup").iterdir())).as_posix()
++                         for p in (real / ".savantos-restore-backup").rglob("*") if p.is_file())
 +        self.assertEqual(backups, [".bashrc", ".config/hypr/monitors.conf"])
 +        calls = self.log.read_text()
 +        self.assertIn("sudo pacman -S --needed --noconfirm -", calls)

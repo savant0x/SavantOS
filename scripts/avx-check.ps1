@@ -4,8 +4,8 @@
 param([string]$cpu = 'Haswell-v4')
 $ErrorActionPreference = 'Stop'
 Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue | Stop-Process -Force
-$wd = 'C:\tryomarchy'
-$qmp = '\\host.lan\Data\tryomarchy\qmp.ps1'
+$wd = 'C:\savantos'
+$qmp = '\\host.lan\Data\savantos\qmp.ps1'
 $p = Start-Process -FilePath 'C:\Program Files\qemu\qemu-system-x86_64.exe' -ArgumentList @(
     '-accel','whpx','-machine','q35','-cpu',$cpu,'-smp','2','-m','1024',
     '-cdrom',(Join-Path $wd 'alpine-virt.iso'),

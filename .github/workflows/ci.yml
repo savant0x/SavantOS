@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main]
 
 permissions:
   contents: read
@@ -42,7 +42,7 @@ jobs:
 
       - name: Build Windows launcher
         working-directory: app
-        run: GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H windowsgui -s -w" -o ../TryOmarchy.exe .
+        run: GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H windowsgui -s -w" -o ../SavantOS.exe .
 
       - name: Validate current release pin
         run: scripts/release/validate-pin.py "$(sed -n 's/.*releases\/download\/\([^\"]*\).*/\1/p' app/manifest.go)"

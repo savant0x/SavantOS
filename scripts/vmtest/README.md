@@ -52,13 +52,13 @@ that for a launcher build and waits for the guest to report ready.
 ## Driving the guest
 
 `qmp.ps1` talks to QEMU's tools QMP port (4445) from inside the VM:
-`qmp.ps1 key meta_l,ret` opens a terminal in Omarchy, `qmp.ps1 type '...'`
+`qmp.ps1 key meta_l,ret` opens a terminal in SavantOS, `qmp.ps1 type '...'`
 and `qmp.ps1 key ret` run a command. Pair it with the shared folder: put a
-script in `Omarchy Shared`, run it with `bash ~/Omarchy\ Shared/x.sh`, and
+script in `SavantOS Shared`, run it with `bash ~/SavantOS\ Shared/x.sh`, and
 have it write its results back to the same folder. Nested SSH into the guest
 stalls; keystrokes and the shared folder do not.
 
-Never send keystrokes with `sendkeys.ps1` to the "Try Omarchy" title while
+Never send keystrokes with `sendkeys.ps1` to the "SavantOS" title while
 the VM window is up: they land inside the guest.
 
 ## Other helpers

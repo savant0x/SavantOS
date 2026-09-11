@@ -2,7 +2,7 @@
 # it boots at all, WHPX works), screendump via QMP, copy the shot to the share.
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$wd = 'C:\tryomarchy'
+$wd = 'C:\savantos'
 New-Item -ItemType Directory -Path $wd -Force | Out-Null
 
 $iso = Join-Path $wd 'alpine-virt.iso'
@@ -40,12 +40,12 @@ $w = New-Object IO.StreamWriter($s); $w.AutoFlush = $true
 $r = New-Object IO.StreamReader($s)
 $r.ReadLine() | Out-Null                                # greeting
 $w.WriteLine('{"execute":"qmp_capabilities"}'); Start-Sleep 1; $r.ReadLine() | Out-Null
-$w.WriteLine('{"execute":"screendump","arguments":{"filename":"C:\\tryomarchy\\shot.ppm"}}')
+$w.WriteLine('{"execute":"screendump","arguments":{"filename":"C:\\savantos\\shot.ppm"}}')
 Start-Sleep 2
 $w.WriteLine('{"execute":"query-status"}'); Start-Sleep 1
 1..3 | ForEach-Object { try { Write-Host $r.ReadLine() } catch {} }
 $tcp.Close()
 
 Stop-Process -Id $p.Id -Force
-Copy-Item "$wd\shot.ppm" '\\host.lan\Data\tryomarchy\shot.ppm' -Force
+Copy-Item "$wd\shot.ppm" '\\host.lan\Data\savantos\shot.ppm' -Force
 Write-Host 'WHPX-BOOT-TEST-DONE'

@@ -1,5 +1,5 @@
 From 7774a928430f08688633bb35ae71502b461c7325 Mon Sep 17 00:00:00 2001
-From: Try Omarchy Release <actions@users.noreply.github.com>
+From: SavantOS Release <actions@users.noreply.github.com>
 Date: Thu, 3 Sep 2026 00:49:17 -0400
 Subject: [PATCH] Make shared folders visible after guest upgrades
 
@@ -14,8 +14,8 @@ diff --git a/guest/factory-overlay/usr/local/lib/try-omarchy/share-link b/guest/
 index 2368e29..c85634d 100755
 --- a/guest/factory-overlay/usr/local/lib/try-omarchy/share-link
 +++ b/guest/factory-overlay/usr/local/lib/try-omarchy/share-link
-@@ -14,6 +14,7 @@ cmdline_file=${TRY_OMARCHY_CMDLINE:-/proc/cmdline}
- state_dir="$HOME/.local/state/try-omarchy"
+@@ -14,6 +14,7 @@ cmdline_file=${TRY_SAVANTOS_CMDLINE:-/proc/cmdline}
+ state_dir="$HOME/.local/state/savantos"
  state_file="$state_dir/share-link"
  bookmark_state="$state_dir/share-bookmark"
 +open_state="$state_dir/share-opened"
@@ -47,7 +47,7 @@ index 2368e29..c85634d 100755
  # the share is still attached under the same name.
  if [[ -f $state_file ]]; then
 @@ -82,7 +100,10 @@ for word in $(<"$cmdline_file"); do
-     tryomarchy.sharename=*) encoded=${word#tryomarchy.sharename=} ;;
+     savantos.sharename=*) encoded=${word#savantos.sharename=} ;;
    esac
  done
 -[[ -n $encoded ]] || exit 0
@@ -88,9 +88,9 @@ index 74d1270..e5cc93f 100644
          super().setUp()
          self.fake("mountpoint", 'exit 0')
 +        self.fake("gio", f'echo "gio $*" >>"{self.log}"')
-         self.state = self.home / ".local/state/try-omarchy/share-link"
-         self.bookmark_state = self.home / ".local/state/try-omarchy/share-bookmark"
-+        self.open_state = self.home / ".local/state/try-omarchy/share-opened"
+         self.state = self.home / ".local/state/savantos/share-link"
+         self.bookmark_state = self.home / ".local/state/savantos/share-bookmark"
++        self.open_state = self.home / ".local/state/savantos/share-opened"
          self.bookmarks = self.home / ".config/gtk-3.0/bookmarks"
  
      def test_links_the_share_under_its_name_and_records_it(self) -> None:
@@ -102,21 +102,21 @@ index 74d1270..e5cc93f 100644
 +        self.assertEqual(self.log.read_text(), "gio open /mnt/host\n")
 +
 +    def test_opens_each_new_share_only_once(self) -> None:
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertEqual(self.log.read_text(), "gio open /mnt/host\n")
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Exchange')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Exchange')}")
 +        self.assertEqual(self.log.read_text(), "gio open /mnt/host\ngio open /mnt/host\n")
 +
 +    def test_retries_opening_after_files_cannot_start(self) -> None:
 +        self.fake("gio", f'echo "gio $*" >>"{self.log}"; exit 1')
-+        result = self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        result = self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertFalse(self.open_state.exists())
 +        self.assertIn("try again next login", result.stdout)
  
      def test_removes_its_link_on_a_launch_without_a_share(self) -> None:
-         self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
+         self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 @@ -82,6 +100,7 @@ class ShareLinkTests(OverlayCase):
          self.assertFalse((self.home / "Work").is_symlink())
          self.assertFalse(self.state.exists())
@@ -136,7 +136,7 @@ index 9b61eab..41be500 100755
 +        and 'gio open "$mount_point"' in share_link
 +        and "share-opened" in share_link
          and "rm -rf" not in share_link
-         and (GUEST / "factory-overlay/etc/systemd/user/default.target.wants/try-omarchy-share-link.service").is_symlink(),
+         and (GUEST / "factory-overlay/etc/systemd/user/default.target.wants/savantos-share-link.service").is_symlink(),
          "the share link and Files bookmark preserve existing user entries",
      )
  
@@ -147,7 +147,7 @@ index 9b61eab..41be500 100755
 +        "launcher integration has an explicit revision for persistent-disk upgrades",
 +    )
 +
-     ready_unit = read(GUEST / "factory-overlay/etc/systemd/system/try-omarchy-ready.service")
+     ready_unit = read(GUEST / "factory-overlay/etc/systemd/system/savantos-ready.service")
      ready_script = GUEST / "factory-overlay/usr/local/lib/try-omarchy/guest-ready"
      initcpio_config = read(GUEST / "factory-overlay/etc/mkinitcpio.conf.d/90-try-omarchy.conf")
 -- 

@@ -58,4 +58,4 @@ jobs:
             echo
             echo "The guest contract tests passed with the patch applied. CI does not run automatically on a pull request opened with the workflow token; close and reopen it, or push an empty commit, to trigger the checks before merging."
           } > body.md
-          gh pr create --title "Refresh the guest package lock" --body-file body.md --head "$branch" --base master
+          gh pr create --title "Refresh the guest package lock" --body-file body.md --head "$branch" --base main

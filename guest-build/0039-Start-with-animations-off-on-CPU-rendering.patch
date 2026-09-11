@@ -3,7 +3,7 @@ From: Tyler South <tsouth2@gmail.com>
 Date: Sat, 5 Sep 2026 07:44:47 -0400
 Subject: [PATCH] Start with animations off on CPU rendering
 
-The launcher reports the rendering path as tryomarchy.render=cpu or gpu. On llvmpipe every animation frame is CPU time the desktop feels, so the QEMU profile turns Hyprland animations off for that case; looknfeel.lua loads later and an explicit choice there still wins.
+The launcher reports the rendering path as savantos.render=cpu or gpu. On llvmpipe every animation frame is CPU time the desktop feels, so the QEMU profile turns Hyprland animations off for that case; looknfeel.lua loads later and an explicit choice there still wins.
 ---
  guest/fragments/hypr-monitors-qemu.append.lua | 7 +++++++
  guest/tests/verify.py                         | 5 +++++
@@ -21,7 +21,7 @@ index 2230448..a4c1b3c 100644
 +-- On CPU rendering (llvmpipe) every animation frame is CPU time the desktop
 +-- feels. Start with animations off; looknfeel.lua loads after this file, so
 +-- an explicit choice there still wins.
-+if omarchy_kernel_option_enabled("tryomarchy.render=cpu") then
++if omarchy_kernel_option_enabled("savantos.render=cpu") then
 +  hl.config({ animations = { enabled = false } })
 +end
  -- END OMARCHY QEMU PROFILE
@@ -34,7 +34,7 @@ index f4ea02b..10461e0 100755
          "QEMU profile starts native display sync",
      )
 +    check(
-+        'omarchy_kernel_option_enabled("tryomarchy.render=cpu")' in monitor_fragment
++        'omarchy_kernel_option_enabled("savantos.render=cpu")' in monitor_fragment
 +        and "animations = { enabled = false }" in monitor_fragment,
 +        "QEMU profile turns animations off on CPU rendering",
 +    )

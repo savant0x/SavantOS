@@ -1,4 +1,4 @@
-# Screenshot the Try Omarchy window from the HOST side (works on the GL path,
+# Screenshot the SavantOS window from the HOST side (works on the GL path,
 # where QMP screendump returns "no surface"). Captures the window's client area
 # via PrintWindow with PW_RENDERFULLCONTENT so GPU-composited content is included.
 #   powershell -ExecutionPolicy Bypass -File capture-window.ps1 -Out shot.png

@@ -3,7 +3,7 @@ From: Tyler South <tsouth2@gmail.com>
 Date: Sat, 5 Sep 2026 03:53:26 -0400
 Subject: [PATCH] Seed only the toggle placeholder for new users
 
-materialize-omarchy.sh copied every template from default/hypr/toggles into each new user's toggle state. A file there means the toggle is on and it loads after the user's looknfeel.lua, so window-no-gaps and single-window-aspect-ratio were permanently switched on and overrode gaps, border size, and rounding for everyone (omacom/try-omarchy-windows#32). Seed only flags.lua, which keeps the directory present, matching what omarchy-hyprland-toggle expects.
+materialize-omarchy.sh copied every template from default/hypr/toggles into each new user's toggle state. A file there means the toggle is on and it loads after the user's looknfeel.lua, so window-no-gaps and single-window-aspect-ratio were permanently switched on and overrode gaps, border size, and rounding for everyone (upstream issue 32). Seed only flags.lua, which keeps the directory present, matching what omarchy-hyprland-toggle expects.
 ---
  guest/scripts/materialize-omarchy.sh | 8 +++++++-
  guest/tests/verify.py                | 5 +++++

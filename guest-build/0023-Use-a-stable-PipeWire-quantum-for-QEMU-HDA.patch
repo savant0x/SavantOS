@@ -4,18 +4,18 @@ Date: Wed, 2 Sep 2026 21:00:26 -0400
 Subject: [PATCH] Use a stable PipeWire quantum for QEMU HDA
 
 ---
- .../90-try-omarchy-quantum.conf               | 22 +++++++++++++++++++
+ .../90-savantos-quantum.conf               | 22 +++++++++++++++++++
  guest/tests/verify.py                         | 12 ++++++++++
  2 files changed, 34 insertions(+)
- create mode 100644 guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-try-omarchy-quantum.conf
+ create mode 100644 guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-savantos-quantum.conf
 
-diff --git a/guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-try-omarchy-quantum.conf b/guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-try-omarchy-quantum.conf
+diff --git a/guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-savantos-quantum.conf b/guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-savantos-quantum.conf
 new file mode 100644
 index 0000000..11ac2fd
 --- /dev/null
-+++ b/guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-try-omarchy-quantum.conf
++++ b/guest/native-overlay/usr/share/pipewire/pipewire.conf.d/90-savantos-quantum.conf
 @@ -0,0 +1,22 @@
-+# Try Omarchy: raise the graph quantum for QEMU's emulated HDA device.
++# SavantOS: raise the graph quantum for QEMU's emulated HDA device.
 +#
 +# QEMU advances the emulated Intel HDA DMA position from its audio timer in
 +# coarse steps. A 4096-frame quantum prevents PipeWire from treating those
@@ -47,7 +47,7 @@ index 538c339..a232472 100755
  
 +    audio_quantum = read(
 +        GUEST
-+        / "native-overlay/usr/share/pipewire/pipewire.conf.d/90-try-omarchy-quantum.conf"
++        / "native-overlay/usr/share/pipewire/pipewire.conf.d/90-savantos-quantum.conf"
 +    )
 +    check(
 +        "default.clock.quantum     = 4096" in audio_quantum

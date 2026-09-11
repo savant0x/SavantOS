@@ -42,20 +42,20 @@ Windows VM tests unless noted in the release checklist):
   is the launcher's clipboard bridge)
 - /mnt/host automounts the launcher's `-share` folder (virtio-9p, condition-guarded
   so boots without a share stay clean)
-- An explicit `tryomarchy.instant=1` kernel flag creates and finalizes a local
+- An explicit `savantos.instant=1` kernel flag creates and finalizes a local
   trial account, shows its credentials once on the first desktop, and leaves
   boots without the flag on upstream's normal setup form
-- `tryomarchy.sshd=1` (set by the launcher when a host port forwards to guest
+- `savantos.sshd=1` (set by the launcher when a host port forwards to guest
   port 22) starts sshd for that boot only and authorizes the launcher-supplied
   public key; sshd config and enablement stay untouched
-- `try-omarchy-export` archives an allowlist of desktop configuration, the
+- `savantos-export` archives an allowlist of desktop configuration, the
   theme, and added packages with a restore script for a real Omarchy install
   (docs/MIGRATION.md)
-- `tryomarchy.sharename=<base64>` links the `-share` folder into the home
+- `savantos.sharename=<base64>` links the `-share` folder into the home
   directory under its own name at login, pins it in the Files sidebar, and
   opens each newly selected share once so users can find it immediately; it
   removes only those managed entries on launches that share nothing
-- `tryomarchy.tz=` and `tryomarchy.kb=` (set by the launcher from the Windows
+- `savantos.tz=` and `savantos.kb=` (set by the launcher from the Windows
   time zone and default input language) are applied at boot by a sysinit
   service when they change, so the guest clock and Hyprland's keyboard layout
   follow Windows without overriding a choice made inside the guest

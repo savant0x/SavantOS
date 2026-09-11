@@ -31,7 +31,7 @@ index 749aa7d..2fb1cb2 100755
 +IMAGE_LIMIT=16777216
  
  XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
- STATE=$XDG_RUNTIME_DIR/try-omarchy-clipboard
+ STATE=$XDG_RUNTIME_DIR/savantos-clipboard
 @@ -14,34 +17,49 @@ mkdir -p "$STATE"
  
  # wl-paste supplies the selected text on stdin. Keeping it in a file preserves
@@ -181,7 +181,7 @@ index 777e13d..591b33e 100644
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertEqual(Path(str(self.capture) + '.args').read_text(), '--type|image/png|')
 +        self.assertEqual(Path(str(self.capture) + '.copied').read_bytes(), png)
-+        self.assertEqual((self.root / 'try-omarchy-clipboard/last_content').read_text().strip(),
++        self.assertEqual((self.root / 'savantos-clipboard/last_content').read_text().strip(),
 +                         hashlib.sha256(png).hexdigest())
 +        # A push of what was just received is suppressed, so nothing echoes back.
 +        self.assertEqual(self.push_image(png).returncode, 0)
@@ -202,7 +202,7 @@ index 979a092..65f1e73 100755
 +        "compat_revision=7" in finalize_rootfs
          and "compat_revision" in finalize_rootfs.split("compat-version")[0]
          and "usr/local/lib/try-omarchy/apply-host-locale" in finalize_rootfs
-         and "etc/systemd/system/sysinit.target.wants/try-omarchy-host-locale.service" in finalize_rootfs
+         and "etc/systemd/system/sysinit.target.wants/savantos-host-locale.service" in finalize_rootfs
 -- 
 2.55.0
 

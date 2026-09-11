@@ -4,24 +4,24 @@ Date: Sat, 29 Aug 2026 21:15:04 -0400
 Subject: [PATCH] Add instant trial provisioning mode
 
 ---
- .../20-try-omarchy.conf                       |  2 +
- .../try-omarchy-welcome.service               |  1 +
- .../user/try-omarchy-welcome.service          | 12 +++
- .../lib/try-omarchy/provision-instant-trial   | 74 +++++++++++++++++++
+ .../20-savantos.conf                       |  2 +
+ .../savantos-welcome.service               |  1 +
+ .../user/savantos-welcome.service          | 12 +++
+ .../lib/savantos/provision-instant-trial   | 74 +++++++++++++++++++
  .../usr/local/lib/try-omarchy/provision-owner |  8 ++
  .../usr/local/lib/try-omarchy/show-welcome    | 26 +++++++
  guest/tests/verify.py                         | 48 ++++++++++++
  7 files changed, 171 insertions(+)
- create mode 120000 guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/try-omarchy-welcome.service
- create mode 100644 guest/factory-overlay/etc/systemd/user/try-omarchy-welcome.service
+ create mode 120000 guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/savantos-welcome.service
+ create mode 100644 guest/factory-overlay/etc/systemd/user/savantos-welcome.service
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/provision-instant-trial
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/provision-owner
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/show-welcome
 
-diff --git a/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf
+diff --git a/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf
 index 6cd0cfa..9b4e2dd 100644
---- a/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf
-+++ b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf
+--- a/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf
++++ b/guest/factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf
 @@ -2,4 +2,6 @@
  # installs), so keep the autologin provisioning writes instead of letting the
  # one-boot cleanup unit drop it — the generic SDDM greeter must never appear.
@@ -36,15 +36,15 @@ index 0000000..e464b39
 +++ b/guest/factory-overlay/usr/local/lib/try-omarchy/provision-instant-trial
 @@ -0,0 +1,74 @@
 +#!/bin/bash
-+# Create the explicit Try Omarchy trial account without stopping at the
++# Create the explicit SavantOS trial account without stopping at the
 +# interactive first-boot form. This runs only when the Windows launcher adds
-+# tryomarchy.instant=1 to the kernel command line.
++# savantos.instant=1 to the kernel command line.
 +set -euo pipefail
 +
 +provisioning_dir=/var/lib/omarchy/provisioning
 +omarchy_path=${OMARCHY_PATH:-/usr/share/omarchy}
 +log_file=/var/log/omarchy-provision-owner.log
-+username=omarchy
++username=savant
 +
 +[[ -f $provisioning_dir/pending ]] || exit 0
 +[[ ! -f $provisioning_dir/wipe-pending ]] || exit 1
@@ -65,24 +65,24 @@ index 0000000..e464b39
 +if getent passwd "$username" >/dev/null; then
 +  usermod -aG "$(user_groups)" "$username"
 +else
-+  useradd -m -G "$(user_groups)" -s /bin/bash -c "Try Omarchy" "$username"
++  useradd -m -G "$(user_groups)" -s /bin/bash -c "SavantOS" "$username"
 +fi
 +
 +# The VM window is the trial account's security boundary. A known password
 +# keeps the lock screen usable, while passwordless sudo avoids putting a
 +# credential hurdle in front of a disposable local trial.
-+printf '%s:%s\n' "$username" omarchy | chpasswd
-+cat >"/etc/sudoers.d/00-try-omarchy-trial" <<SUDOERS
++printf '%s:%s\n' "$username" savant | chpasswd
++cat >"/etc/sudoers.d/00-savantos-trial" <<SUDOERS
 +$username ALL=(ALL:ALL) NOPASSWD: ALL
 +SUDOERS
-+chmod 440 /etc/sudoers.d/00-try-omarchy-trial
++chmod 440 /etc/sudoers.d/00-savantos-trial
 +
-+mkdir -p /var/lib/sddm /etc/sddm.conf.d /var/lib/try-omarchy
++mkdir -p /var/lib/sddm /etc/sddm.conf.d /var/lib/savantos
 +printf '[Last]\nSession=omarchy.desktop\nUser=%s\n' "$username" >/var/lib/sddm/state.conf
 +chown -R sddm:sddm /var/lib/sddm 2>/dev/null || true
 +printf '[Autologin]\nUser=%s\nSession=omarchy.desktop\n' "$username" >/etc/sddm.conf.d/autologin.conf
-+printf 'instant-trial\n' >/var/lib/try-omarchy/provision-mode
-+hostnamectl set-hostname try-omarchy >>"$log_file" 2>&1 || printf 'try-omarchy\n' >/etc/hostname
++printf 'instant-trial\n' >/var/lib/savantos/provision-mode
++hostnamectl set-hostname savantos >>"$log_file" 2>&1 || printf 'savantos\n' >/etc/hostname
 +
 +home=$(getent passwd "$username" | cut -d: -f6)
 +shell=$(getent passwd "$username" | cut -d: -f7)
@@ -94,7 +94,7 @@ index 0000000..e464b39
 +  OMARCHY_PATH="$omarchy_path" \
 +  OMARCHY_INSTALL="$omarchy_path/install" \
 +  OMARCHY_SETUP_CONTEXT=provision-owner \
-+  OMARCHY_USER_NAME="Try Omarchy" \
++  OMARCHY_USER_NAME="SavantOS" \
 +  OMARCHY_USER_EMAIL="" \
 +  OMARCHY_INSTALL_LOG_FILE="$log_file" \
 +  OMARCHY_LOG_TO_STDOUT=1 \
@@ -118,30 +118,30 @@ index 0000000..4f4ddb3
 +#!/bin/bash
 +set -euo pipefail
 +
-+if grep -qw 'tryomarchy.instant=1' /proc/cmdline; then
++if grep -qw 'savantos.instant=1' /proc/cmdline; then
 +  exec /usr/local/lib/try-omarchy/provision-instant-trial
 +fi
 +
 +exec /usr/bin/omarchy-provision-owner
-diff --git a/guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/try-omarchy-welcome.service b/guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/try-omarchy-welcome.service
+diff --git a/guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/savantos-welcome.service b/guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/savantos-welcome.service
 new file mode 120000
 index 0000000..925ba12
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/try-omarchy-welcome.service
++++ b/guest/factory-overlay/etc/systemd/user/graphical-session.target.wants/savantos-welcome.service
 @@ -0,0 +1 @@
-+../try-omarchy-welcome.service
++../savantos-welcome.service
 \ No newline at end of file
-diff --git a/guest/factory-overlay/etc/systemd/user/try-omarchy-welcome.service b/guest/factory-overlay/etc/systemd/user/try-omarchy-welcome.service
+diff --git a/guest/factory-overlay/etc/systemd/user/savantos-welcome.service b/guest/factory-overlay/etc/systemd/user/savantos-welcome.service
 new file mode 100644
 index 0000000..2a9feca
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/user/try-omarchy-welcome.service
++++ b/guest/factory-overlay/etc/systemd/user/savantos-welcome.service
 @@ -0,0 +1,12 @@
 +[Unit]
-+Description=Show the Try Omarchy instant-account welcome
++Description=Show the SavantOS instant-account welcome
 +After=graphical-session.target
 +PartOf=graphical-session.target
-+ConditionPathExists=/var/lib/try-omarchy/provision-mode
++ConditionPathExists=/var/lib/savantos/provision-mode
 +
 +[Service]
 +Type=oneshot
@@ -158,19 +158,19 @@ index 0000000..0bb39fc
 +#!/bin/bash
 +set -u
 +
-+[[ $(cat /var/lib/try-omarchy/provision-mode 2>/dev/null) == instant-trial ]] || exit 0
++[[ $(cat /var/lib/savantos/provision-mode 2>/dev/null) == instant-trial ]] || exit 0
 +
-+state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/try-omarchy
++state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/savantos
 +marker=$state_dir/welcome-shown
 +[[ ! -e $marker ]] || exit 0
 +
-+body=$'Trial login: omarchy    Password: omarchy\nSudo does not require a password.\n\nSUPER+SPACE opens the menu.  SUPER+K shows all keybindings.'
++body=$'Trial login: savant    Password: savant\nSudo does not require a password.\n\nSUPER+SPACE opens the menu.  SUPER+K shows all keybindings.'
 +for attempt in {1..30}; do
 +  if notify-send \
-+    --app-name='Try Omarchy' \
++    --app-name='SavantOS' \
 +    --urgency=normal \
 +    --expire-time=30000 \
-+    'Welcome to Try Omarchy' \
++    'Welcome to SavantOS' \
 +    "$body"; then
 +    mkdir -p "$state_dir"
 +    touch "$marker"
@@ -197,22 +197,22 @@ index ce3eba4..f553e99 100755
 +    )
 +    provision_override = read(
 +        GUEST
-+        / "factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-try-omarchy.conf"
++        / "factory-overlay/etc/systemd/system/omarchy-provision-owner.service.d/20-savantos.conf"
 +    )
 +    welcome = read(
 +        GUEST / "factory-overlay/usr/local/lib/try-omarchy/show-welcome"
 +    )
 +    welcome_service = read(
-+        GUEST / "factory-overlay/etc/systemd/user/try-omarchy-welcome.service"
++        GUEST / "factory-overlay/etc/systemd/user/savantos-welcome.service"
 +    )
 +    check(
-+        "tryomarchy.instant=1" in provision_dispatch
++        "savantos.instant=1" in provision_dispatch
 +        and "/usr/bin/omarchy-provision-owner" in provision_dispatch,
 +        "first boot dispatches explicit instant mode without changing normal provisioning",
 +    )
 +    check(
 +        "ExecStart=/usr/local/lib/try-omarchy/provision-owner" in provision_override,
-+        "owner provisioning uses the Try Omarchy dispatcher",
++        "owner provisioning uses the SavantOS dispatcher",
 +    )
 +    check(
 +        "useradd -m" in instant_trial
@@ -227,13 +227,13 @@ index ce3eba4..f553e99 100755
 +    )
 +    check(
 +        "notify-send" in welcome
-+        and "Trial login: omarchy" in welcome
-+        and "Password: omarchy" in welcome
++        and "Trial login: savant" in welcome
++        and "Password: savant" in welcome
 +        and "welcome-shown" in welcome,
 +        "instant mode shows the trial credentials once on the first desktop",
 +    )
 +    check(
-+        "ConditionPathExists=/var/lib/try-omarchy/provision-mode" in welcome_service,
++        "ConditionPathExists=/var/lib/savantos/provision-mode" in welcome_service,
 +        "the welcome service is limited to explicit instant-mode guests",
 +    )
 +

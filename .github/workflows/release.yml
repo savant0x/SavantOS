@@ -32,7 +32,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          test "$GITHUB_REF" = refs/heads/master
+          test "$GITHUB_REF" = refs/heads/main
           [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-preview)?$ ]]
 
   prepare:
@@ -131,10 +131,8 @@ jobs:
       id-token: write
     env:
       RELEASE_TAG: ${{ inputs.release_tag }}
-      # Keep the redirected legacy URL for the first release after transfer so
-      # v0.0.7 can authenticate and install its bridge update.
-      UPDATE_RELEASE_REPOSITORY: tsouth89/try-omarchy-windows
-      TRYOMARCHY_UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+      UPDATE_RELEASE_REPOSITORY: savant0x/SavantOS
+      SAVANTOS_UPDATE_SIGNING_KEY: ${{ secrets.SAVANTOS_UPDATE_SIGNING_KEY }}
     steps:
       - name: Check out source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -148,7 +146,7 @@ jobs:
       - name: Build optimized launcher
         working-directory: app
         shell: pwsh
-        run: go build -trimpath -ldflags '-H windowsgui -s -w' -o TryOmarchy.exe .
+        run: go build -trimpath -ldflags '-H windowsgui -s -w' -o SavantOS.exe .
 
       - name: Sign in to Azure with OIDC
         uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
@@ -163,7 +161,7 @@ jobs:
           endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
           signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
           certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\app\TryOmarchy.exe
+          files: ${{ github.workspace }}\app\SavantOS.exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -171,7 +169,7 @@ jobs:
       - name: Verify signature
         shell: pwsh
         run: |
-          $signature = Get-AuthenticodeSignature app/TryOmarchy.exe
+          $signature = Get-AuthenticodeSignature app/SavantOS.exe
           if ($signature.Status -ne 'Valid') {
             throw "Authenticode verification failed: $($signature.StatusMessage)"
           }
@@ -184,22 +182,22 @@ jobs:
             -version $env:RELEASE_TAG `
             -release "https://github.com/$env:UPDATE_RELEASE_REPOSITORY/releases/download/$env:RELEASE_TAG" `
             -manifest-sha256 $manifestHash `
-            -launcher TryOmarchy.exe `
+            -launcher SavantOS.exe `
             -output "$env:RUNNER_TEMP/update.json"
 
       - name: Package signed test launcher
         shell: pwsh
         run: |
-          $hash = (Get-FileHash app/TryOmarchy.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  TryOmarchy.exe" | Set-Content app/TryOmarchy.exe.sha256 -Encoding ascii
+          $hash = (Get-FileHash app/SavantOS.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  SavantOS.exe" | Set-Content app/SavantOS.exe.sha256 -Encoding ascii
 
       - name: Upload signed test launcher
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: TryOmarchy-signing-check-${{ github.sha }}
+          name: SavantOS-signing-check-${{ github.sha }}
           path: |
-            app/TryOmarchy.exe
-            app/TryOmarchy.exe.sha256
+            app/SavantOS.exe
+            app/SavantOS.exe.sha256
           retention-days: 3
           if-no-files-found: error
 
@@ -216,13 +214,11 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ inputs.release_tag }}
-      LEGACY_UPDATE_BRIDGE_TAG: ${{ vars.LEGACY_UPDATE_BRIDGE_TAG }}
+      UPDATE_RELEASE_REPOSITORY: savant0x/SavantOS
+      SAVANTOS_UPDATE_SIGNING_KEY: ${{ secrets.SAVANTOS_UPDATE_SIGNING_KEY }}
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      # Change this to omacom/omarchy-win after the bridge release is public.
-      UPDATE_RELEASE_REPOSITORY: tsouth89/try-omarchy-windows
-      TRYOMARCHY_UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
     steps:
       - name: Check out source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -276,7 +272,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force ../release | Out-Null
-          go build -trimpath -ldflags '-H windowsgui -s -w' -o ../release/TryOmarchy.exe .
+          go build -trimpath -ldflags '-H windowsgui -s -w' -o ../release/SavantOS.exe .
 
       - name: Sign in to Azure with OIDC
         uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
@@ -291,7 +287,7 @@ jobs:
           endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
           signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
           certificate-profile-name: ${{ vars.AZURE_SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\release\TryOmarchy.exe
+          files: ${{ github.workspace }}\release\SavantOS.exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -299,13 +295,13 @@ jobs:
       - name: Verify signature and write checksum
         shell: pwsh
         run: |
-          $exe = 'release/TryOmarchy.exe'
+          $exe = 'release/SavantOS.exe'
           $signature = Get-AuthenticodeSignature $exe
           if ($signature.Status -ne 'Valid') {
             throw "Authenticode verification failed: $($signature.StatusMessage)"
           }
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  TryOmarchy.exe" | Set-Content release/TryOmarchy.exe.sha256 -Encoding ascii
+          "$hash  SavantOS.exe" | Set-Content release/SavantOS.exe.sha256 -Encoding ascii
 
       - name: Sign authenticated update metadata
         shell: pwsh
@@ -315,7 +311,7 @@ jobs:
             -version $env:RELEASE_TAG `
             -release "https://github.com/$env:UPDATE_RELEASE_REPOSITORY/releases/download/$env:RELEASE_TAG" `
             -manifest-sha256 $manifestHash `
-            -launcher ../release/TryOmarchy.exe `
+            -launcher ../release/SavantOS.exe `
             -output ../release/update.json
 
       - name: Prepare current and legacy update feeds
@@ -323,30 +319,13 @@ jobs:
         run: |
           Copy-Item release/update.json release/update-v2.json
           Copy-Item release/update.json.sig release/update-v2.json.sig
-          if ($env:RELEASE_TAG -notlike '*-preview') {
-            if ($env:LEGACY_UPDATE_BRIDGE_TAG -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview$') {
-              throw 'Set LEGACY_UPDATE_BRIDGE_TAG to a tested, published bridge preview before releasing stable builds'
-            }
-            $bridgeDraft = gh release view $env:LEGACY_UPDATE_BRIDGE_TAG --json isDraft --jq .isDraft
-            if ($LASTEXITCODE -ne 0 -or $bridgeDraft -ne 'false') { throw 'The bridge must be public' }
-            $newerThanBridge = python scripts/release/release-order.py $env:RELEASE_TAG $env:LEGACY_UPDATE_BRIDGE_TAG
-            if ($LASTEXITCODE -ne 0 -or $newerThanBridge -ne 'true') { throw 'Stable must be newer than the bridge' }
-            New-Item -ItemType Directory -Force bridge-metadata | Out-Null
-            gh release download $env:LEGACY_UPDATE_BRIDGE_TAG -p update-v2.json -p update-v2.json.sig -D bridge-metadata
-            if ($LASTEXITCODE -ne 0) { throw 'Could not download bridge metadata' }
-            go -C app run ./cmd/sign-update -verify-bridge ../bridge-metadata/update-v2.json -version $env:LEGACY_UPDATE_BRIDGE_TAG
-            if ($LASTEXITCODE -ne 0) { throw 'Bridge metadata verification failed' }
-            Copy-Item bridge-metadata/update-v2.json release/update.json
-            Copy-Item bridge-metadata/update-v2.json.sig release/update.json.sig
-          }
-
       - name: Upload launcher and release notes
         shell: pwsh
         run: |
           python scripts/release/release-notes.py $env:RELEASE_TAG | Out-File release-notes.md -Encoding utf8
           gh release upload $env:RELEASE_TAG `
-            release/TryOmarchy.exe `
-            release/TryOmarchy.exe.sha256 `
+            release/SavantOS.exe `
+            release/SavantOS.exe.sha256 `
             release/update.json `
             release/update.json.sig `
             release/update-v2.json `
@@ -362,7 +341,6 @@ jobs:
         shell: pwsh
         run: |
           scripts/release/verify-public.ps1 -Tag $env:RELEASE_TAG
-          scripts/release/verify-public.ps1 -Tag $env:RELEASE_TAG -Repository tsouth89/try-omarchy-windows
 
       - name: Promote newer releases without replacing stable with preview
         id: promote
@@ -386,4 +364,5 @@ jobs:
         shell: pwsh
         run: |
           scripts/release/verify-public.ps1 -Tag $env:RELEASE_TAG -Latest
-          scripts/release/verify-public.ps1 -Tag $env:RELEASE_TAG -Latest -Repository tsouth89/try-omarchy-windows
+
+

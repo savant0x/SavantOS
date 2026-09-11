@@ -1,10 +1,10 @@
-# Boot the built Omarchy factory image under QEMU/WHPX inside this VM.
-# Adapted from jorge-huxley/try-omarchy-win windows/boot-omarchy.ps1 (their proven
+# Boot the built SavantOS factory image under QEMU/WHPX inside this VM.
+# Adapted from jorge-huxley/try-omarchy-win windows/boot-savantos.ps1 (their proven
 # flags: whpx + q35 + qemu64, virtio disk/net/input, sparse NTFS disk), headless
 # with QMP screendumps at intervals so the host can watch boot progress.
 $ErrorActionPreference = 'Stop'
-$g = '\\host.lan\Data\tryomarchy\guest'
-$wd = 'C:\tryomarchy'
+$g = '\\host.lan\Data\savantos\guest'
+$wd = 'C:\savantos'
 $vm = Join-Path $wd 'vm'
 New-Item -ItemType Directory -Path $vm -Force | Out-Null
 
@@ -35,11 +35,11 @@ $qemuArgs = @(
     '-device','virtio-rng-pci',
     '-display','none',
     '-qmp','tcp:127.0.0.1:4445,server=on,wait=off',
-    '-serial',"file:$wd\omarchy-serial.log"
+    '-serial',"file:$wd\savantos-serial.log"
 )
 $p = Start-Process -FilePath 'C:\Program Files\qemu\qemu-system-x86_64.exe' `
-    -ArgumentList $qemuArgs -RedirectStandardError "$wd\omarchy-qemu-err.log" `
-    -RedirectStandardOutput "$wd\omarchy-qemu-out.log" -PassThru -WindowStyle Hidden
+    -ArgumentList $qemuArgs -RedirectStandardError "$wd\savantos-qemu-err.log" `
+    -RedirectStandardOutput "$wd\savantos-qemu-out.log" -PassThru -WindowStyle Hidden
 Write-Host "qemu pid $($p.Id)"
 
 function Invoke-Qmp([string[]]$cmds) {
@@ -61,12 +61,12 @@ foreach ($t in 60, 120, 180, 240) {
     Start-Sleep (60)
     if ($p.HasExited) {
         Write-Host "QEMU EXITED code $($p.ExitCode); stderr:"
-        Get-Content "$wd\omarchy-qemu-err.log"
+        Get-Content "$wd\savantos-qemu-err.log"
         break
     }
-    $shot = "C:\\tryomarchy\\omarchy-$t.ppm"
+    $shot = "C:\\savantos\\savantos-$t.ppm"
     Invoke-Qmp @("{`"execute`":`"screendump`",`"arguments`":{`"filename`":`"$shot`"}}")
-    Copy-Item "C:\tryomarchy\omarchy-$t.ppm" "\\host.lan\Data\tryomarchy\omarchy-$t.ppm" -Force -ErrorAction SilentlyContinue
+    Copy-Item "C:\savantos\savantos-$t.ppm" "\\host.lan\Data\savantos\savantos-$t.ppm" -Force -ErrorAction SilentlyContinue
     Write-Host "shot at ${t}s"
 }
 
@@ -74,5 +74,5 @@ if (-not $p.HasExited) {
     Invoke-Qmp @('{"execute":"query-status"}')
     Stop-Process -Id $p.Id -Force
 }
-Copy-Item "$wd\omarchy-serial.log" '\\host.lan\Data\tryomarchy\omarchy-serial.log' -Force -ErrorAction SilentlyContinue
-Write-Host 'OMARCHY-BOOT-TEST-DONE'
+Copy-Item "$wd\savantos-serial.log" '\\host.lan\Data\savantos\savantos-serial.log' -Force -ErrorAction SilentlyContinue
+Write-Host 'SAVANTOS-BOOT-TEST-DONE'

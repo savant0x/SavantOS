@@ -1,5 +1,5 @@
 From 1056e9073a5a330c0a3515f5ab2a8532131d20e9 Mon Sep 17 00:00:00 2001
-From: Try Omarchy Release <actions@users.noreply.github.com>
+From: SavantOS Release <actions@users.noreply.github.com>
 Date: Wed, 2 Sep 2026 23:32:44 -0400
 Subject: [PATCH] Pin the shared folder in Files
 
@@ -23,8 +23,8 @@ index 0f2a063..2368e29 100755
 +# user's other sidebar entries.
  set -euo pipefail
  
- cmdline_file=${TRY_OMARCHY_CMDLINE:-/proc/cmdline}
- state_dir="$HOME/.local/state/try-omarchy"
+ cmdline_file=${TRY_SAVANTOS_CMDLINE:-/proc/cmdline}
+ state_dir="$HOME/.local/state/savantos"
  state_file="$state_dir/share-link"
 +bookmark_state="$state_dir/share-bookmark"
 +bookmarks="$HOME/.config/gtk-3.0/bookmarks"
@@ -39,7 +39,7 @@ index 0f2a063..2368e29 100755
 +  local previous temp line
 +  previous=$(<"$bookmark_state")
 +  if [[ $previous == "file://$mount_point "* && -f $bookmarks && ! -L $bookmarks ]]; then
-+    temp=$(mktemp "$(dirname "$bookmarks")/.bookmarks.try-omarchy.XXXXXX")
++    temp=$(mktemp "$(dirname "$bookmarks")/.bookmarks.savantos.XXXXXX")
 +    while IFS= read -r line || [[ -n $line ]]; do
 +      [[ $line == "$previous" ]] || printf '%s\n' "$line" >>"$temp"
 +    done <"$bookmarks"
@@ -64,7 +64,7 @@ index 0f2a063..2368e29 100755
 +      fi
 +    done <"$bookmarks"
 +  fi
-+  temp=$(mktemp "$config_dir/.bookmarks.try-omarchy.XXXXXX")
++  temp=$(mktemp "$config_dir/.bookmarks.savantos.XXXXXX")
 +  if [[ -f $bookmarks ]]; then
 +    cat "$bookmarks" >"$temp"
 +    chmod --reference="$bookmarks" "$temp"
@@ -135,12 +135,12 @@ index 371bfda..74d1270 100644
 @@ -61,6 +61,8 @@ class ShareLinkTests(OverlayCase):
          super().setUp()
          self.fake("mountpoint", 'exit 0')
-         self.state = self.home / ".local/state/try-omarchy/share-link"
-+        self.bookmark_state = self.home / ".local/state/try-omarchy/share-bookmark"
+         self.state = self.home / ".local/state/savantos/share-link"
++        self.bookmark_state = self.home / ".local/state/savantos/share-bookmark"
 +        self.bookmarks = self.home / ".config/gtk-3.0/bookmarks"
  
      def test_links_the_share_under_its_name_and_records_it(self) -> None:
-         result = self.run_script(SHARE_LINK, cmdline=f"root=/dev/vda tryomarchy.sharename={b64('Work')}")
+         result = self.run_script(SHARE_LINK, cmdline=f"root=/dev/vda savantos.sharename={b64('Work')}")
 @@ -69,6 +71,8 @@ class ShareLinkTests(OverlayCase):
          self.assertTrue(link.is_symlink())
          self.assertEqual(os.readlink(link), "/mnt/host")
@@ -149,7 +149,7 @@ index 371bfda..74d1270 100644
 +        self.assertEqual(self.bookmark_state.read_text().strip(), "file:///mnt/host Work")
  
      def test_removes_its_link_on_a_launch_without_a_share(self) -> None:
-         self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
+         self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 @@ -77,6 +81,40 @@ class ShareLinkTests(OverlayCase):
          self.assertFalse((self.home / "Work").exists())
          self.assertFalse((self.home / "Work").is_symlink())
@@ -160,12 +160,12 @@ index 371bfda..74d1270 100644
 +    def test_preserves_user_bookmarks_when_the_share_changes_or_stops(self) -> None:
 +        self.bookmarks.parent.mkdir(parents=True)
 +        self.bookmarks.write_text("file:///home/test/Documents Documents\n")
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertEqual(
 +            self.bookmarks.read_text(),
 +            "file:///home/test/Documents Documents\nfile:///mnt/host Work\n",
 +        )
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Exchange')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Exchange')}")
 +        self.assertEqual(
 +            self.bookmarks.read_text(),
 +            "file:///home/test/Documents Documents\nfile:///mnt/host Exchange\n",
@@ -176,7 +176,7 @@ index 371bfda..74d1270 100644
 +    def test_keeps_the_files_bookmark_when_the_home_link_name_is_occupied(self) -> None:
 +        (self.home / "Work").mkdir()
 +        (self.home / "Work/mine.txt").write_text("keep")
-+        self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertEqual(self.bookmarks.read_text(), "file:///mnt/host Work\n")
 +
 +    def test_does_not_replace_a_symlinked_bookmarks_file(self) -> None:
@@ -184,7 +184,7 @@ index 371bfda..74d1270 100644
 +        victim.write_text("keep\n")
 +        self.bookmarks.parent.mkdir(parents=True)
 +        self.bookmarks.symlink_to(victim)
-+        result = self.run_script(SHARE_LINK, cmdline=f"tryomarchy.sharename={b64('Work')}")
++        result = self.run_script(SHARE_LINK, cmdline=f"savantos.sharename={b64('Work')}")
 +        self.assertEqual(result.returncode, 0, result.stderr)
 +        self.assertEqual(victim.read_text(), "keep\n")
 +        self.assertFalse(self.bookmark_state.exists())
@@ -196,18 +196,18 @@ index fee12fc..9b61eab 100755
 --- a/guest/tests/verify.py
 +++ b/guest/tests/verify.py
 @@ -237,9 +237,11 @@ def main() -> None:
-         "tryomarchy.sharename" in share_unit
+         "savantos.sharename" in share_unit
          and "ln -s" in share_link
          and "rmdir" in share_link
 +        and "gtk-3.0/bookmarks" in share_link
 +        and "file://$mount_point" in share_link
          and "rm -rf" not in share_link
-         and (GUEST / "factory-overlay/etc/systemd/user/default.target.wants/try-omarchy-share-link.service").is_symlink(),
+         and (GUEST / "factory-overlay/etc/systemd/user/default.target.wants/savantos-share-link.service").is_symlink(),
 -        "the share link only ever replaces its own link or an empty directory",
 +        "the share link and Files bookmark preserve existing user entries",
      )
  
-     ready_unit = read(GUEST / "factory-overlay/etc/systemd/system/try-omarchy-ready.service")
+     ready_unit = read(GUEST / "factory-overlay/etc/systemd/system/savantos-ready.service")
 -- 
 2.55.0
 

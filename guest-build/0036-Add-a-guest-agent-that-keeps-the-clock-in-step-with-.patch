@@ -5,33 +5,33 @@ Subject: [PATCH] Add a guest agent that keeps the clock in step with Windows
 
 The agent connects out to the launcher at 10.0.2.2:4451 like the clipboard bridge, announces itself, and applies time messages: when the guest clock differs from the host's by more than two seconds it is stepped. The launcher sends the time on connect, periodically, and after Windows resumes from sleep. Ships in the compat overlay; integration revision 8.
 ---
- .../try-omarchy-agent.service                 |  1 +
- .../systemd/system/try-omarchy-agent.service  | 13 +++++
+ .../savantos-agent.service                 |  1 +
+ .../systemd/system/savantos-agent.service  | 13 +++++
  .../usr/local/lib/try-omarchy/agent           | 49 +++++++++++++++++++
  guest/scripts/finalize-rootfs.sh              |  5 +-
  guest/tests/test_overlay_scripts.py           | 26 ++++++++++
  guest/tests/verify.py                         |  3 +-
  6 files changed, 95 insertions(+), 2 deletions(-)
- create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-agent.service
- create mode 100644 guest/factory-overlay/etc/systemd/system/try-omarchy-agent.service
+ create mode 120000 guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-agent.service
+ create mode 100644 guest/factory-overlay/etc/systemd/system/savantos-agent.service
  create mode 100755 guest/factory-overlay/usr/local/lib/try-omarchy/agent
 
-diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-agent.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-agent.service
+diff --git a/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-agent.service b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-agent.service
 new file mode 120000
 index 0000000..0d5a72a
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/try-omarchy-agent.service
++++ b/guest/factory-overlay/etc/systemd/system/multi-user.target.wants/savantos-agent.service
 @@ -0,0 +1 @@
-+../try-omarchy-agent.service
++../savantos-agent.service
 \ No newline at end of file
-diff --git a/guest/factory-overlay/etc/systemd/system/try-omarchy-agent.service b/guest/factory-overlay/etc/systemd/system/try-omarchy-agent.service
+diff --git a/guest/factory-overlay/etc/systemd/system/savantos-agent.service b/guest/factory-overlay/etc/systemd/system/savantos-agent.service
 new file mode 100644
 index 0000000..00500fe
 --- /dev/null
-+++ b/guest/factory-overlay/etc/systemd/system/try-omarchy-agent.service
++++ b/guest/factory-overlay/etc/systemd/system/savantos-agent.service
 @@ -0,0 +1,13 @@
 +[Unit]
-+Description=Try Omarchy guest agent (clock sync with the Windows launcher)
++Description=SavantOS guest agent (clock sync with the Windows launcher)
 +After=network-online.target NetworkManager.service
 +Wants=network-online.target
 +
@@ -58,9 +58,9 @@ index 0000000..80a7d93
 +# forever, quietly, since the launcher may not be listening on every boot.
 +set -u
 +
-+host=${TRY_OMARCHY_AGENT_HOST:-10.0.2.2}
-+port=${TRY_OMARCHY_AGENT_PORT:-4451}
-+set_time=${TRY_OMARCHY_SET_TIME:-date -s}
++host=${TRY_SAVANTOS_AGENT_HOST:-10.0.2.2}
++port=${TRY_SAVANTOS_AGENT_PORT:-4451}
++set_time=${TRY_SAVANTOS_SET_TIME:-date -s}
 +version=1
 +max_drift=2
 +
@@ -103,16 +103,16 @@ index dc06c45..483cc9b 100755
 --- a/guest/scripts/finalize-rootfs.sh
 +++ b/guest/scripts/finalize-rootfs.sh
 @@ -63,11 +63,14 @@ compat_paths=(
-   etc/systemd/system/multi-user.target.wants/try-omarchy-sshd.service
-   etc/systemd/system/try-omarchy-host-locale.service
-   etc/systemd/system/sysinit.target.wants/try-omarchy-host-locale.service
-+  etc/systemd/system/try-omarchy-agent.service
-+  etc/systemd/system/multi-user.target.wants/try-omarchy-agent.service
-   etc/systemd/user/try-omarchy-share-link.service
-   etc/systemd/user/graphical-session.target.wants/try-omarchy-share-link.service
-   etc/systemd/user/try-omarchy-factory-update-notice.service
-   etc/systemd/user/graphical-session.target.wants/try-omarchy-factory-update-notice.service
-   usr/local/bin/try-omarchy-export
+   etc/systemd/system/multi-user.target.wants/savantos-sshd.service
+   etc/systemd/system/savantos-host-locale.service
+   etc/systemd/system/sysinit.target.wants/savantos-host-locale.service
++  etc/systemd/system/savantos-agent.service
++  etc/systemd/system/multi-user.target.wants/savantos-agent.service
+   etc/systemd/user/savantos-share-link.service
+   etc/systemd/user/graphical-session.target.wants/savantos-share-link.service
+   etc/systemd/user/savantos-factory-update-notice.service
+   etc/systemd/user/graphical-session.target.wants/savantos-factory-update-notice.service
+   usr/local/bin/savantos-export
 +  usr/local/lib/try-omarchy/agent
    usr/local/lib/try-omarchy/apply-host-locale
    usr/local/lib/try-omarchy/guest-ready
@@ -135,7 +135,7 @@ index 8cd7a11..a71d3fc 100644
  REQUEST_SSHD = OVERLAY / "usr/local/lib/try-omarchy/request-sshd"
  HOST_LOCALE = OVERLAY / "usr/local/lib/try-omarchy/apply-host-locale"
 +AGENT = OVERLAY / "usr/local/lib/try-omarchy/agent"
- EXPORT = OVERLAY / "usr/local/bin/try-omarchy-export"
+ EXPORT = OVERLAY / "usr/local/bin/savantos-export"
  
  def generated_key(directory: Path) -> str:
 @@ -380,3 +381,28 @@ class HostLocaleTests(OverlayCase):
@@ -180,7 +180,7 @@ index 65f1e73..0c91d5d 100755
 +        and "usr/local/lib/try-omarchy/agent" in finalize_rootfs
          and "compat_revision" in finalize_rootfs.split("compat-version")[0]
          and "usr/local/lib/try-omarchy/apply-host-locale" in finalize_rootfs
-         and "etc/systemd/system/sysinit.target.wants/try-omarchy-host-locale.service" in finalize_rootfs
+         and "etc/systemd/system/sysinit.target.wants/savantos-host-locale.service" in finalize_rootfs
 -- 
 2.55.0
 

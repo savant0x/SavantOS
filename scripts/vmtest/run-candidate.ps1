@@ -3,7 +3,7 @@
 # winps.sh. Interactive tasks are the only way a session started over SSH can
 # open windows on the console desktop.
 #
-#   run-candidate.ps1 -Exe C:\path\TryOmarchy.exe -Dir C:\Users\me\AppData\Local\TryOmarchy `
+#   run-candidate.ps1 -Exe C:\path\SavantOS.exe -Dir C:\Users\me\AppData\Local\SavantOS `
 #       -Release http://172.30.0.1:18080/assets -Sums <sha256 of SHA256SUMS> [-ExtraArgs '-ssh 2223']
 param(
   [Parameter(Mandatory)][string]$Exe,
@@ -12,7 +12,7 @@ param(
   [string]$Sums = '',
   [string]$ExtraArgs = '',
   [int]$TimeoutSeconds = 300,
-  [string]$TaskName = 'TryOmarchyCandidateRun'
+  [string]$TaskName = 'SavantOSCandidateRun'
 )
 $launchArgs = "-dir `"$Dir`" -no-update $ExtraArgs"
 if ($Release -ne '') { $launchArgs += " -release $Release -sums-sha256 $Sums -runtime-release $Release -runtime-sums-sha256 $Sums" }
