@@ -1,0 +1,10 @@
+{
+  "name": "savantos",
+  "private": true,
+  "scripts": {
+    "lint:md": "markdownlint ."
+  },
+  "devDependencies": {
+    "markdownlint-cli": "^0.49.1"
+  }
+}

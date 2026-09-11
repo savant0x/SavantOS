@@ -8,7 +8,7 @@ parts worth keeping to a bare-metal Omarchy install.
 
 Open a terminal (SUPER+RETURN) and run:
 
-```
+```bash
 try-omarchy-export
 ```
 
@@ -36,7 +36,7 @@ your data. Review it before sharing it with anyone.
 Copy the archive over (USB stick, the shared folder, `scp` through the SSH
 preset), then as the user who should receive the configuration:
 
-```
+```bash
 tar -xzf omarchy-export-<date>.tar.gz
 cd omarchy-export-<date>
 ./restore.sh

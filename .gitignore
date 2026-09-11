@@ -16,6 +16,8 @@ __pycache__/
 /TryOmarchy*.exe.sha256
 /artifacts/
 
+# Node toolchain — docs gate (markdownlint via bun); bun.lock IS tracked
+node_modules/
 # Secrets and agent credentials — never commit
 .env
 .env.*
@@ -32,4 +34,5 @@ __pycache__/
 
 # Operator-local reference material and session artifacts — not product content
 lastses.md
+ses.md
 savant-docs/

@@ -7,7 +7,8 @@ upgrade reliability.
 
 ## Runtime and release validation
 
-- [ ] Validate the source-built runtime on physical Windows hardware, including full Hyper-V. Record archive hashes and results using
+- [ ] Validate the source-built runtime on physical Windows hardware,
+  including full Hyper-V. Record archive hashes and results using
   [RUNTIME-VALIDATION.md](RUNTIME-VALIDATION.md).
 - [ ] Pin the tested runtime and matching source archive in
   `guest-build/runtime.lock.json`, then verify the runtime packaged in the

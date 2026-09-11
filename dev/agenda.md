@@ -18,8 +18,6 @@ at session end.
 
 ## Waiting on operator
 
-- Quality-limits reconciliation: canonical go.md overrides (350/50/120) vs
-  `protocol.config.yaml` quality block (600/60/120 advisory).
 - Whether to retain the two dropped SavantOS-specific Go rules in
   `AGENTS.md` (`filepath.Join` path building; test-fixture skip-or-fail
   messaging).

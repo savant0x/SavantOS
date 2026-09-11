@@ -43,6 +43,17 @@ go test ./...                     # zero failures
 gofmt -l .                        # empty output
 ```
 
+From the repo root, docs verify with markdownlint — run it after any
+`*.md` change (the Go gates never exercise root-level markdown):
+
+```bash
+bun run lint:md                   # zero markdown violations
+```
+
+The config (`.markdownlint.json`) is the canonical Savant markdownlint
+config, byte-copied from savant-code; tree-specific exemptions live in
+`.markdownlintignore`, each dated and reasoned.
+
 Plain `go vet ./...` intentionally flags `unsafe.Pointer` usage in win32
 callback/COM interop — that is contractual (see `.github/workflows/ci.yml`);
 the `-unsafeptr=false` gate matches upstream CI. Windows-specific tests

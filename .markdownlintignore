@@ -1,0 +1,22 @@
+node_modules/
+
+# Inherited upstream history — kept verbatim below the divider for
+# provenance, not hand-rewritten (savant-code ignores CHANGELOG.md the
+# same way).
+CHANGELOG.md
+
+# Closed/archived FIDs — historical records, not live docs
+# (savant-code precedent: dev/fids/archive/**).
+dev/fids/archive/**
+
+# Operator-local reference material and session artifacts — gitignored,
+# may exist on disk, not product content.
+lastses.md
+ses.md
+savant-docs/
+
+# README.md — 37 inherited violations (MD013/MD040/MD041/MD033), dense with
+# Try Omarchy identity; FID-2026-0910-001 rewrites it wholesale at the
+# rebrand. The rewritten README must lint clean before this exemption is
+# removed (2026-09-10).
+README.md

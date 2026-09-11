@@ -20,8 +20,10 @@ commands:
   type_check: 'go build ./...'        # Go compiles = typechecks; cwd: app/
   vet: 'go vet -unsafeptr=false ./...' # upstream CI gate; plain `go vet` flags contractual win32 unsafe.Pointer interop (see .github/workflows/ci.yml)
   lint: 'gofmt -l .'                 # cwd: app/; empty output = clean
+  lint_md: 'bun run lint:md'          # cwd: repo root; docs gate (markdownlint)
   # Full validation gate (bash, from repo root):
   #   cd app && go build ./... && go vet -unsafeptr=false ./... && go test ./... && gofmt -l .
+  #   bun run lint:md
 
 paths:
   src: 'app/'
@@ -34,8 +36,17 @@ paths:
   learnings: 'dev/LEARNINGS.md'
 
 quality:
-  max_file_lines: 600       # advisory; app/main.go (1061) predates the scaffold
-  max_function_lines: 60
+  # Aligned to the canonical coding-standards/go.md Go overrides (350/50/120)
+  # on 2026-09-10 — Law 13: one limit set, not two disagreeing ones. Advisory
+  # (no enforcement tool in this repo yet). Inherited upstream files exceed
+# these and are grandfathered until refactored post-rebrand (FID-2026-0910-001):
+  # 7 non-test files >350 lines (main.go 1061, ui.go 564, winapi.go 462,
+  # download.go 434, backup.go 431, setup.go 392,
+  # settings_dialog_windows.go 375) and
+  # 33 functions >50 lines (longest: main() 549) — protected by the
+  # behavioral freeze; new code must stay within the limits.
+  max_file_lines: 350
+  max_function_lines: 50
   max_line_length: 120      # advisory in Go (gofmt owns formatting)
   max_nesting_depth: 4
 

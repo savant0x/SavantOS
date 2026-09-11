@@ -4,7 +4,7 @@ Working notes on what's proven, what bit us, and the fixes. Dates are 2026-08.
 
 ## WHPX boot recipe (proven)
 
-```
+```text
 qemu-system-x86_64 -accel whpx -machine q35 -cpu qemu64 -smp 4 -m 4096
   -drive file=disk.raw,format=raw,if=virtio
   -kernel vmlinuz-linux -initrd initramfs-linux.img -append "<cmdline>"
@@ -17,46 +17,97 @@ qemu-system-x86_64 -accel whpx -machine q35 -cpu qemu64 -smp 4 -m 4096
   -serial file:serial.log
 ```
 
-- `-cpu qemu64`, not `-cpu host`: upstream QEMU's WHPX backend rejects host passthrough (WINQ-EMU patches this). qemu64 is a 2006-era feature set — no AVX2, which hurts llvmpipe badly. Testing richer named models / feature flags is an open task.
-- QEMU 11 matters: Chainfire documented WHPX interrupt fixes landing in QEMU 11 (and a startup regression on Hyper-V-host setups that WINQ-EMU Alpha 10 + his patch work around). Stock QEMU 11.1.0 from winget works fine under WHPX-on-KVM-nested and should work on bare-metal Windows.
-- Nested virtualization refusal (issue #19): with the kernel irqchip, `whpx_accel_init` requests `WHvPartitionPropertyCodeNestedVirtualization` whenever the processor feature banks advertise it. Meteor Lake laptops (Core Ultra 9 185H, Win11 23H2) and hosts with the full Hyper-V feature set advertise it and then refuse with `hr=80370302`, and alpha 10 treats that as fatal. Two fixes stack: the source-built runtime carries `runtime-build/patches/qemu/0001-*` which downgrades it to a warning, and the launcher retries the attempt with `kernel-irqchip=off` when it sees the fatal message, so the old runtime still boots (slower interrupts, same guest).
+- `-cpu qemu64`, not `-cpu host`: upstream QEMU's WHPX backend rejects host
+  passthrough (WINQ-EMU patches this). qemu64 is a 2006-era feature set — no
+  AVX2, which hurts llvmpipe badly. Testing richer named models / feature
+  flags is an open task.
+- QEMU 11 matters: Chainfire documented WHPX interrupt fixes landing in
+  QEMU 11 (and a startup regression on Hyper-V-host setups that WINQ-EMU
+  Alpha 10 + his patch work around). Stock QEMU 11.1.0 from winget works
+  fine under WHPX-on-KVM-nested and should work on bare-metal Windows.
+- Nested virtualization refusal (issue #19): with the kernel irqchip,
+  `whpx_accel_init` requests `WHvPartitionPropertyCodeNestedVirtualization`
+  whenever the processor feature banks advertise it. Meteor Lake laptops
+  (Core Ultra 9 185H, Win11 23H2) and hosts with the full Hyper-V feature
+  set advertise it and then refuse with `hr=80370302`, and alpha 10 treats
+  that as fatal. Two fixes stack: the source-built runtime carries
+  `runtime-build/patches/qemu/0001-*` which downgrades it to a warning, and
+  the launcher retries the attempt with `kernel-irqchip=off` when it sees the
+  fatal message, so the old runtime still boots (slower interrupts, same
+  guest).
 - Direct kernel boot (no bootloader) + raw ext4 rootfs on virtio-blk, from the try-omarchy build system.
-- Writable disk on NTFS: copy rootfs.ext4 to disk.raw, `fsutil sparse setflag`, then extend to the spec's expanded size via SetLength. Allocate-on-write; hosts without 24 GiB spare still boot. (Credit: jorge-huxley.)
+- Writable disk on NTFS: copy rootfs.ext4 to disk.raw,
+  `fsutil sparse setflag`, then extend to the spec's expanded size via
+  SetLength. Allocate-on-write; hosts without 24 GiB spare still boot.
+  (Credit: jorge-huxley.)
 
 ## THE display trap: default VGA + virtio-gpu (cost us an hour)
 
-`-device virtio-gpu-pci` does **not** suppress QEMU's default VGA. You silently get two display devices. The guest kernel's fbcon/DRM moves to the virtio-gpu, while QMP `screendump` (and anything watching the default console) keeps showing the **stale VGA text buffer** — frozen at early boot messages. It looks exactly like a boot hang. Keystrokes go through and land on the invisible display.
+`-device virtio-gpu-pci` does **not** suppress QEMU's default VGA. You
+silently get two display devices. The guest kernel's fbcon/DRM moves to the
+virtio-gpu, while QMP `screendump` (and anything watching the default
+console) keeps showing the **stale VGA text buffer** — frozen at early boot
+messages. It looks exactly like a boot hang. Keystrokes go through and land
+on the invisible display.
 
-Fix: always pass `-vga none` alongside `-device virtio-gpu-pci`. Prefer `-display vnc=127.0.0.1:N` over `-display none` for headless work so the display pipeline stays live.
+Fix: always pass `-vga none` alongside `-device virtio-gpu-pci`. Prefer
+`-display vnc=127.0.0.1:N` over `-display none` for headless work so the
+display pipeline stays live.
 
 Any embedded/headless display client in the app must account for this.
 
 ## First-boot provisioning
 
-The factory image arms upstream Omarchy's `omarchy-provision-owner.service`: an interactive gum form on tty1 (keyboard, username, password, optional name/email, hostname, timezone), run before display-manager. Completing it creates the user and hands off to SDDM → Hyprland.
+The factory image arms upstream Omarchy's `omarchy-provision-owner.service`:
+an interactive gum form on tty1 (keyboard, username, password, optional
+name/email, hostname, timezone), run before display-manager. Completing it
+creates the user and hands off to SDDM → Hyprland.
 
-The entire form is drivable over QMP `send-key` (see `scripts/qmp.ps1` — `type`/`key`/`shot` ops). This is the basis for an app-driven setup UX, or a "just try it" mode that provisions a default account with no questions.
+The entire form is drivable over QMP `send-key` (see `scripts/qmp.ps1` —
+`type`/`key`/`shot` ops). This is the basis for an app-driven setup UX, or
+a "just try it" mode that provisions a default account with no questions.
 
 ## Guest image build
 
-Built with the containerized x86_64 builder from jorge-huxley/try-omarchy-win (`guest/build-container.sh`, Docker on Linux, ~10 min). Two operational notes:
+Built with the containerized x86_64 builder from jorge-huxley/try-omarchy-win
+(`guest/build-container.sh`, Docker on Linux, ~10 min). Two operational
+notes:
 
-- The build enforces `packages.lock.json` against live Arch repos and refuses on drift. Refresh with `guest/build-container.sh --refresh-package-lock guest/packages.lock.json`, review the diff, rebuild. Expect this routinely — Arch moves fast.
-- The build spec self-documents the graphics state: `guestRenderer: llvmpipe, hostRenderer: none`. The trimmed 79-package guest has no sshd; all in-guest automation goes through QMP keystrokes. A dev-image variant with openssh (+ QEMU `hostfwd`) would make benchmarking much nicer.
+- The build enforces `packages.lock.json` against live Arch repos and refuses
+  on drift. Refresh with
+  `guest/build-container.sh --refresh-package-lock guest/packages.lock.json`,
+  review the diff, rebuild. Expect this routinely — Arch moves fast.
+- The build spec self-documents the graphics state:
+  `guestRenderer: llvmpipe, hostRenderer: none`. The trimmed 79-package
+  guest has no sshd; all in-guest automation goes through QMP keystrokes.
+  A dev-image variant with openssh (+ QEMU `hostfwd`) would make
+  benchmarking much nicer.
 
 ## Dev environment: nested virtualization under dockur/windows
 
-Development runs inside a dockur/windows Win11 VM on a Linux/KVM host (so: Linux → KVM → Windows 11 → WHPX → Omarchy). Findings:
+Development runs inside a dockur/windows Win11 VM on a Linux/KVM host (so:
+Linux → KVM → Windows 11 → WHPX → Omarchy). Findings:
 
-- dockur **masks VMX by default for Windows guests** (`-cpu ...,-vmx`, guarding an old Windows-update crash). Set the `VMX: "Y"` env on the container to expose nested virt; current Win11 builds run fine with it.
-- After exposing VMX, enable the `HypervisorPlatform` optional feature in the Windows guest + reboot; then `-accel whpx` initializes. ("WHPX: No accelerator found" = the hypervisor isn't launching — check VMX exposure first.)
+- dockur **masks VMX by default for Windows guests** (`-cpu ...,-vmx`,
+  guarding an old Windows-update crash). Set the `VMX: "Y"` env on the
+  container to expose nested virt; current Win11 builds run fine with it.
+- After exposing VMX, enable the `HypervisorPlatform` optional feature in
+  the Windows guest + reboot; then `-accel whpx` initializes. ("WHPX: No
+  accelerator found" = the hypervisor isn't launching — check VMX exposure
+  first.)
 - The same enable-WHP + reboot flow is what the product installer must automate on end-user machines.
 
-Caveat: all performance numbers measured in this nested environment carry KVM-nesting overhead. Relative comparisons (flag A vs flag B) are valid; absolute UX judgments need bare-metal Windows.
+Caveat: all performance numbers measured in this nested environment carry
+KVM-nesting overhead. Relative comparisons (flag A vs flag B) are valid;
+absolute UX judgments need bare-metal Windows.
 
 ## GPU path (planned, needs real hardware)
 
-WINQ-EMU proves Venus Vulkan forwarding works on Windows QEMU (their benchmark: 410 fps SuperTuxKart vs 226 under WSL2), with virgl for GL and experimental DXVA video decode. Their caveat: BIOS boot, not EFI (EFI boot tanks Vulkan perf). The dev VM has no GPU to forward, so this work needs a physical Windows machine.
+WINQ-EMU proves Venus Vulkan forwarding works on Windows QEMU (their
+benchmark: 410 fps SuperTuxKart vs 226 under WSL2), with virgl for GL and
+experimental DXVA video decode. Their caveat: BIOS boot, not EFI (EFI boot
+tanks Vulkan perf). The dev VM has no GPU to forward, so this work needs a
+physical Windows machine.
 
 ## WHPX CPU features: the XSAVE cliff (2026-08-27 evening)
 
@@ -158,8 +209,8 @@ via QMP match what the window shows; no SDL-specific issues observed).
 `systemctl reboot` inside the guest hangs the whole VM at the reset: the guest shuts
 down cleanly, issues the reset, and never comes back — SDL window freezes on black,
 serial stops, QMP stops answering, and the QEMU process sits alive at ~0% CPU.
-Upstream WHPX apparently cannot execute a system reset (same class of gap as the
-XSAVE cliff). Also observed: after force-killing the wedged process, the *next*
+Upstream WHPX apparently cannot execute a system reset (same class of gap as
+the XSAVE cliff). Also observed: after force-killing the wedged process, the *next*
 launch froze at ~1.4s into kernel boot (possibly leaked WHPX partition state);
 killing that one and launching again booted clean in ~20s.
 
@@ -182,8 +233,8 @@ iGPU:
 - **Venus Vulkan confirmed**: `vulkaninfo` reports
   `Virtio-GPU Venus (AMD Radeon (TM) Graphics)`, `driverName = venus`.
   BUT the guest image ships no Venus ICD — had to `pacman -S vulkan-virtio
-  vulkan-tools` in the running guest (network works). **Add `vulkan-virtio` to the
-  image package set** (and consider `vulkan-tools` for the dev variant).
+  vulkan-tools` in the running guest (network works). **Add `vulkan-virtio` to
+  the image package set** (and consider `vulkan-tools` for the dev variant).
 - Device recipe: `-device virtio-vga-gl,blob=on,hostmem=4G,venus=on -display
   sdl,gl=on` (per WINQ-EMU's launcher; virtio-vga-gl IS the VGA device — no `-vga
   none`, and no two-display trap observed). Direct kernel boot sidesteps their
@@ -240,8 +291,8 @@ exists but the window is smaller (faster boot), which is why the laptop saw it
 
 Rule: never touch any QMP socket before the guest is past early boot. The app
 shell (app/main.go) waits 10s before the supervisor's first probe, and the
-winkey forwarder + tooling only connect after that handshake succeeds. With the
-delay in place, nested launches come up healthy on attempt 1 in ~11s.
+winkey forwarder + tooling only connect after that handshake succeeds. With
+the delay in place, nested launches come up healthy on attempt 1 in ~11s.
 
 Two more shell-era findings the same night:
 

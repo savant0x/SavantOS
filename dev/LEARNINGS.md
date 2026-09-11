@@ -25,3 +25,17 @@ each entry dated. Technical traps specific to QEMU/WHPX live in
   notes stale (claimed "no .git" while the baseline commit had already
   landed). Always re-verify disk ground truth on resume before executing a
   recorded plan.
+- 2026-09-10 — toolchain: the docs gate is repo-local (`bun run lint:md`;
+  markdownlint-cli 0.49.1 via bun, config byte-copied from savant-code).
+  Every ignore-list entry carries a date and reason; the README exemption
+  dies when its rebrand rewrite lints clean.
+- 2026-09-10 — config edits: a one-line YAML insertion lost its 2-space
+  indent and silently re-keyed the mapping; the `python3 -c yaml.safe_load`
+  parse caught it. Parse config files after every edit to them — eyeballs
+  miss indentation.
+- 2026-09-10 — governance: quality limits are targets, not descriptions —
+  when a canonical standard and a repo config disagree, align the config to
+  the standard and grandfather inherited debt in a dated comment, rather
+  than loosening limits to match legacy code. Decision evidence (2026-09-10):
+  66/73 non-test Go files already ≤350 lines; only inherited upstream files
+  exceed.

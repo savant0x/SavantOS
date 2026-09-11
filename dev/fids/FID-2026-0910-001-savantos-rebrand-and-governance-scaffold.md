@@ -146,6 +146,9 @@ behavior.
 4. `gofmt -l app` → empty.
 5. `git log --oneline` shows atomic commits: baseline → scaffold →
    rebrand (host) → rebrand (guest/scripts/CI) → docs → keys.
+6. `bun run lint:md` → exit 0 — tree-wide docs gate, run from the repo
+   root (`markdownlint` on changed `*.md` alone is not sufficient once
+   exemptions exist; the tree-wide run proves the ignore set).
 
 ## Resolution
 
@@ -174,10 +177,8 @@ behavior.
   this FID (behavioral freeze). Two adapted-variant rules with no other home
   (`filepath.Join` path building; test-fixture skip-or-fail message) were
   dropped with the canonical replacement.
-- Flagged for operator decision (not resolved in this pass): canonical go.md
-  quality overrides (max_file_lines 350, max_function_lines 50,
-  max_line_length 120) vs `protocol.config.yaml` quality block (600/60/120,
-  advisory, main.go exemption note).
+- Flagged for operator decision in this pass; resolved same day (see
+  "Quality-limits conflict resolved" below).
 - 2026-09-10 compliance pass: markdownlint (savant-code `.markdownlint.json`,
   MD013/MD040) applied — this FID reflowed to ≤120 columns and ECHO.md's FSM
   fence tagged `text`; wording unchanged (reflow only).
@@ -221,3 +222,49 @@ pins savant0x/SavantOS v0.0.1 (first-run download fails closed until the
 Release workflow publishes the first SavantOS image; zero installs exist),
 and the guest-build lock files keep their upstream pins (external pins, not
 our identity). Status moves analyzed -> fixed as the sweep commits land.
+
+### Docs gate institutionalized (2026-09-10, operator directive)
+
+- Repo-local markdownlint gate so docs verify without borrowing
+  savant-code's node_modules: `.markdownlint.json` byte-copied from
+  savant-code (SHA256
+  `b8fb8b6408873697a3abc6622440d0db483936112c3c4b7706bbfd308f1e9bb9`),
+  `.markdownlintignore` (every entry dated and reasoned), `package.json`
+  (`lint:md` script, markdownlint-cli `^0.49.1`), `.bun-version` (1.3.14),
+  `bun.lock` tracked, `node_modules/` gitignored.
+- Wired into the gates: `protocol.config.yaml` `commands.lint_md`, and the
+  Validation section of `AGENTS.md` (docs verify with lint:md — the Go
+  gates never exercise root-level markdown).
+- First tree-wide run: 63 violations in 6 files, all inherited upstream
+  docs. Fixed 26 in the 5 living docs (23 MD013 reflow + 3 MD040 fence
+  tags, content-preserving; wording unchanged). README.md exempted in
+  `.markdownlintignore` — its 37 violations ride the wholesale rebrand
+  rewrite; the exemption is removed only when the rewritten README lints
+  clean.
+- Verification: `bun run lint:md` exit 0 tree-wide; YAML parse of
+  protocol.config.yaml OK (an indent slip that de-keyed `commands.lint`
+  was caught by `python3 -c yaml.safe_load` and fixed). No Go files
+  touched — Go gates unaffected by this change set.
+
+### Quality-limits conflict resolved (2026-09-10, operator directive)
+
+- Decision: **align** — `protocol.config.yaml` quality block now holds the
+  canonical go.md Go-override values (max_file_lines 350,
+  max_function_lines 50, max_line_length 120) directly. This is a pure-Go
+  repo, so the default/override split in the go.md table is moot; the
+  config carries the Go-effective values. Law 13 (one truth) — two
+  disagreeing limit sets are noise, not governance.
+- Evidence base (2026-09-10): 66/73 non-test Go files already ≤350 lines;
+  7 exceed (main.go 1061, ui.go 564, winapi.go 462, download.go 434,
+  backup.go 431, setup.go 392, settings_dialog_windows.go 375) and 33 of
+  385 functions exceed 50 lines (longest main() 549) — all inherited
+  upstream, all protected by the behavioral freeze. Grandfathered via a
+  dated comment in the config; refactor target post-rebrand, new code
+  within limits.
+- Rationale for align over document-divergence: the limits are advisory
+  (no enforcement tool in this repo), so alignment costs nothing
+  operationally, while keeping 600/60 would silently bless future files at
+  twice the canonical ceiling. Limits are targets, not descriptions of
+  inherited code.
+- Cleared from `dev/agenda.md` Waiting-on-operator; lesson recorded in
+  `dev/LEARNINGS.md`.
