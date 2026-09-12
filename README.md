@@ -26,6 +26,9 @@ Try Omarchy for Windows — see [provenance](#provenance-and-credits).
 [![CI](https://github.com/savant0x/SavantOS/actions/workflows/ci.yml/badge.svg)](https://github.com/savant0x/SavantOS/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+Developing on SavantOS (live launcher/guest iteration, headless VM control):
+see [docs/DEVELOPING.md](docs/DEVELOPING.md).
+
 ## Install
 
 **Requirements:** Windows 10 or 11 (Home or Pro), a 64-bit CPU with
