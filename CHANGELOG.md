@@ -10,6 +10,7 @@
   configured.
 - SignPath submission: MFA recorded as verified via the GitHub API
   (FID-2026-0911-001).
+- FID-2026-0911-001 closed and archived.
 
 ## v0.0.1 - 2026-09-11
 
