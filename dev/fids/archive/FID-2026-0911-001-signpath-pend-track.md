@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0911-001-signpath-pend-track.md`
 **ID:** FID-2026-0911-001
 **Severity:** medium
-**Status:** fixed
+**Status:** closed
 **Created:** 2026-09-11 20:40
 **YAGNI-Compliance:** Verified
 
@@ -321,23 +321,30 @@ step names verified in the same session); final re-grep due at archive time.
 > To be filled when steps land. A `closed` status without this section is
 > invalid.
 
-- [ ] **Commit SHA:** (PR that lands steps 2–4)
-- [ ] **File:line ranges:** README.md badge row; docs/RELEASE.md (new);
-      docs/TESTING.md:4 repoint; dev/signpath-submission.md MFA line
-- [ ] **Gate output:** (pasted at verification time)
-- [ ] **Reproducibility:** `ls docs/RELEASE.md` exists; `ls docs/RELEASING.md`
-      absent; `grep -rn RELEASING docs/` empty; `grep -n "img.shields.io\|actions/workflows" README.md` non-empty
-- [ ] **Step statuses:** 1 pending approval; 2–4 pending implementation;
-      sesh.md deletion implemented (evidence in Loop 1 AUDIT)
+- [x] **Commit SHA:** `2886923` (squash-merge of PR #6 on main; branch commit
+      `1061098`)
+- [x] **File:line ranges:** README.md:24–27 (badge row); docs/RELEASE.md (new,
+      claims block at :6); docs/TESTING.md:4 (repoint);
+      dev/signpath-submission.md:93 (MFA verified line);
+      dev/fids/archive/ (this file, at closure)
+- [x] **Gate output:** pasted in Verification Gates (lint exit 0; RELEASING
+      grep clean tree-wide; PR #6 checks Guest contract + Launcher + Windows
+      launcher all pass)
+- [x] **Reproducibility:** `ls docs/RELEASE.md` exists; `ls docs/RELEASING.md`
+      fails; `grep -rn RELEASING docs/` empty; `grep -c "img.shields.io" README.md`
+      → 3 (+1 GitHub-native CI badge)
+- [x] **Step statuses:** 1 **implemented** (live, gh-verified above);
+      2–4 **implemented** (`2886923`); sesh.md deletion **implemented**
 
 ### Code Verification Evidence
 
-- [ ] Files referenced in Affected Components exist in the intended end state
-- [ ] Implementation matches the Proposed Solution
-- [ ] Gates pass with pasted tool output
-- [ ] Production call-graph evidence: N/A — no wiring changed
-- [ ] FID status reflects the actual implementation state (currently
-      `analyzed`: all fix-steps proposed, none begun)
+- [x] Files referenced in Affected Components exist in the intended end state
+      (RELEASE.md present; RELEASING.md absent — verified by ls)
+- [x] Implementation matches the Proposed Solution (line-cited claims block)
+- [x] Gates pass with pasted tool output (Verification Gates section)
+- [x] Production call-graph evidence: N/A — no wiring changed
+- [x] FID status reflects the actual implementation state (`closed` after
+      merge `2886923` and independent check review on PR #6)
 
 > Every PASS/FAIL must cite file:line or exact command output at audit time.
 
@@ -380,11 +387,20 @@ docs/TESTING.md:4:backup untouched. Follow [RELEASING.md](RELEASING.md) for runn
 
 ## Resolution
 
-- **Closed Date:** (pending — blocked on step-1 approval + steps 2–4 landing)
-- **Fix Description:** (at closure)
-- **Tests Added:** No (docs/metadata only; gates: lint:md + claims greps)
-- **Verification Evidence:** (pasted at closure)
-- **Archived:** (set on move to `dev/fids/archive/` + CHANGELOG entry)
+- **Closed Date:** 2026-09-11 21:05
+- **Fix Description:** All four approved steps landed: repo topics (10) +
+  homepage live (gh-verified); README badge row (`2886923`);
+  `docs/RELEASE.md` playbook replacing deleted `docs/RELEASING.md` with
+  TESTING.md repointed; submission MFA line corrected to API-verified.
+  Plus pre-filing hygiene: `sesh.md` removed (never committed — verified).
+- **Tests Added:** No (docs/metadata only; gates: lint:md + claims greps +
+  PR checks)
+- **Verification Evidence:** `bun run lint:md` exit 0; tree-wide RELEASING
+  grep empty; PR #6 required checks all pass (Guest contract, Launcher,
+  Windows launcher); squash-merged via admin override as `2886923`; repo
+  metadata confirmed by `gh repo view` JSON in Implementation Evidence.
+- **Archived:** 2026-09-11 21:05 (moved to `dev/fids/archive/`; CHANGELOG
+  Unreleased entry appended)
 
 ## Lessons Learned
 
