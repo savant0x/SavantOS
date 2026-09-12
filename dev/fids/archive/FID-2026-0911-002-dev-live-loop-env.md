@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0911-002-dev-live-loop-env.md`
 **ID:** FID-2026-0911-002
 **Severity:** low
-**Status:** fixed (pending merge + archive)
+**Status:** closed
 **Created:** 2026-09-11 21:25
 **YAGNI-Compliance:** Pending
 
@@ -214,7 +214,8 @@ fix changed only how the script invokes the existing tool — no source change.)
 
 ### Implementation Evidence (REQUIRED for `closed`)
 
-- [x] **Commit SHA:** (PR landing steps 1–3 — filled at merge)
+- [x] **Commit SHA:** `3018843` (squash-merge of PR #8 on main; branch commit
+      `545c2a0`)
 - [x] **File:line ranges:** scripts/dev/dev-vm.sh (whole file, 5 subcommands);
       scripts/dev/README.md (whole file)
 - [x] **Gate output:** pasted in Verification Gates
@@ -260,11 +261,19 @@ fix changed only how the script invokes the existing tool — no source change.)
 
 ## Resolution
 
-- **Closed Date:** (pending)
-- **Fix Description:** (at closure)
-- **Tests Added:** (at closure)
-- **Verification Evidence:** (at closure)
-- **Archived:** (on move to `dev/fids/archive/`)
+- **Closed Date:** 2026-09-11 21:40
+- **Fix Description:** `scripts/dev/dev-vm.sh` + `README.md` landed
+  (`3018843`): init (sparse seed)/boot (live-log dev launcher + share +
+  ssh)/shell/stop composition, everything outside the repo and outside any
+  real install. Live-verified end to end on the operator machine; the dev VM
+  was left running for operator use.
+- **Tests Added:** No automated tests (host-side tooling needing a booted
+  guest; verification transcript in this FID serves as the evidence record).
+- **Verification Evidence:** lint:md exit 0; bash -n clean; PR #8 required
+  checks all pass; live loop: ssh cat round-trip + guest→host file landing
+  (timestamps in Implementation Evidence).
+- **Archived:** 2026-09-11 21:40 (moved to `dev/fids/archive/`; CHANGELOG
+  Unreleased entry appended)
 
 ## Lessons Learned
 
