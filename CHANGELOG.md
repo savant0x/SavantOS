@@ -9,6 +9,10 @@
   (FID-2026-0911-002).
 
 ### Documentation
+- Developer guide (`docs/DEVELOPING.md`): the three live-iteration layers
+  (launcher rebuild loop, guest iteration via SSH/share, QMP driving plane),
+  observed port map with plane lifetimes, and orphaned-guest recovery
+  (FID-2026-0911-003).
 - Release playbook (`docs/RELEASE.md`) replaces the inherited upstream
   release doc (now removed): three-phase workflow, manifest pin recipe,
   PR-only main mechanics, and the `signing` input choices.

@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0911-003-developing-doc.md`
 **ID:** FID-2026-0911-003
 **Severity:** low
-**Status:** fixed
+**Status:** closed
 **Created:** 2026-09-11 21:50
 **YAGNI-Compliance:** Pending
 
@@ -157,8 +157,11 @@ marked as such rather than asserted.
 
 ### Implementation Evidence (REQUIRED for `closed`)
 
-- [ ] **Commit SHA:** (PR landing steps 1–2)
-- [ ] **File:line ranges:** docs/DEVELOPING.md; README.md pointer line
+- [x] **Commit SHA:** `63edbb2` (squash-merge of PR #10 on main; branch
+      commit `231edad`)
+- [x] **File:line ranges:** docs/DEVELOPING.md (whole file, three layer
+      sections + ports table + orphan section); README.md (pointer after
+      badges block)
 - [ ] **Gate output:** (pasted at verification)
 - [ ] **Reproducibility:** `ls docs/DEVELOPING.md`; grep for the three
       layer headings
@@ -199,11 +202,17 @@ marked as such rather than asserted.
 
 ## Resolution
 
-- **Closed Date:** (pending)
-- **Fix Description:** (at closure)
-- **Tests Added:** No (docs)
-- **Verification Evidence:** (at closure)
-- **Archived:** (on move)
+- **Closed Date:** 2026-09-11 22:00
+- **Fix Description:** `docs/DEVELOPING.md` landed (`63edbb2`) with the
+  three dev-mode layers, the observed v0.0.1 port map (owner + lifetime),
+  the `qmp.ps1 shot` NEEDS-REVIEW caveat, and the orphaned-guest recovery
+  section (sudo verified live). README pointer added.
+- **Tests Added:** No (docs).
+- **Verification Evidence:** lint:md exit 0; PR #10 required checks all
+  pass; every command in the doc has a live transcript in this FID or is
+  explicitly marked otherwise.
+- **Archived:** 2026-09-11 22:00 (moved to `dev/fids/archive/`; CHANGELOG
+  Unreleased entry appended)
 
 ## Lessons Learned
 
