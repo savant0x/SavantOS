@@ -90,11 +90,11 @@ Solo-maintainer project. GitHub owner: savant0x
 - **Approvers:** savant0x (the single person who approves each release
   signing request)
 
-Multi-factor authentication is enabled on the GitHub account, and will be
-enabled on the SignPath account. (ACTION before submitting: confirm MFA is
-on at github.com/settings/security — SignPath's code of conduct requires
-MFA on both.) As the project grows, the reviewer and
-approver roles are intended to be split onto additional maintainers.
+Multi-factor authentication is verified enabled on the GitHub account
+(GitHub API check, 2026-09-11), and will be enabled on the SignPath
+account as their code of conduct requires on both sides. As the project
+grows, the reviewer and approver roles are intended to be split onto
+additional maintainers.
 
 ## Upstream / fork disclosure
 
