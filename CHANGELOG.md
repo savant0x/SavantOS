@@ -28,6 +28,15 @@
   `git am` round-trip proof) (FID-2026-0911-004).
 
 ### Documentation
+- First-party OS pivot filed (FID-2026-0912-001): the guest is rebuilt as a
+  first-party mkosi + systemd-repart builder (Arch base, snapshot-pinned) with
+  a KDE Plasma 6 Wayland desktop, native traffic-lights theming, and the
+  Savant agent embedded via the live-verified KWin EIS + AT-SPI2 control
+  plane. Operator rulings recorded: research reconciliation adopted, agent
+  safety law confirmed, and a NO-WIPE ruling — the launcher, release
+  pipeline, dev loop, and SignPath work are untouched; the Omarchy patch
+  train (`guest-build/`) retires surgically after sign-off. Deep Research
+  brief and reconciliation recorded under `dev/`.
 - Developer guide (`docs/DEVELOPING.md`): the three live-iteration layers
   (launcher rebuild loop, guest iteration via SSH/share, QMP driving plane),
   observed port map with plane lifetimes, and orphaned-guest recovery
