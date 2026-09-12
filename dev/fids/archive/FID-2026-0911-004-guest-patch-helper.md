@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0911-004-guest-patch-helper.md`
 **ID:** FID-2026-0911-004
 **Severity:** low
-**Status:** fixed
+**Status:** closed
 **Created:** 2026-09-11 22:10
 **YAGNI-Compliance:** Pending
 
@@ -235,7 +235,8 @@ commit), `git am` round-trip in a scratch repo, and in modify mode
 
 ### Implementation Evidence (REQUIRED for `closed`)
 
-- [ ] **Commit SHA:** (PR landing steps 1–2)
+- [x] **Commit SHA:** `55b3079` (squash-merge of PR #12 on main; branch
+      commit `158c58e`)
 - [ ] **File:line ranges:** scripts/dev/guest-patch.sh; README section
 - [ ] **Gate output:** (pasted at verification)
 - [ ] **Reproducibility:** `scripts/dev/guest-patch.sh help` on any checkout
@@ -295,11 +296,20 @@ commit), `git am` round-trip in a scratch repo, and in modify mode
 
 ## Resolution
 
-- **Closed Date:** (pending)
-- **Fix Description:** (at closure)
-- **Tests Added:** (at closure)
-- **Verification Evidence:** (at closure)
-- **Archived:** (on move)
+- **Closed Date:** 2026-09-11 22:15
+- **Fix Description:** `scripts/dev/guest-patch.sh` + README patch-authoring
+  section landed (`55b3079`): tar-over-SSH capture, factory-overlay mapping,
+  add/modify modes with correct bases, provenance headers, exec-bit and
+  CRLF hardening, symlink refusal, and a `git am` round-trip proof per
+  commit.
+- **Tests Added:** No automated tests (requires a booted dev VM; the live
+  transcripts in this FID are the evidence record; CI's Guest contract
+  remains the authoritative gate for any real patch that lands).
+- **Verification Evidence:** bash -n clean; lint:md exit 0; PR #12 required
+  checks all pass (incl. Guest contract); live add + modify transcripts
+  with exact-diff evidence in this FID.
+- **Archived:** 2026-09-11 22:15 (moved to `dev/fids/archive/`; CHANGELOG
+  Unreleased entry appended)
 
 ## Lessons Learned
 
