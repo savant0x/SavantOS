@@ -83,8 +83,9 @@ Solo-maintainer project. GitHub owner: savant0x
 (https://github.com/savant0x).
 
 - **Authors / Committers:** savant0x (repository owner, sole committer)
-- **Reviewers:** savant0x (all pull requests reviewed before merge;
-  branch-ruleset enforcement is planned — see policy note below)
+- **Reviewers:** savant0x (all changes land through pull request — branch
+  rulesets on `main` require a PR with one approval and CODEOWNERS review,
+  and ban force pushes outright; the owner acts as the sole reviewer)
 - **Approvers:** savant0x (the single person who approves each release
   signing request)
 

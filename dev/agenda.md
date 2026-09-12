@@ -14,9 +14,11 @@ at session end.
 
 ## Next
 
-- Optional hardening: branch protection on main (no force-push, PR +
-  approval, CODEOWNERS on `.signpath/`), then uncomment the staged
-  branch_rulesets rules in `.signpath/policies/savantos/release-signing.yml`.
+- Hardening done 2026-09-11: branch rulesets active on main (no
+  force-push/deletion, no bypass; PR + 1 approval + CODEOWNERS + required
+  checks, maintainer bypass in pull_request mode). SignPath policy
+  branch_rulesets uncommented to match — direct pushes to main are gone;
+  everything lands by PR now.
 - Next release exercise: prepare → pin → publish cycle on a real tag with
   the executed playbook (exec-bit and CRLF gates now in the tree).
 

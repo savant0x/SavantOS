@@ -34,16 +34,22 @@ github-policies:
     # fixed with a new commit and a fresh dispatch instead.
     disallow_reruns: true
 
-  # branch_rulesets:
-  #   - condition:
-  #       rules:
-  #         - block_force_pushes: true
-  #         - require_pull_request:
-  #             min_required_approvals: 1
-  #     allow_bypass_actors: false
-  #     enforced_from: EARLIEST
-  #
-  # Staged until branch protection exists on main: these rules require a
-  # matching active GitHub branch ruleset. Enable them together with branch
-  # protection (force-push ban + PR requirement) so the signature also
-  # attests to the review path the commit took.
+  branch_rulesets:
+    - condition:
+        rules:
+          - block_force_pushes: true
+      allow_bypass_actors: false
+      enforced_from: EARLIEST
+    - condition:
+        rules:
+          - require_pull_request:
+              min_required_approvals: 1
+              require_code_owner_review: true
+      allow_bypass_actors: true # solo maintainer; bypass actors run in pull_request mode
+      enforced_from: EARLIEST
+
+  # Backed by the active GitHub rulesets created 2026-09-11:
+  #   "main: no force pushes" (non_fast_forward + deletion, no bypass)
+  #   "main: PR + required checks" (pull_request: 1 approval, CODEOWNERS,
+  #   Launcher / Windows launcher / Guest contract required; repository
+  #   maintainer as pull_request-mode bypass actor)
