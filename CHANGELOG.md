@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Features
+- Developer live-loop environment (`scripts/dev/dev-vm.sh`): sparse-seeded
+  disposable data dir, shared folder, and SSH wiring for iterating on the
+  guest and launcher without rebuilding the factory image
+  (FID-2026-0911-002).
+
 ### Documentation
 - Release playbook (`docs/RELEASE.md`) replaces the inherited upstream
   release doc (now removed): three-phase workflow, manifest pin recipe,
