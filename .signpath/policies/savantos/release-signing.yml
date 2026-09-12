@@ -1,0 +1,49 @@
+# SignPath GitHub build policy — SavantOS release signing
+#
+# Verified by SignPath at signing time (docs.signpath.io/trusted-build-systems/github,
+# "Define policies for source code and builds") against the workflow run that
+# produced the artifact. The file path is coupled to the SignPath project
+# registered after Foundation approval:
+#
+#   .signpath/policies/<project-slug>/<signing-policy-slug>.yml
+#   = .signpath/policies/savantos/release-signing.yml
+#
+# Slugs assumed here: project "savantos", signing policy "release-signing".
+# If the registered slugs differ, rename this file (and update the
+# SIGNPATH_PROJECT_SLUG / SIGNPATH_SIGNING_POLICY_SLUG repo variables) before
+# running phase=publish with signing=signpath.
+#
+# Activation checklist (after SignPath Foundation approval):
+#   1. Register the project and signing policy in SignPath.io with these slugs.
+#   2. Restrict write access to this file via a CODEOWNERS entry
+#      (SignPath treats build policy files as security-sensitive).
+#   3. If branch ruleset rules are uncommented below, create matching
+#      branch rulesets on main first — SignPath verifies they exist and are
+#      active before allowing a signature.
+
+github-policies:
+  runners:
+    # OSS Trusted Build requirement: every job leading up to the signing
+    # request runs on GitHub-hosted agents. The publish job already runs on
+    # windows-2025.
+    require_github_hosted: true
+
+  build:
+    # A temporarily failed build must not be re-run and signed under the
+    # false impression that it contains fresh changes. Failed releases are
+    # fixed with a new commit and a fresh dispatch instead.
+    disallow_reruns: true
+
+  # branch_rulesets:
+  #   - condition:
+  #       rules:
+  #         - block_force_pushes: true
+  #         - require_pull_request:
+  #             min_required_approvals: 1
+  #     allow_bypass_actors: false
+  #     enforced_from: EARLIEST
+  #
+  # Staged until branch protection exists on main: these rules require a
+  # matching active GitHub branch ruleset. Enable them together with branch
+  # protection (force-push ban + PR requirement) so the signature also
+  # attests to the review path the commit took.
