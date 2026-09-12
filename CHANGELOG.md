@@ -7,6 +7,10 @@
   disposable data dir, shared folder, and SSH wiring for iterating on the
   guest and launcher without rebuilding the factory image
   (FID-2026-0911-002).
+- Guest patch-authoring helper (`scripts/dev/guest-patch.sh`): captures
+  live guest files into the next numbered `guest-build/` mailbox patch
+  (factory-overlay mapping, provenance header, exec-bit/CRLF hardening,
+  `git am` round-trip proof) (FID-2026-0911-004).
 
 ### Documentation
 - Developer guide (`docs/DEVELOPING.md`): the three live-iteration layers
