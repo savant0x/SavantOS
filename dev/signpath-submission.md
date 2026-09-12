@@ -83,10 +83,11 @@ Solo-maintainer project. GitHub owner: savant0x
 (https://github.com/savant0x).
 
 - **Authors / Committers:** savant0x (repository owner, sole committer)
-- **Reviewers:** savant0x (all changes land through pull request — branch
-  rulesets on `main` require a PR with one approval and CODEOWNERS review,
-  and ban force pushes outright; as a solo maintainer the owner merges
-  via the repository admin override rather than self-approving)
+- **Reviewers:** savant0x (changes land by direct push to `main`, which runs
+  the full CI check suite on every push — Launcher, Windows launcher, Guest
+  contract — plus a branch ruleset banning force pushes and deletion with
+  zero bypass actors; PR review may be added back ahead of any review
+  milestone)
 - **Approvers:** savant0x (the single person who approves each release
   signing request)
 

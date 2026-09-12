@@ -137,7 +137,7 @@ driving patterns are shared between both.
 ## Before pushing
 
 - Go changes: full gate from `protocol.config.yaml` (`build`, `vet
-  -unsafeptr=false`, `test`, `gofmt`) — main is PR-only; CI runs the same
+  -unsafeptr=false`, `test`, `gofmt`) — main takes direct pushes; CI runs the same
   gates on every PR.
 - Docs: `bun run lint:md`.
 - Guest changes intended to ship: `guest-build/` patch + the guest contract

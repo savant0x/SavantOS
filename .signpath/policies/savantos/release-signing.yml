@@ -40,16 +40,10 @@ github-policies:
           - block_force_pushes: true
       allow_bypass_actors: false
       enforced_from: EARLIEST
-    - condition:
-        rules:
-          - require_pull_request:
-              min_required_approvals: 1
-              require_code_owner_review: true
-      allow_bypass_actors: true # solo maintainer: own-PR merges go through the repository admin override
-      enforced_from: EARLIEST
 
-  # Backed by the active GitHub rulesets created 2026-09-11:
+  # Backed by the active GitHub ruleset created 2026-09-11:
   #   "main: no force pushes" (non_fast_forward + deletion, no bypass)
-  #   "main: PR + required checks" (pull_request: 1 approval, CODEOWNERS,
-  #   Launcher / Windows launcher / Guest contract required; solo maintainer
-  #   merges own PRs via the admin override - no self-approval exists)
+  # The PR-required ruleset ("main: PR + required checks") was removed on
+  # 2026-09-12 by operator directive; CI runs the full check suite on every
+  # push to main. Revisit before any signing milestone that relies on
+  # reviewer attestation.

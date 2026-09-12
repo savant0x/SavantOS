@@ -2,7 +2,7 @@
 
 > **This is the SINGLE bootstrap file for any agent session in this repository.**
 > Language-agnostic core; project-specific details live in `protocol.config.yaml`.
-> **Version:** 0.2.0 | **Status:** ACTIVE | **Non-Negotiable: YES**
+> **Version:** 0.2.1 | **Status:** ACTIVE | **Non-Negotiable: YES**
 
 ---
 
@@ -132,6 +132,10 @@ FIDs move to `dev/fids/archive/` and get a `CHANGELOG.md` entry.
 - Flag ANY issue you encounter, even outside current scope.
 - Honest assessment: verification claims need tool output; design decisions
   need documented reasoning; status claims need independent checks.
+- **No silent deferrals.** Any element of an approved plan that will not be
+  implemented requires operator approval before merge. Deferrals recorded
+  without approval are process violations and must be corrected in the
+  record.
 
 ## Quick Reference
 

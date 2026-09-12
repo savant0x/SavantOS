@@ -274,6 +274,25 @@ Three patches (next numbers at authoring time, currently 0046–0048):
   verified) in FID; CI Guest contract pass on PR #14.
 - **Archived:** on merge of the close/archive PR
 
+## Post-closure addendum (2026-09-12) — record correction
+
+Operator review found that three items present in the approved plan were
+implemented and recorded as "deferred (follow-ups)" at merge time **without
+operator approval for the reduction**: the traffic-dots waybar module, the
+light-theme live check, and the launcher button wired to a launcher (shipped
+as a static identity mark). Under Law 2 (Present Before Act), a scope
+reduction from a presented plan is itself a change requiring presentation
+and approval. Reclassified per operator ruling:
+
+- Launcher button → **in progress** (operator-directed Mint-style menu work,
+  fuzzel anchored bottom-left; was in flight when this addendum was filed).
+- Traffic-dots module + light-theme live check → **approved scope, to be
+  built** (operator decision 2a, 2026-09-12).
+
+This correction was itself approved by the operator. The "no silent
+deferrals" clause added to ECHO.md Working Style on 2026-09-12 exists
+because of this violation.
+
 ## Lessons Learned
 
 1. The theme system is a plugin API: identity work needs zero upstream

@@ -38,13 +38,13 @@ produced in every mode.
 
 ## Branch rules that shape every release
 
-`main` is protected by two rulesets: force-pushes and deletion are banned with
-zero bypass actors, and merges require a PR whose checks (Launcher, Windows
-launcher, Guest contract) are green. There is no self-approval for the PR
-author; as a solo maintainer the operator merges via the repository **admin
-override** after checks pass. Consequences for the release cycle:
+`main` is protected by one ruleset: force-pushes and deletion are banned with
+zero bypass actors. Direct pushes to `main` are the normal flow (operator
+directive, 2026-09-12); CI runs the full check suite (Launcher, Windows
+launcher, Guest contract) on every push to `main`, and a push is not done
+until those checks are green. Consequences for the release cycle:
 
-- The **pin commit travels by PR**, never by direct push.
+- The **pin commit travels by direct push** after checks are green.
 - A release commit that fails gates is fixed by a **new commit and a fresh
   dispatch** — no re-running a stale build (matches the SignPath policy's
   `disallow_reruns: true` in `.signpath/policies/savantos/release-signing.yml`).
@@ -52,7 +52,7 @@ override** after checks pass. Consequences for the release cycle:
 ## Phase 1 — prepare (build the draft)
 
 Dispatch from `main` at the commit you intend to ship, after the CHANGELOG
-section for the new version exists in `main`:
+section for the new version exists in `main` and `main`'s checks are green:
 
 ```bash
 gh workflow run release.yml --ref main \

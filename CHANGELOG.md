@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Governance
+- ECHO Protocol 0.2.1: new Working Style clause — **no silent deferrals**;
+  any element of an approved plan that will not be implemented requires
+  operator approval before merge (arising from FID-2026-0911-005's post-
+  closure record correction).
+- Main branch flow: the PR-required ruleset was removed by operator
+  directive; direct pushes to `main` are the normal flow, CI runs the full
+  check suite on every push, and the force-push/deletion ban remains.
+  Release playbook, SignPath submission, and policy stub updated to match.
+
 ### Features
 - Savant desktop identity: the Savant and Savant Light themes (traffic-lights
   palette, glowing-dots wallpapers) as factory default, plus a Windows-style
