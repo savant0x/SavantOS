@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0911-005-savant-desktop-identity.md`
 **ID:** FID-2026-0911-005
 **Severity:** medium
-**Status:** fixed
+**Status:** closed
 **Created:** 2026-09-11 22:30
 **YAGNI-Compliance:** Pending
 
@@ -149,8 +149,10 @@ Three patches (next numbers at authoring time, currently 0046–0048):
    guest contract verified" (pasted below). Live guest additionally at
    parity: Savant theme applied via real theme machinery, waybar running
    ("Bar configured (width: 2560, height: 34)").
-4. PR (patches) → CI Guest contract → merge. **in flight**
-5. CHANGELOG + FID close/archive PR. **pending**
+4. PR (patches) → CI Guest contract → merge. **implemented** — PR #14
+   merged as `12c5245` (all 3 required checks green, incl. Guest contract
+   in 8s: CI independently re-applied all 48 patches and passed).
+5. CHANGELOG + FID close/archive PR. **implemented** (this PR)
 
 ### Verification
 
@@ -260,11 +262,17 @@ Three patches (next numbers at authoring time, currently 0046–0048):
 
 ## Resolution
 
-- **Closed Date:** (pending)
-- **Fix Description:** (at closure)
-- **Tests Added:** (at closure)
-- **Verification Evidence:** (at closure)
-- **Archived:** (on move)
+- **Closed Date:** 2026-09-11
+- **Fix Description:** Merged in PR #14 (`8afa4bc` → main `12c5245`):
+  patches 0046 (Savant + Savant Light themes, 14 files incl. binary
+  wallpapers), 0047 (waybar package + lock digest chain), 0048 (XDG waybar
+  defaults, autostart fragment + catch-up migration, compat_revision 13,
+  factory default theme flip via overlay).
+- **Tests Added:** verify.py: new-users-autostart assertion + compat pin
+  updated to 13 (run in CI's Guest contract job, green).
+- **Verification Evidence:** Docker contract run (51 tests OK + contract
+  verified) in FID; CI Guest contract pass on PR #14.
+- **Archived:** on merge of the close/archive PR
 
 ## Lessons Learned
 
@@ -275,3 +283,11 @@ Three patches (next numbers at authoring time, currently 0046–0048):
    reframed the taskbar from restyle to feature before any code was written.
 3. Live-guest grounding before design (the waybar discovery, the theme.sh
    seeding semantics) prevented building the wrong thing.
+4. Builder-tree files that don't exist in the guest (packages.txt, the
+   materialized omarchy tree) cannot be authored with the live-capture
+   helper — assemble the builder clone and hand-author following the
+   closest precedent (0042/0044).
+5. The Windows worktree smudges files CRLF; digest/substring gates
+   (verify.py) are Linux-only and false-fail there — the faithful local
+   gate is the Docker contract run with the CI-equivalent environment
+   (git, jq, sudo, tester user).

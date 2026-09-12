@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Features
+- Savant desktop identity: the Savant and Savant Light themes (traffic-lights
+  palette, glowing-dots wallpapers) as factory default, plus a Windows-style
+  bottom taskbar (waybar: launcher mark, window list, clock, tray) launched
+  with the session, with existing-user migration via the compat-revision
+  catch-up flow (FID-2026-0911-005, patches 0046–0048).
 - Developer live-loop environment (`scripts/dev/dev-vm.sh`): sparse-seeded
   disposable data dir, shared folder, and SSH wiring for iterating on the
   guest and launcher without rebuilding the factory image
