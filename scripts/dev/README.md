@@ -34,9 +34,38 @@ edit files on Windows, they appear in the guest at `/mnt/host` instantly.
 Run `bash /mnt/host/hello.sh` inside the guest for the round-trip smoke
 (writes `from-guest.txt` back to the share). The guest's writable disk
 persists local changes across reboots: `yay -S <pkg>` and config edits stay
-in the dev dir. When a guest change proves out, formalize it as the next
-numbered patch in `guest-build/` — that is how the existing patches were
-authored.
+in the dev dir. When a guest change proves out, formalize it with the patch
+authoring helper below.
+
+## Patch authoring (`guest-patch.sh`)
+
+Turns live guest files into the next numbered `guest-build/` patch — the
+exact mailbox format `scripts/release/build-guest.sh` consumes with `git am`:
+
+```bash
+scripts/dev/guest-patch.sh stage /usr/local/bin/newtool
+scripts/dev/guest-patch.sh commit "Ship the newtool stub"        # add mode
+scripts/dev/guest-patch.sh stage /usr/local/bin/clipboard-bridge
+scripts/dev/guest-patch.sh commit --modify "Tune the bridge"     # modify mode
+scripts/dev/guest-patch.sh list | clean
+```
+
+- Mapping handled for you: a guest path `/p/f` becomes builder-tree path
+  `guest/factory-overlay/p/f` (that is how guest content reaches the
+  factory image).
+- Modes and symlinks survive capture (tar over SSH); add mode refuses paths
+  the builder already tracks (use `--modify`, which diffs against the
+  pinned builder commit in `source.lock.json` — needs network for the
+  fetch).
+- Every patch carries a provenance header: builder commit, SavantOS source
+  SHA, factory image provenance, captured paths. Author comes from your git
+  config or `--author` / `SAVANTOS_PATCH_AUTHOR`.
+- `commit` runs a `git am` round-trip proof before writing the patch — the
+  builder's real consumer is the referee.
+- Stage only intended content, never runtime-mutated state (`/etc` machine
+  state, logs): that belongs to the writable disk, not the factory overlay.
+- Before opening a PR with a real patch: `scripts/release/build-guest.sh
+  --contract-only` (CI runs the same Guest contract job on every PR).
 
 **Launcher loop:** `boot` uses `app/SavantOS-dev.exe`, a plain `go build`
 (console, live logs). Kill it, edit Go code, rebuild, relaunch — the VM state
