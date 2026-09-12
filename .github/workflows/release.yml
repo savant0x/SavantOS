@@ -16,11 +16,12 @@ on:
         required: true
         type: string
       signing:
-        description: Authenticode path for the launcher (azure Trusted Signing, or none for an unsigned launcher; the update feeds stay Ed25519-signed either way)
+        description: Authenticode path for the launcher (azure Trusted Signing, signpath Foundation certificate, or none for an unsigned launcher; the update feeds stay Ed25519-signed either way)
         required: true
         type: choice
         options:
           - azure
+          - signpath
           - none
 
 concurrency:
@@ -301,11 +302,44 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
+      - name: Upload unsigned launcher for SignPath
+        if: inputs.signing == 'signpath'
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: SavantOS-unsigned-${{ github.run_id }}
+          path: release/SavantOS.exe
+          if-no-files-found: error
+
+      - name: Sign launcher via SignPath Foundation
+        if: inputs.signing == 'signpath'
+        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627 # v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned-artifact.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: ${{ github.workspace }}/release/signed
+          parameters: |
+            version: "${{ inputs.release_tag }}"
+
+      - name: Promote the SignPath-signed launcher
+        if: inputs.signing == 'signpath'
+        shell: pwsh
+        run: |
+          $signed = Get-ChildItem release/signed -Recurse -Filter SavantOS.exe |
+            Select-Object -First 1
+          if (-not $signed) { throw 'SignPath returned no signed launcher' }
+          Copy-Item $signed.FullName release/SavantOS.exe -Force
+
       - name: Verify signature and write checksum
         shell: pwsh
         run: |
           $exe = 'release/SavantOS.exe'
-          if ('${{ inputs.signing }}' -eq 'azure') {
+          if ('${{ inputs.signing }}' -ne 'none') {
             $signature = Get-AuthenticodeSignature $exe
             if ($signature.Status -ne 'Valid') {
               throw "Authenticode verification failed: $($signature.StatusMessage)"
