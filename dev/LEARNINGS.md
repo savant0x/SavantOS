@@ -39,3 +39,24 @@ each entry dated. Technical traps specific to QEMU/WHPX live in
   than loosening limits to match legacy code. Decision evidence (2026-09-10):
   66/73 non-test Go files already ≤350 lines; only inherited upstream files
   exceed.
+- 2026-09-11 — release: executables committed from Windows lose the exec
+  bit (the zip baseline had none; Windows has none), and every Linux-runner
+  invocation of a tracked `.sh`/`.py` then dies with exit 126 — first
+  `build-guest.sh` in the Release workflow, then `validate-pin.py` in CI.
+  Remedy: `git update-index --chmod=+x` (content-free mode commit). After
+  any Windows-side import, audit `git ls-files -s | grep 100644` for
+  scripts.
+- 2026-09-11 — release: Windows toolchains emit CRLF at every boundary, and
+  it bit three times in one day — `prepare-assets.sh` consumed a python3
+  pipe with `\r\n` (digest field corrupted; fixed with `tr -d '\r'`), a
+  test fixture wrote via text mode (pin `newline='\n'`), and PowerShell
+  `Set-Content` published `SavantOS.exe.sha256` with CRLF, breaking
+  `sha256sum -c` everywhere off-Windows (the checksum tool looked for a
+  file named `SavantOS.exe\r`; fixed with `[IO.File]::WriteAllText` +
+  `` `n ``). Rule: any artifact consumed by non-Windows tooling pins LF
+  explicitly.
+- 2026-09-11 — CI: GitHub forbids Actions creating pull requests by
+  default; the refresh-guest-lock weekly cron pushes its branch but the
+  `gh pr create` step fails until the repo's workflow permissions allow
+  it. Enabled 2026-09-11; that day's lock PR went out under the operator
+  token instead.

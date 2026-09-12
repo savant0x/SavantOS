@@ -5,17 +5,20 @@ at session end.
 
 ## Now
 
-- First SavantOS guest image build via the Release workflow (required before
-  first-run download can succeed — the launcher pins savant0x v0.0.1 and the
-  placeholder manifest is fail-closed by design).
+- Submit the SignPath Foundation application (`dev/signpath-application.md`
+  has the eligibility mapping and fork disclosure; review takes days–weeks).
+  On approval: register project `savantos` / policy `release-signing`,
+  install the SignPath GitHub App, set `SIGNPATH_API_TOKEN` +
+  the three `SIGNPATH_*` vars, paste the Code signing policy into README,
+  and publish the next release with `signing=signpath`.
 
 ## Next
 
-- Load the Ed25519 update-signing private key
-  (`/c/Users/spenc/dev/.savantos-keys/savantos-update-signing-key.b64`) into
-  the GitHub release environment secret `SAVANTOS_UPDATE_SIGNING_KEY`
-  before the Release workflow runs.
-- Tag v0.0.1 when the Release workflow publishes the factory image.
+- Optional hardening: branch protection on main (no force-push, PR +
+  approval, CODEOWNERS on `.signpath/`), then uncomment the staged
+  branch_rulesets rules in `.signpath/policies/savantos/release-signing.yml`.
+- Next release exercise: prepare → pin → publish cycle on a real tag with
+  the executed playbook (exec-bit and CRLF gates now in the tree).
 
 ## Waiting on operator
 
