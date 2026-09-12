@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0912-001-first-party-os-pivot.md`
 **ID:** FID-2026-0912-001
 **Severity:** critical
-**Status:** analyzed
+**Status:** implemented (Phase 1)
 **Created:** 2026-09-12 00:00
 **YAGNI-Compliance:** Verified
 
@@ -189,7 +189,7 @@ Four workstreams, ordered to de-risk the control plane before aesthetics
 
 ## Verification Gates
 
-(To be pasted at implementation milestones; none claimed yet — status `analyzed`.)
+(Implementation milestone evidence pasted above, 2026-09-12 — Phase 1.)
 
 ```markdown
 - gate: build (cd app && go build ./...)
@@ -295,8 +295,52 @@ Four workstreams, ordered to de-risk the control plane before aesthetics
 - **CHANGE DELTA:** ~3%.
 
 **Convergence declared:** three loops, deltas 45% → 8% → 3%, RED items resolved
-or converted into named exit criteria. Status remains `analyzed` (implementation
-begins next); gates will be pasted when Phase 1 lands.
+or converted into named exit criteria.
+
+## Phase 1 Implementation Evidence (landed 2026-09-12)
+
+All Phase 1 steps **implemented**. Builder: `guest-image/` (build.sh → mkosi 27
+rootless directory build on the date-pinned Arch snapshot → assemble.sh
+mke2fs tar-stream assembly → dual-build digest gate → SHA256SUMS + release
+base). No deferrals.
+
+- **F1 (six-file contract):** all six emitted verbatim; guest-manifest carries
+  authenticated sizes for the disk-space preflight.
+- **F2 (plain ext4, root=/dev/vda):** mke2fs over a name-sorted GNU tar stream
+  (`--sort=name`, fixed epoch, fixed UUID/label/hash-seed).
+- **F3 (grow at boot):** systemd-growfs-root drop-in + preset policy; proof below.
+- **F4 (readiness):** `savantos-ready` ported with the `10.0.2.2:4450` listener.
+- **F5 (fixed names):** linux-zen kernel/initramfs renamed to contract names.
+- **F6 (minimal boot set):** base + linux-zen + openssh + networkd; no desktop.
+- **F7 (honest boot path):** loopback release base serving the contract dir +
+  the real v0.0.1 WINQ-EMU archive; unmodified launcher, no fabricated state.
+
+**Determinism gate (build 18):** dual independent builds byte-identical across
+all six files. Nondeterminism the gate caught and killed along the way: SSH
+host keys (now generated at first boot by the sshd unit's ExecStartPre),
+random chpasswd salt (fixed salt), shadow's `-` backup carrying a stale hash
+(ordering fix), glibc ldconfig aux-cache, mkosi's post-postinst
+`/boot/arch` modules-initrd (deleted pre-tar), per-volume readdir order
+(tar-stream population), and mke2fs wall-clock superblock stamps
+(`SOURCE_DATE_EPOCH`).
+
+**Boot proof (the launcher's own log + guest probe):**
+
+    17:29:13 runtime archive unchanged in v0.0.1; kept the installed runtime
+    17:29:27 booting - GPU accelerated (virgl + Venus Vulkan) (attempt 1)
+    17:29:37 guest userspace announced ready
+    $ ssh -p 2223 savant@127.0.0.1
+    SSH-OK / savantos / 7.1.7-zen1-1-zen / running / /dev/vda 24G 1.4G 22G 7% /
+
+**Late find, fixed and re-proven:** the first boot-proof round reached the
+login prompt but SSH refused pubkey auth. Forensics on the mounted image:
+`/home/savant` was `root:root 0700` — `useradd -m` ran inside mkosi's
+id-mapped sandbox, which rewrites non-root ownership to root, and sshd's
+StrictModes correctly refuses a home the user cannot traverse. Fix:
+assemble.sh reasserts the account's uid/gid (read from the image's own
+passwd/group) on the home tree outside the sandbox, and the tar stream no
+longer overrides ownership. Verified in-image (`1000:1000` == passwd) and
+end-to-end (SSH-OK above).
 
 ## Lessons Learned
 
@@ -308,11 +352,13 @@ contract in this FID was corrected from the launcher's source, not from memory.
 
 ## Resolution
 
-- **Closed Date:** (pending — implementation)
-- **Fix Description:** —
-- **Tests Added:** —
-- **Verification Evidence:** —
-- **Archived:** —
+- **Closed Date:** 2026-09-12 (Phase 1)
+- **Fix Description:** First-party builder landed; Phase 1 scope complete.
+- **Tests Added:** guest-image dual-build determinism gate (build.sh); boot
+  proof via boot-proof.sh flow (fresh data dir + local release base).
+- **Verification Evidence:** see Implementation Evidence above (gate digests +
+  launcher log + guest SSH probe).
+- **Archived:** — (Phase 2/3 continue under new FIDs)
 
 ## Implementation Evidence (REQUIRED for `closed`)
 

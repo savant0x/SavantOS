@@ -1,0 +1,36 @@
+#!/bin/bash
+# Runs only on boots whose kernel command line carries savantos.sshd=1,
+# which the launcher sets when a host port is forwarded to guest port 22
+# (app/forward.go sshCmdline). Starts sshd for this boot and, when the
+# launcher supplied a public key, authorizes it for the savant account.
+# It never enables sshd across boots and never edits sshd_config.
+# Ported from the patch train (0014/0018) with the account fixed to the
+# factory image's own user.
+set -euo pipefail
+
+key=""
+for word in $(</proc/cmdline); do
+  case $word in
+    savantos.sshkey=*) key=${word#savantos.sshkey=} ;;
+  esac
+done
+
+authorize_key() {
+  local encoded=$1 decoded
+  decoded=$(printf '%s' "$encoded" | base64 -d 2>/dev/null) || decoded=""
+  if [[ ! $decoded =~ ^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com)\ [A-Za-z0-9+/=]+( [^[:cntrl:]]*)?$ ]] ||
+     ! ssh-keygen -l -f <(printf '%s\n' "$decoded") >/dev/null 2>&1; then
+    echo "ignoring a malformed public key on the kernel command line" >&2
+    return 0
+  fi
+  install -d -m 0700 -o savant -g savant /home/savant/.ssh
+  [[ -f /home/savant/.ssh/authorized_keys ]] ||
+    install -m 0600 -o savant -g savant /dev/null /home/savant/.ssh/authorized_keys
+  if ! grep -qxF "$decoded" /home/savant/.ssh/authorized_keys; then
+    printf '%s\n' "$decoded" >>/home/savant/.ssh/authorized_keys
+    echo "authorized the launcher-supplied key for savant"
+  fi
+}
+
+[[ -z $key ]] || authorize_key "$key"
+systemctl start --no-block sshd.service

@@ -1,0 +1,21 @@
+# Factory unit-enable policy for the SavantOS image.
+#
+# mkosi runs `systemctl preset-all` after postinst, which applies distribution
+# defaults and REMOVES any enable symlinks created earlier (observed
+# 2026-09-12: all three factory enables were wiped). The systemd-sanctioned
+# mechanism is a preset policy: files here are read by `systemctl preset`
+# (order: admin /etc, then vendor /usr/lib) and pin exactly what a
+# SavantOS factory image enables.
+#
+# Format: <action> <unit-name>   (first matching line wins)
+
+enable savantos-ready.service
+enable savantos-sshd.service
+enable systemd-networkd.service
+enable systemd-resolved.service
+
+# systemd-growfs-root.service ships WITHOUT an [Install] section, so preset
+# cannot enable it directly; a drop-in adds WantedBy=local-fs-pre.target and
+# preset then creates the symlink. The drop-in itself is installed via
+# SkeletonTrees.
+enable systemd-growfs-root.service

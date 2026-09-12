@@ -27,6 +27,14 @@ node_modules/
 # Savant harness state
 .savant/
 
+# guest-image builder local state (volumes/cache live in Docker; host-side
+# only build outputs land here)
+guest-image/out/
+guest-image/build-*/
+guest-image/work/
+guest-image-ws/
+guest-image/mkosi-cache/
+
 # Brand assets live in assets/ (tracked); PNG exceptions above removed so
 # docs/ and assets/ images stay versioned.
 !docs/images/**

@@ -1,0 +1,8 @@
+# SavantOS factory image: systemd-networkd gets DHCP on the virtual NIC.
+# (Phase 1 scope: lifecycle + sshd need networking; the desktop phase
+# replaces this with the full network stack.)
+[Match]
+Name=en* eth*
+
+[Network]
+DHCP=yes

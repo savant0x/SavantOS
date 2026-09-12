@@ -1,0 +1,14 @@
+# Report a usable SavantOS guest to the Windows launcher (contract F4).
+# The launcher's lifecycle listener (10.0.2.2:4450, user-mode net) flips its
+# guest-ready state on the "ready" line and commits pending payload updates.
+[Unit]
+Description=Report a usable SavantOS guest to the Windows launcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/savantos/guest-ready
+
+[Install]
+WantedBy=multi-user.target

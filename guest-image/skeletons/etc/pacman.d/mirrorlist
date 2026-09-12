@@ -1,0 +1,4 @@
+# Pinned by guest-image/snapshot.lock.json (FID-2026-0912-001).
+# The factory image installs from this exact snapshot; runtime pacman use
+# advances only through a rebuilt image with a re-validated snapshot pin.
+Server=https://archive.archlinux.org/repos/2026/08/11/$repo/os/$arch

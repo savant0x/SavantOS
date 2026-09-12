@@ -1,0 +1,19 @@
+# Per-boot SSH request from the SavantOS launcher. Only boots whose kernel
+# command line carries savantos.sshd=1 (a host port forwarded to guest port
+# 22) reach ExecStart; every other boot leaves sshd untouched and inactive.
+[Unit]
+Description=Start sshd for boots that forward a host port to guest port 22
+ConditionKernelCommandLine=savantos.sshd=1
+After=network.target
+
+[Service]
+Type=oneshot
+# Host keys are generated on first boot (not at build): random keys per
+# factory build broke the dual-build determinism gate, and keys under /etc
+# ride the launcher's persistent data disk, so they are generated once and
+# survive updates. ExecStartPre is idempotent (skips existing keys).
+ExecStartPre=/usr/bin/ssh-keygen -A
+ExecStart=/usr/local/lib/savantos/request-sshd
+
+[Install]
+WantedBy=multi-user.target

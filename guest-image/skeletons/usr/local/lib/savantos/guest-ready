@@ -1,0 +1,14 @@
+#!/bin/bash
+# Payload updates are kept rollback-capable until the guest reaches userspace
+# with networking. The launcher listens on its lifecycle port (10.0.2.2:4450
+# from the guest, user-mode networking) and commits staged payloads on the
+# "ready" line. Ported from the patch train's guest-ready (0020), with the
+# socat dependency replaced by bash's /dev/tcp.
+set -u
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if printf 'ready\n' > /dev/tcp/10.0.2.2/4450 2>/dev/null; then
+    exit 0
+  fi
+  sleep 1
+done
+exit 0
