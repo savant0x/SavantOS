@@ -1,7 +1,7 @@
 # Testing a Windows release candidate
 
 Use a separate data folder and a copy of any existing guest. Keep the original
-backup untouched. Follow [RELEASING.md](RELEASING.md) for running a signed draft
+backup untouched. Follow [RELEASE.md](RELEASE.md) for running a signed draft
 candidate against locally served, authenticated assets.
 
 ## Report details

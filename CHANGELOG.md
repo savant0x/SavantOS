@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Documentation
+- Release playbook (`docs/RELEASE.md`) replaces the inherited upstream
+  release doc (now removed): three-phase workflow, manifest pin recipe,
+  PR-only main mechanics, and the `signing` input choices.
+- README badges (release, downloads, CI, license); repo topics and homepage
+  configured.
+- SignPath submission: MFA recorded as verified via the GitHub API
+  (FID-2026-0911-001).
+
 ## v0.0.1 - 2026-09-11
 
 The SavantOS lineage restarts at v0.0.1 (Savant Versioning,
