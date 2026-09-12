@@ -12,6 +12,8 @@ __pycache__/
 # Build outputs
 /SavantOS*.exe
 /SavantOS*.exe.sha256
+/app/SavantOS*.exe
+/app/SavantOS*.exe.sha256
 /artifacts/
 
 # Node toolchain — docs gate (markdownlint via bun); bun.lock IS tracked
