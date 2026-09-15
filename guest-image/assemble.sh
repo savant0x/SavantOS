@@ -149,10 +149,27 @@ echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring
 # binary, not a stale artifact from a previous build on this tree: an
 # existence probe alone would let a Linux-embed COFF silently ship (the
 # host build runs on Windows). ELF magic + mode check here.
-if ! debugfs -R "cat /usr/bin/savant-core" "$img" 2>/dev/null | head -c 4 | grep -q $'\x7fELF'; then
+# Pipefail trap avoided: debugfs | head -c 4 makes debugfs die of SIGPIPE
+# (it writes 2.2MB into a pipe head closes after 4 bytes) and pipefail
+# converts that into a false "not ELF" (caught 2026-09-15, first build
+# with the daemon). Temp file: debugfs completes, exits 0, no SIGPIPE.
+sc_tmp=$(mktemp)
+debugfs -R "cat /usr/bin/savant-core" "$img" > "$sc_tmp" 2>/dev/null
+if ! head -c 4 "$sc_tmp" | grep -q $'\x7fELF'; then
     echo "assemble: savant-core is not a Linux ELF binary" >&2
+    rm -f "$sc_tmp"
     exit 1
 fi
+rm -f "$sc_tmp"
+
+# Mode normalization for the daemon's files (narrow slice of the T1
+# finding — the whole tree currently ships 0777): the unit must not be
+# executable/world-writable (systemd warns and refuses to treat it as
+# trusted), the binary must be executable. Normalized HERE, before the
+# tar stream, so the shipped image is right regardless of worktree modes.
+chmod 0755 "$tree/usr/bin/savant-core"
+chmod 0644 "$tree/usr/lib/systemd/user/savant-core.service" \
+           "$tree/usr/lib/systemd/user-preset/91-savantos-desktop.preset"
 
 # The power-button seed is load-bearing for the launcher's close contract
 # (FID-2026-0914-003): the loop above proves the file ships, this proves
