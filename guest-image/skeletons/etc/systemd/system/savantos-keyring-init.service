@@ -1,0 +1,24 @@
+# Runtime pacman keyring initialization. The first-party builder installs
+# packages from OUTSIDE the image (mkosi sandbox), so the image ships with a
+# never-initialized keyring and runtime `pacman -S` fails signature
+# verification ("required key missing from keyring" — observed 2026-09-14).
+# The keyring cannot ship in the factory image: pacman-key --init generates
+# random content that breaks the dual-build determinism gate. Generated at
+# first boot instead (the sshd host-keys pattern); the keyring lives under
+# /etc, which rides the launcher's persistent data disk, so it is created
+# once and survives updates.
+[Unit]
+Description=Initialize the pacman keyring on first boot
+After=local-fs.target
+
+[Service]
+Type=oneshot
+# Idempotent: skip when the archlinux keyring's master keys are already in
+# the keyring (grep the UID output — gpg --list-keys exit codes are
+# unreliable for "no match"); init + populate otherwise (the live fix proven
+# 2026-09-14). archlinux-keyring is a base dependency, so the populate
+# source is always present.
+ExecStart=/bin/bash -ceu 'pacman-key --list-keys 2>/dev/null | grep -qF archlinux.org || { pacman-key --init && pacman-key --populate archlinux; }'
+
+[Install]
+WantedBy=multi-user.target

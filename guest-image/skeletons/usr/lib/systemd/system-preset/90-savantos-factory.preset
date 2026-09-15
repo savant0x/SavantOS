@@ -11,6 +11,8 @@
 
 enable savantos-ready.service
 enable savantos-sshd.service
+enable savantos-host-share.service
+enable savantos-keyring-init.service
 enable systemd-networkd.service
 enable systemd-resolved.service
 

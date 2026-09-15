@@ -104,6 +104,59 @@ actual_mib=$(( $(stat -c %s "$img") / 1024 / 1024 ))
     echo "assemble: factory image ($actual_mib MiB) must be smaller than the expanded disk ($expanded_mib MiB)" >&2
     exit 1
 }
+# Content assertions run BEFORE the rename (the mv lives below the probe
+# block): debugfs exits 0 even when the image file is absent (verified
+# 2026-09-14 — a probe against a missing image passes vacuously, which is
+# exactly how this block once passed while probing a renamed-away path),
+# so the probes must never see anything but the real artifact.
+[[ -f $img ]] || {
+    echo "assemble: image $img missing before content assertion" >&2
+    exit 1
+}
+
+# --- Phase 2 content assertion (FID-2026-0912-002, gate addition): a
+# silently-empty desktop must be unshippable. Probe the image for the
+# desktop's load-bearing binaries with debugfs (read-only, no mount, no
+# writes — determinism-safe). The keyring unit joins the list
+# (FID-2026-0914-002): preset-all only WARNS on a missing unit, so a
+# silently keyring-less image must also be unshippable.
+for probe in \
+    /usr/bin/kwin_wayland \
+    /usr/bin/plasmashell \
+    /usr/bin/sddm \
+    /usr/bin/sddm-greeter \
+    /usr/share/color-schemes/Savant.colors \
+    /usr/share/wallpapers/savant/metadata.desktop \
+    /usr/share/kwin/decorations/savant-traffic-lights/contents/ui/main.qml \
+    /usr/share/plasma/look-and-feel/savant.desktop/contents/layouts/org.kde.plasma.desktop-layout.js \
+    /usr/share/Kvantum/Savant/Savant.kvconfig \
+    /usr/lib/qt6/plugins/styles/libkvantum.so \
+    /usr/share/icons/Papirus-Dark/index.theme \
+    /usr/share/icons/hicolor/scalable/apps/savant-start.svg \
+    /etc/skel/.config/powermanagementprofilesrc \
+    /etc/systemd/system/savantos-keyring-init.service; do
+    if ! debugfs -R "stat "$probe"" "$img" >/dev/null 2>&1; then
+        echo "assemble: desktop content assertion FAILED — $probe missing" >&2
+        exit 1
+    fi
+done
+echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit)"
+
+# The power-button seed is load-bearing for the launcher's close contract
+# (FID-2026-0914-003): the loop above proves the file ships, this proves
+# the VALUE — a silently-wrong seed reintroduces the can't-close bug an
+# existence probe would miss. kwriteconfig6 writes the key as one line.
+if ! debugfs -R "cat /etc/skel/.config/powermanagementprofilesrc" "$img" 2>/dev/null \
+    | grep -q '^powerButtonAction=8$'; then
+    echo "assemble: power-button shutdown seed missing or wrong (expected powerButtonAction=8)" >&2
+    exit 1
+fi
+
+# Rename after the assertions: they must probe the artifact that actually
+# exists on disk. (The rename used to sit above this block; every probe
+# then ran against a missing path and — thanks to debugfs's exit-0 quirk —
+# "passed" vacuously. Caught 2026-09-14 by the power-button value probe,
+# the only assertion strict enough to fail on empty output.)
 mv "$img" "$out/rootfs.ext4"
 
 # --- compressed twin (the launcher downloads this one and verifies against
