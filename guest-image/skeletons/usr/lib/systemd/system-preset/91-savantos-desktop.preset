@@ -1,0 +1,9 @@
+# Factory enable policy — Phase 2 additions (FID-2026-0912-002).
+#
+# Phase 1 entries live in 90-savantos-factory.preset; this file carries
+# the display-manager layer. sddm ships [Install] WantedBy=graphical.target,
+# so preset creates the wants symlink; display-manager.service alias
+# creation is enforced separately in finalize.sh (idempotent, survives
+# preset-all either way — R3 in the FID).
+
+enable sddm.service

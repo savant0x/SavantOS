@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "KWin/Decoration",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "os@savant0x.dev",
+                "Name": "SavantOS Project"
+            }
+        ],
+        "Description": "SavantOS traffic-lights window decoration: three glowing dots top-right",
+        "Id": "savant-traffic-lights",
+        "License": "Apache-2.0",
+        "Name": "Savant Traffic Lights"
+    }
+}

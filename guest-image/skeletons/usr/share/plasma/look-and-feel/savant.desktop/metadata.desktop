@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Savant
+Comment=Savant traffic-lights desktop identity
+X-KDE-ServiceTypes=Plasma/LookAndFeel
+
+[KPackage Structure]
+Id=savant.desktop
+Name=Savant

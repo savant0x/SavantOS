@@ -1,0 +1,22 @@
+[Unit]
+Description=SavantOS host share mount (9p virtiofs from launcher)
+# The launcher exports the host share via QEMU virtfs and passes
+# savantos.sharename=<base64 name> on the kernel cmdline. This unit mounts
+# it at /mnt/host once local filesystems are up. ConditionPathExists on
+# the backing virtiofs device keeps non-shared boots (factory test, CI)
+# green — the unit no-ops instead of failing.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+#_sharename_ is substituted by the generator below from the cmdline.
+# The 9p device advertises its tag in sysfs; the launcher's QEMU fsdev
+# uses tag "hostshare". Reading it from the device (not the cmdline) is
+# authoritative — the cmdline base64 name and the fsdev tag need not agree
+# (verified live 2026-09-13: cmdline said savantos-share, tag was hostshare).
+ExecStart=/bin/sh -c 'tag=$(cat /sys/bus/virtio/devices/*/mount_tag 2>/dev/null | head -1); [ -n "$tag" ] || exit 0; mkdir -p /mnt/host; mount -t 9p -o trans=virtio,version=9p2000.L,msize=104857600 "$tag" /mnt/host'
+ExecStop=/bin/umount /mnt/host
+TimeoutSec=10
+
+[Install]
+WantedBy=local-fs.target

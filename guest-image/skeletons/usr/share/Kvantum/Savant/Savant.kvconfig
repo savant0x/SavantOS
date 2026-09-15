@@ -1,0 +1,40 @@
+# Savant Kvantum theme — config-only variant of the Default theme.
+#
+# Sections/keys not present inherit from Kvantum's default theme config and
+# SVG (documented inheritance — Kvantum/doc/Theme-Config: "you could keep
+# only those sections or variables you want to change"). Colors are the
+# savant-code Savant Cyberpunk palette (dark): background #050508,
+# surface #0b0b11, hover #14141c, border #20202a, foreground #e4e4e8,
+# muted #8f8f99, accent cyan #18faf9. Translucency/compositing keys are
+# deliberately absent (Kvantum Exception 3) so the default opaque
+# rendering holds — nothing to fail silently inside a VM.
+[%General]
+author=SavantOS Project
+comment=Savant Cyberpunk palette on the Kvantum default theme (FID-2026-0913-001)
+
+[GeneralColors]
+window.color=#0b0b11
+inactive.window.color=#0b0b11
+base.color=#050508
+inactive.base.color=#0b0b11
+alt.base.color=#0b0b11
+button.color=#14141c
+light.color=#20202a
+mid.light.color=#1a1a24
+dark.color=#050508
+mid.color=#14141c
+highlight.color=#18faf9
+inactive.highlight.color=#0d8f94
+tooltip.base.color=#0b0b11
+text.color=#e4e4e8
+inactive.text.color=#8f8f99
+window.text.color=#e4e4e8
+inactive.window.text.color=#8f8f99
+button.text.color=#e4e4e8
+disabled.text.color=#8f8f99
+tooltip.text.color=#e4e4e8
+highlight.text.color=#050508
+inactive.highlight.text.color=#050508
+link.color=#22d3ee
+link.visited.color=#a78bfa
+progress.indicator.text.color=#e4e4e8

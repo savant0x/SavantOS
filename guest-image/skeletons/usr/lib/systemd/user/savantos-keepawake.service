@@ -1,0 +1,12 @@
+[Unit]
+Description=SavantOS appliance keep-awake (prevents idle output blanking)
+PartOf=plasma-workspace.target
+After=plasma-workspace.target
+
+[Service]
+Type=simple
+ExecStart=/bin/sh -c 'while true; do /usr/bin/qdbus6 org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity 2>/dev/null; sleep 60; done'
+Restart=on-failure
+
+[Install]
+WantedBy=plasma-workspace.target

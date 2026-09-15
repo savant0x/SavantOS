@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [ { "Name": "Savant" } ],
+        "Category": "",
+        "Description": "Savant traffic-lights desktop identity",
+        "Id": "savant.desktop",
+        "License": "MIT",
+        "Name": "Savant",
+        "Website": "https://github.com/savant0x/SavantOS"
+    }
+}

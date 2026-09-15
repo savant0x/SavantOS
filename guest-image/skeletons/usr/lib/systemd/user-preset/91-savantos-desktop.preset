@@ -1,0 +1,9 @@
+# User-level factory enable policy — SavantOS desktop (FID-2026-0912-002).
+#
+# Plasma sessions run `systemctl --user preset-all` at first login; this
+# file activates the identity oneshot that applies the Savant Look & Feel
+# through Plasma's supported path, and the keep-awake loop that stops the
+# idle blanking of the (headless-adjacent) VM output.
+
+enable savantos-identity.service
+enable savantos-keepawake.service

@@ -1,0 +1,31 @@
+# Savant Look & Feel defaults — applied wholesale by plasma-apply-lookandfeel.
+#
+# The factory account's kdeglobals carry the Savant color scheme and fonts;
+# this file pins the identity pieces Plasma owns as a package: widget style
+# (Kvantum engine), icon theme (Papirus-Dark), panel theme, wallpaper, and
+# the QML traffic-lights window decoration with the dot row top-right.
+# Keys follow the org.kde.breezedark.desktop reference layout.
+
+[kdeglobals][KDE]
+widgetStyle=kvantum
+
+[kdeglobals][General]
+ColorScheme=Savant
+
+[kdeglobals][Icons]
+Theme=Papirus-Dark
+
+[plasmarc][Theme]
+name=breeze-dark
+
+[Wallpaper]
+Image=file:///usr/share/wallpapers/savant
+
+[kcminputrc][Mouse]
+cursorTheme=breeze_cursors
+
+[kwinrc][org.kde.kdecoration2]
+library=org.kde.kwin.aurorae
+theme=savant-traffic-lights
+ButtonsOnLeft=
+ButtonsOnRight=IAX

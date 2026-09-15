@@ -1,0 +1,22 @@
+[Unit]
+Description=SavantOS first-login identity activation (Savant Look & Feel)
+# Applies the Savant L&F package once, on the first Plasma session, so the
+# wallpaper/decoration land through Plasma's own supported path (migration
+# strips hand-written appletsrc keys; it honors the L&F application).
+DefaultDependencies=no
+# After=: plasma-apply-lookandfeel talks to the RUNNING shell over DBus for
+# the layout script — starting in parallel raced the shell's own first-boot
+# migration (the config-restore race behind the edit-mode band).
+After=plasma-plasmashell.service
+
+[Service]
+Type=oneshot
+# plasma-apply-lookandfeel rewrites kdeglobals and triggers plasmashell to
+# reconfigure; the wrapper then re-asserts the Aurorae keys the L&F apply
+# drops (verified live 2026-09-13: applied L&F left kwinrc decoration keys
+# unset, KWin fell back to breeze) and pokes KWin to pick them up.
+ExecStart=/usr/lib/savantos/identity-apply.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=plasma-plasmashell.service

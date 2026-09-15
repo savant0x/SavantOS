@@ -1,1 +1,8 @@
 app/testdata/SHA256SUMS.* text eol=lf
+
+# Builder tree: the build's CRLF gate greps every KConfig/unit/theme file for
+# CR (KConfig mis-parses '[Group]\r' — verified 2026-09-13, the whole L&F
+# layer once no-op'd on it). Checkouts must be LF regardless of core.autocrlf;
+# PNGs (wallpapers) stay binary.
+guest-image/** text eol=lf
+guest-image/**/*.png binary
