@@ -3,6 +3,7 @@
 set -euo pipefail
 
 repo_root=$(cd "$(dirname "$0")/../.." && pwd)
+builder_dir="$repo_root/guest-image"
 output=""
 contract_only=0
 
@@ -28,45 +29,70 @@ if ((contract_only == 0)) && [[ -z $output ]]; then
   exit 2
 fi
 
-source_lock="$repo_root/guest-build/source.lock.json"
-readarray -t source_fields < <(python3 - "$source_lock" <<'PY'
-import json
-import pathlib
-import sys
+# --- contract gate for the builder tree (cheap, no image build; CI runs this
+# on every push, the full dual-build mkosi gate runs at release time —
+# FID-2026-0914-002 step 2). The old gate's git-am contract test is replaced;
+# the script's interface survives (FID-2026-0912-001 keep-list).
 
-lock = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-print(lock["repository"])
-print(lock["commit"])
-PY
-)
-source_url=${source_fields[0]}
-source_commit=${source_fields[1]}
-[[ $source_commit =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid guest source commit" >&2; exit 1; }
+# 1. Snapshot-lock consistency: mkosi.conf AND sandbox/pacman.conf must pin
+#    the same Arch snapshot as the lock file — a silent pin drift ships a
+#    guest from a different archive than the one that was tested.
+"$builder_dir/check-snapshot-lock.sh" "$builder_dir/snapshot.lock.json" "$builder_dir/mkosi.conf"
 
-work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/savantos-guest-source.XXXXXX")
-cleanup() {
-  rm -rf -- "$work"
-}
-trap cleanup EXIT
+# 2. Builder scripts must parse (a syntax-broken gate is a gate that fails).
+bash -n "$builder_dir/build.sh" "$builder_dir/assemble.sh" \
+  "$builder_dir/check-snapshot-lock.sh"
 
-git -C "$work" init --quiet
-git -C "$work" remote add origin "$source_url"
-git -C "$work" fetch --quiet --depth=1 origin "$source_commit"
-git -C "$work" checkout --quiet --detach FETCH_HEAD
-test "$(git -C "$work" rev-parse HEAD)" = "$source_commit"
-git -C "$work" config user.name "SavantOS Release"
-git -C "$work" config user.email "actions@users.noreply.github.com"
-git -C "$work" am "$repo_root"/guest-build/*.patch
+# 3. CRLF gate: no KConfig/unit/theme file may carry CR (KConfig mis-parses
+#    '[Group]\r' — verified 2026-09-13, the whole L&F layer no-op'd on CRLF).
+crlf_hits=$(grep -rlI $'\r' "$builder_dir/skeletons" 2>/dev/null | grep -v '\.png$' || true)
+if [[ -n $crlf_hits ]]; then
+  echo "CRLF found in:" >&2
+  echo "$crlf_hits" >&2
+  exit 1
+fi
 
-"$work/guest/test"
+# 4. Skeleton presence: the load-bearing files must ship in the skeleton
+#    tree before any build can embed them (skeleton-level mirror of the
+#    assemble.sh image probes).
+for probe in \
+    usr/share/kwin/decorations/savant-traffic-lights/contents/ui/main.qml \
+    usr/share/plasma/look-and-feel/savant.desktop/contents/layouts/org.kde.plasma.desktop-layout.js \
+    usr/share/Kvantum/Savant/Savant.kvconfig \
+    usr/share/color-schemes/Savant.colors \
+    usr/share/konsole/Savant.profile \
+    etc/systemd/system/savantos-keyring-init.service \
+    etc/sddm.conf.d/10-savantos-autologin.conf \
+    usr/share/wallpapers/savant/contents/images/savant-traffic-lights.png; do
+  [[ -f "$builder_dir/skeletons/$probe" ]] || {
+    echo "skeleton content assertion FAILED — $probe missing" >&2
+    exit 1
+  }
+done
 
 if ((contract_only)); then
   exit 0
 fi
 
+# --- full build: mkosi ×2 inside an Arch container (dual-build determinism
+# gate) → six contract files + SHA256SUMS. RELEASE_NAME/VERSION flow through
+# from the environment when set; docker (or podman) on the runner, no root
+# on the host.
+( cd "$builder_dir" && ./build.sh )
+
+# The builder publishes the payload in guest-image/out/contract; move the
+# finished artifacts to the requested output directory (mv, not cp: the
+# uncompressed rootfs is 6 GiB).
+[[ -d "$builder_dir/out/contract" ]] || {
+  echo "builder produced no contract payload in $builder_dir/out/contract" >&2
+  exit 1
+}
 mkdir -p "$output"
-sudo bash "$work/guest/build-container.sh" --output "$output"
-# The container build runs as root so it can create and mount the factory
-# filesystem. Return the finished release artifacts to the workflow user before
-# later steps extend SHA256SUMS and upload the files.
+mv "$builder_dir/out/contract/"* "$output"/
+# Container-root writes in the /work bind stay root-owned on the host; the
+# later pipeline steps (SHA256SUMS append, upload) run as the runner user.
 sudo chown -R -- "$(id -u):$(id -g)" "$output"
+[[ -f "$output/rootfs.ext4" ]] || {
+  echo "builder produced no rootfs.ext4 in $output" >&2
+  exit 1
+}

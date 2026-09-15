@@ -86,7 +86,7 @@ jobs:
       - name: Add and verify the locked runtime
         run: scripts/release/prepare-assets.sh "$ARTIFACT_DIR"
 
-      - name: Smoke-test instant first boot
+      - name: Smoke-test factory first boot
         run: scripts/release/smoke-guest.py "$ARTIFACT_DIR"
 
       - name: Remove unpacked release input
@@ -107,9 +107,6 @@ jobs:
             "$ARTIFACT_DIR/build-spec.json" \
             "$ARTIFACT_DIR/guest-manifest.json" \
             "$ARTIFACT_DIR/initramfs-linux.img" \
-            "$ARTIFACT_DIR/LICENSE.omarchy" \
-            "$ARTIFACT_DIR/packages.lock.txt" \
-            "$ARTIFACT_DIR/provenance.json" \
             "$ARTIFACT_DIR/rootfs.ext4.zst" \
             "$ARTIFACT_DIR/vmlinuz-linux" \
             "$ARTIFACT_DIR/winq-emu-alpha10-portable.zip" \
@@ -254,9 +251,6 @@ jobs:
             'build-spec.json',
             'guest-manifest.json',
             'initramfs-linux.img',
-            'LICENSE.omarchy',
-            'packages.lock.txt',
-            'provenance.json',
             'rootfs.ext4.zst',
             'vmlinuz-linux',
             'winq-emu-alpha10-portable.zip',

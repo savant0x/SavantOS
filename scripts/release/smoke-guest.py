@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Boot the factory image and prove instant provisioning works."""
+"""Boot the factory image and prove the Plasma desktop payload boots."""
 
 from __future__ import annotations
 
@@ -14,34 +14,41 @@ import time
 from pathlib import Path
 
 
-SUCCESS = b"SAVANTOS_SMOKE:savant:instant-trial"
-# Facts the built image must satisfy, checked from inside the booted guest
-# and reported on the serial console as SAVANTOS_FACT:<name>:<value>.
+SUCCESS = b"SAVANTOS_SMOKE:savant:phase2"
+# Facts the factory image must satisfy, checked from inside the booted guest
+# and reported on the serial console as SAVANTOS_FACT:<name>:<value>. The
+# instant-trial premise is dead on the first-party builder (no
+# savantos.instant consumption — grep-verified 2026-09-14); the smoke proves
+# the Plasma payload instead (FID-2026-0914-002 step 2).
 FACT_CHECKS = {
-    "clang": "command -v clang >/dev/null 2>&1 && echo present || echo missing",
-    "yay": "pacman -Q yay >/dev/null 2>&1 && echo present || echo missing",
-    "omarchy-nvim": "pacman -Q omarchy-nvim >/dev/null 2>&1 && echo present || echo missing",
-    "nvim-config": "test -f ~/.config/nvim/init.lua && echo present || echo missing",
-    "recorder": "pacman -Q gpu-screen-recorder >/dev/null 2>&1 && echo present || echo missing",
-    "foreign": "pacman -Qmq 2>/dev/null | wc -l",
+    "kwin": "test -x /usr/bin/kwin_wayland && echo present || echo missing",
+    "plasmashell": "test -x /usr/bin/plasmashell && echo present || echo missing",
+    "sddm": "test -x /usr/bin/sddm && echo present || echo missing",
+    "colorscheme": "test -f /usr/share/color-schemes/Savant.colors && echo present || echo missing",
+    "decoration": "test -f /usr/share/kwin/decorations/savant-traffic-lights/contents/ui/main.qml && echo present || echo missing",
+    "kvantum": "test -f /usr/share/Kvantum/Savant/Savant.kvconfig && echo present || echo missing",
+    "autologin": "test -f /etc/sddm.conf.d/10-savantos-autologin.conf && echo present || echo missing",
+    "display-manager-alias": "test -L /etc/systemd/system/display-manager.service && echo yes || echo no",
+    "keyring-unit": "systemctl is-enabled savantos-keyring-init.service 2>/dev/null || true",
+    "sddm-enabled": "systemctl is-enabled sddm.service 2>/dev/null || true",
     "sshd": "systemctl is-active sshd 2>/dev/null || true",
-    "savantos-repo-signed": "grep -A2 '^\\[savantos\\]' /etc/pacman.conf | grep -q TrustAll && echo no || echo yes",
-    "input-group": "id -nG | tr ' ' '\\n' | grep -qx input && echo yes || echo no",
-    "compat-version": "test \"$(cat /usr/share/try-omarchy/compat-version)\" = \"12:$(uname -r)\" && echo yes || echo no",
+    "foreign": "pacman -Qmq 2>/dev/null | wc -l",
     "kernel-modules": "test -f /usr/lib/modules/$(uname -r)/modules.dep.bin && echo yes || echo no",
     "ready-service": "systemctl is-enabled savantos-ready.service 2>/dev/null || true",
 }
 EXPECTED_FACTS = {
-    "clang": "present",
-    "yay": "present",
-    "omarchy-nvim": "present",
-    "nvim-config": "present",
-    "recorder": "present",
-    "foreign": "0",
+    "kwin": "present",
+    "plasmashell": "present",
+    "sddm": "present",
+    "colorscheme": "present",
+    "decoration": "present",
+    "kvantum": "present",
+    "autologin": "present",
+    "display-manager-alias": "yes",
+    "keyring-unit": "enabled",
+    "sddm-enabled": "enabled",
     "sshd": "inactive",
-    "savantos-repo-signed": "yes",
-    "input-group": "no",
-    "compat-version": "yes",
+    "foreign": "0",
     "kernel-modules": "yes",
     "ready-service": "enabled",
 }
@@ -76,7 +83,7 @@ def main() -> None:
     spec = json.loads((args.artifacts / "build-spec.json").read_text(encoding="utf-8"))
     cmdline = spec["runtime"]["kernelCommandLine"]
     cmdline = cmdline.replace("console=tty0 ", "").replace("console=hvc0", "console=ttyS0")
-    cmdline += " savantos.instant=1 systemd.unit=multi-user.target"
+    cmdline += " systemd.unit=multi-user.target"
 
     command = [
         "qemu-system-x86_64",
@@ -154,8 +161,8 @@ def main() -> None:
                     facts = parse_facts(bytes(transcript))
                     wrong = {name: (facts.get(name), want) for name, want in EXPECTED_FACTS.items() if facts.get(name) != want}
                     if wrong:
-                        raise SystemExit(f"instant guest booted but the image facts are wrong: {wrong}")
-                    print("ok - instant guest reached a usable trial account")
+                        raise SystemExit(f"factory guest booted but the image facts are wrong: {wrong}")
+                    print("ok - factory guest reached a usable account")
                     print("ok - image facts: " + ", ".join(f"{k}={facts[k]}" for k in sorted(facts)))
                     return
 
@@ -188,7 +195,7 @@ def main() -> None:
                 process.stdin.write(
                     (checks + "; ").encode()
                     + b"printf 'SAVANTOS_SMOKE:%s:%s\\n' \"$(id -un)\" "
-                    b"\"$(cat /var/lib/savantos/provision-mode 2>/dev/null)\"; "
+                    b"\"$(cat /usr/share/savantos/image-stream 2>/dev/null)\"; "
                     b"sudo systemctl poweroff\n"
                 )
                 process.stdin.flush()
@@ -203,7 +210,7 @@ def main() -> None:
                 process.wait()
 
     tail = bytes(transcript[-8000:]).decode("utf-8", errors="replace")
-    raise SystemExit(f"instant guest smoke test failed\n\n{tail}")
+    raise SystemExit(f"factory guest smoke test failed\n\n{tail}")
 
 
 if __name__ == "__main__":
