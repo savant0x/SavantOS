@@ -6,3 +6,7 @@ app/testdata/SHA256SUMS.* text eol=lf
 # PNGs (wallpapers) stay binary.
 guest-image/** text eol=lf
 guest-image/**/*.png binary
+
+# The guest daemon (Phase 3, FID-2026-0915-005) is built in the Linux
+# container and LF-checked by the same toolchain conventions.
+guest-daemon/** text eol=lf

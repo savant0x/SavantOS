@@ -34,6 +34,10 @@ guest-image/build-*/
 guest-image/work/
 guest-image-ws/
 guest-image/mkosi-cache/
+# savant-core is cross-compiled into the skeleton tree by build.sh before
+# each assembly (FID-2026-0915-005) — generated, never committed.
+guest-image/skeletons/usr/bin/savant-core
+guest-image/.gocache/
 
 # Brand assets live in assets/ (tracked); PNG exceptions above removed so
 # docs/ and assets/ images stay versioned.

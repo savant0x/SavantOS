@@ -1,0 +1,34 @@
+[Unit]
+Description=Savant Core — agent control-plane daemon (Phase 3, FID-2026-0915-005)
+# The daemon lives for the whole desktop session: input plane (m4), vision
+# plane (m3), and the operator control socket are all session-scoped.
+PartOf=plasma-workspace.target
+After=plasma-workspace.target
+
+[Service]
+# notify: readiness is announced by the daemon itself (sd_notify READY=1),
+# so systemd never guesses whether the control socket is up.
+Type=notify
+ExecStart=/usr/bin/savant-core
+Restart=on-failure
+RestartSec=1
+# A hung core is killed and restarted WITHOUT capability (re-arm required):
+# crash-resilience is fail-closed by topology (FID-2026-0915-004).
+WatchdogSec=10
+
+# --- Confinement (the law's structural half; FID-2026-0915-004) ---
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%t/savant-core
+PrivateTmp=yes
+PrivateNetwork=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=plasma-workspace.target

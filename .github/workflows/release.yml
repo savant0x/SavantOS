@@ -80,6 +80,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends qemu-system-x86
 
+      - name: Set up Go (savant-core cross-compile)
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: guest-daemon/savant-core/go.mod
+          # Dependency-free module today (DBus surface arrives in m4): no
+          # go.sum to key a module cache on, and nothing to cache.
+          cache: false
+
       - name: Build locked guest image
         run: scripts/release/build-guest.sh --output "$ARTIFACT_DIR"
 

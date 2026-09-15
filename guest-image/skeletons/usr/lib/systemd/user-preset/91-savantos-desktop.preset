@@ -4,6 +4,11 @@
 # file activates the identity oneshot that applies the Savant Look & Feel
 # through Plasma's supported path, and the keep-awake loop that stops the
 # idle blanking of the (headless-adjacent) VM output.
+#
+# Phase 3 (FID-2026-0915-005): savant-core joins the session. It binds NO
+# capability at start (armed=false, mechanism=none) — the unit running is
+# not the agent acting; fail-closed from first boot.
 
 enable savantos-identity.service
 enable savantos-keepawake.service
+enable savant-core.service

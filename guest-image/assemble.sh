@@ -134,13 +134,25 @@ for probe in \
     /usr/share/icons/Papirus-Dark/index.theme \
     /usr/share/icons/hicolor/scalable/apps/savant-start.svg \
     /etc/skel/.config/powermanagementprofilesrc \
-    /etc/systemd/system/savantos-keyring-init.service; do
+    /etc/systemd/system/savantos-keyring-init.service \
+    /usr/bin/savant-core \
+    /usr/lib/systemd/user/savant-core.service \
+    /usr/lib/systemd/user-preset/91-savantos-desktop.preset; do
     if ! debugfs -R "stat "$probe"" "$img" >/dev/null 2>&1; then
         echo "assemble: desktop content assertion FAILED — $probe missing" >&2
         exit 1
     fi
 done
-echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit)"
+echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit/savant-core)"
+
+# savant-core (FID-2026-0915-005 m2) must be the real cross-compiled
+# binary, not a stale artifact from a previous build on this tree: an
+# existence probe alone would let a Linux-embed COFF silently ship (the
+# host build runs on Windows). ELF magic + mode check here.
+if ! debugfs -R "cat /usr/bin/savant-core" "$img" 2>/dev/null | head -c 4 | grep -q $'\x7fELF'; then
+    echo "assemble: savant-core is not a Linux ELF binary" >&2
+    exit 1
+fi
 
 # The power-button seed is load-bearing for the launcher's close contract
 # (FID-2026-0914-003): the loop above proves the file ships, this proves

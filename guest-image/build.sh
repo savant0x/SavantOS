@@ -24,6 +24,21 @@ version=${VERSION:-0.0.0-phase1}
 
 mkdir -p "$out"
 
+# --- Phase 3: build savant-core into the skeleton tree (FID-2026-0915-005
+# m2). Runs before BOTH assemblies so A and B embed the identical binary;
+# the build flags pin CGO off (pure-Go, static) and trimpath (no host paths
+# in the binary) so the two assemblies verify byte-identical.
+build_savant_core() {
+    local gocache="$(pwd)/.gocache"
+    mkdir -p "$gocache" "skeletons/usr/bin"
+    ( cd guest-daemon/savant-core && \
+        GOCACHE="$gocache" GOFLAGS=-mod=mod CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+        go build -trimpath -ldflags "-s -w" -o "../../skeletons/usr/bin/savant-core" . ) \
+        || { echo "[build] FATAL: savant-core go build failed" >&2; exit 1; }
+    echo "[build] savant-core built: $(sha256sum skeletons/usr/bin/savant-core | cut -c1-16)"
+}
+build_savant_core
+
 run_build() {
     local tag=$1
     # MSYS_NO_PATHCONV: Git Bash rewrites POSIX paths in argv to Windows paths
@@ -55,10 +70,15 @@ run_build() {
         -v "guest-image-cache:/mkosi-cache:rw" \
         -e RELEASE_NAME="$release_name" -e VERSION="$version" \
         -w /work "$image" /bin/bash -ceu '
-        pacman -Sy --noconfirm --needed mkosi e2fsprogs zstd python-pefile python-pillow
+        pacman -Sy --noconfirm --needed mkosi e2fsprogs zstd python-pefile python-pillow go
         useradd -m builder 2>/dev/null || true
         export HOME=/home/builder
         rm -rf /mkosi-ws/'"$tag"' /work/build-'"$tag"'
+        # Phase 3 (FID-2026-0915-005): savant-core is cross-compiled on the
+        # HOST (before the container starts) into skeletons/usr/bin, so it
+        # rides SkeletonTrees into the image like every other factory file.
+        # GOFLAGS=-mod=mod with GOMODCACHE on the repo tree: the container
+        # has no network beyond pacman, so the build is network-free.
         # Phase 2: the factory wallpaper is generated deterministically
         # before the build so it lands in the skeleton tree and rides
         # SkeletonTrees into the image (FID-2026-0912-002). v2 generates on
@@ -84,9 +104,31 @@ echo "[build] assembly B (determinism gate)"
 run_build b
 
 echo "[build] CRLF gate: no KConfig/unit/theme file may carry CR (KConfig mis-parses '[Group]\r' — verified 2026-09-13, whole L&F layer no-op'd on CRLF)"
-crlf_hits=$(grep -rlI $'\r' guest-image/skeletons 2>/dev/null | grep -v '\.png$' || true)
+# Byte-exact scan, not grep: CR is a byte question and grep's binary/text
+# heuristics proved irreproducible in this environment (2026-09-15: the same
+# tree alternately reported 0 and 34 CR hits between runs while a full Python
+# byte scan showed 0). Byte semantics are strictly stronger than grep -I.
+PY=$(command -v python3 || command -v python)
+crlf_hits=$("$PY" - <<'PYEOF'
+import os, sys
+bad = []
+for dirpath, _, files in os.walk("skeletons"):
+    for name in files:
+        if name.endswith(".png"):
+            continue
+        p = os.path.join(dirpath, name)
+        try:
+            with open(p, "rb") as f:
+                if b"\r" in f.read():
+                    bad.append(p)
+        except OSError:
+            pass
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PYEOF
+) || true
 if [[ -n $crlf_hits ]]; then
-    echo "[build] GATE FAILED: CRLF found in:" >&2
+    echo "[build] GATE FAILED: CR bytes found in:" >&2
     echo "$crlf_hits" >&2
     exit 1
 fi

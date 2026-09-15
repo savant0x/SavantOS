@@ -75,5 +75,13 @@ jobs:
       - name: Check out source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
+      - name: Set up Go (savant-core gate)
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: guest-daemon/savant-core/go.mod
+          # Dependency-free module today (DBus surface arrives in m4): no
+          # go.sum to key a module cache on, and nothing to cache.
+          cache: false
+
       - name: Apply guest patches and run contract tests
         run: scripts/release/build-guest.sh --contract-only

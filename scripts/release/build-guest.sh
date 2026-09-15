@@ -45,12 +45,32 @@ bash -n "$builder_dir/build.sh" "$builder_dir/assemble.sh" \
 
 # 3. CRLF gate: no KConfig/unit/theme file may carry CR (KConfig mis-parses
 #    '[Group]\r' — verified 2026-09-13, the whole L&F layer no-op'd on CRLF).
-crlf_hits=$(grep -rlI $'\r' "$builder_dir/skeletons" 2>/dev/null | grep -v '\.png$' || true)
-if [[ -n $crlf_hits ]]; then
-  echo "CRLF found in:" >&2
-  echo "$crlf_hits" >&2
-  exit 1
-fi
+#    Byte-exact scan, not grep: CR is a byte question and grep's binary/text
+#    heuristics proved irreproducible in this environment (2026-09-15: the
+#    same tree alternately reported 0 and 34 CR hits between runs while a
+#    full Python byte scan showed 0). Byte semantics are strictly stronger
+#    than grep -I.
+PY=$(command -v python3 || command -v python)
+BUILDER_DIR_ABS="$builder_dir" "$PY" - <<'PYEOF'
+import os, sys
+bad = []
+root = os.path.join(os.environ["BUILDER_DIR_ABS"], "skeletons")
+for dirpath, _, files in os.walk(root):
+    for name in files:
+        if name.endswith(".png"):
+            continue
+        p = os.path.join(dirpath, name)
+        try:
+            with open(p, "rb") as f:
+                if b"\r" in f.read():
+                    bad.append(p)
+        except OSError:
+            pass
+if bad:
+    print("CR bytes found in:", file=sys.stderr)
+    print("\n".join(bad), file=sys.stderr)
+    sys.exit(1)
+PYEOF
 
 # 4. Skeleton presence: the load-bearing files must ship in the skeleton
 #    tree before any build can embed them (skeleton-level mirror of the
@@ -63,7 +83,9 @@ for probe in \
     usr/share/konsole/Savant.profile \
     etc/systemd/system/savantos-keyring-init.service \
     etc/sddm.conf.d/10-savantos-autologin.conf \
-    usr/share/wallpapers/savant/contents/images/savant-traffic-lights.png; do
+    usr/share/wallpapers/savant/contents/images/savant-traffic-lights.png \
+    usr/lib/systemd/user/savant-core.service \
+    usr/lib/systemd/user-preset/91-savantos-desktop.preset; do
   [[ -f "$builder_dir/skeletons/$probe" ]] || {
     echo "skeleton content assertion FAILED — $probe missing" >&2
     exit 1
@@ -71,6 +93,11 @@ for probe in \
 done
 
 if ((contract_only)); then
+  # Phase 3 (FID-2026-0915-005): the guest daemon must compile and its
+  # safety-law tests must pass on every CI push — the same bar app/ meets.
+  ( cd "$repo_root/guest-daemon/savant-core" && \
+      go vet ./... && go test ./... ) \
+      || { echo "savant-core gate FAILED" >&2; exit 1; }
   exit 0
 fi
 
