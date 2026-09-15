@@ -111,6 +111,62 @@ act → sever-by-default).
   filed into this FID as they land.
 - T4.4 demo (parent's exit criterion) is the final verification.
 
+### Milestone 1+2 — LANDED (2026-09-15, commits `b4ded8e` + `b82d5b8`)
+
+**m1 (factory wiring):** `guest-image/skeletons/usr/lib/systemd/user/
+savant-core.service` (Type=notify, the full confinement block:
+RestrictAddressFamilies=AF_UNIX, NoNewPrivileges, ProtectSystem=strict,
+PrivateNetwork, MemoryDenyWriteExecute), enabled via the user preset;
+assemble.sh asserts unit+binary+preset with an **ELF-magic probe** (a
+Windows-embed binary must be unshippable — the host build runs on
+Windows). build.sh cross-compiles host-side (CGO off, trimpath, fixed
+cache) before BOTH assemblies, so the dual-build gate sees identical
+bytes.
+
+**m2 (control plane):** `guest-daemon/savant-core` — dependency-free Go
+daemon. Design evolution, disclosed: the FID's private DBus is
+**deferred to m4** (godbus v5 is client-only; server-side peer auth
+would mean vendoring or reimplementing the auth handshake for zero
+behavioral gain). The m2 control plane serves the identical verb set
+(KILL/PAUSE/RESUME/STATUS/QUIT) as a line protocol over a 0600 Unix
+socket in `$XDG_RUNTIME_DIR/savant-core/control.sock` — same private,
+no-bus, fail-closed contract; savantctl (m3) speaks these exact bytes.
+Unit is Type=notify: the daemon sends READY=1 and services
+WatchdogSec=10 with WATCHDOG=1 pings (a hung core gets killed and
+restarted with no capability — the law's fail-closed property).
+
+**Live proof, running dev guest (not a rebuild):** binary pushed over
+ssh; transcript: structured `event=start ... cap=none law=FID-2026-
+0915-004`; socket mode `600`; fresh STATUS `armed=false severed=false
+mechanism=none killAt=never rearm=0`; RESUME→armed (rearm=1); KILL→
+severed; post-kill RESUME and PAUSE both refused; severed STATUS shows
+`killAt=2026-09-15T19:52:30Z`; QUIT→process exited; **restart STATUS
+disarmed again** (fail-closed across restarts). CI-side: vet+test green
+(disarmed-at-boot, no-self-recovery-after-kill, dispatch totality,
+socket lifecycle round-trip, stale-non-socket refusal).
+
+**Findings recorded while proving:**
+
+1. **The 9p host-share is a boot-time snapshot.** Files written to the
+   host share after the guest booted (14:17) are invisible in-guest;
+   morning files are visible. Workaround of record: pipe artifacts over
+   ssh (base64) for live experiments. A refresh mechanism (or
+   documentation of the snapshot semantics) belongs to the launcher's
+   host-share service.
+2. **grep's CRLF detection was irreproducible in this environment** —
+   the same tree alternately reported 0 and 34 CR-containing files
+   between runs while a full Python byte scan showed 0 both times. Both
+   CRLF gates (build.sh + CI contract) now use a byte-exact scan
+   instead of `grep -rlI`. (Three green consecutive runs after the
+   rewrite.)
+3. **QUIT reply races EOF** (cosmetic): the client saw an empty reply
+   line before the daemon exited, though exit semantics and the
+   `law_quit` journal line are proven. Fix rides m3's savantctl client
+   (write-then-graceful-close ordering).
+
+**Next:** m3 vision plane (AT-SPI2 read + savantctl), then m4 input
+plane (EIS bind; DBus surface lands with the UI layer).
+
 ## Verification Gates
 
 - gate: build/vet/test/fmt per protocol.config.yaml
