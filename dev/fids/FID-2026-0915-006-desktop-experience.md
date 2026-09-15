@@ -111,6 +111,24 @@ not drag Xfce/GTK deps the way mousepad would.
   the packages are listed; boot-verified in the next image build.
 - All: dual-build determinism gate green on the final state.
 
+### Snapshot verification transcript (2026-09-15, gate of record)
+
+Source: `extra.db` fetched from
+`https://archive.archlinux.org/repos/2026/08/11/extra/os/x86_64/extra.db`
+(8,774,630 B, HTTP 200) — the authoritative package list of the pin.
+
+- **chromium** — `chromium-151.0.7922.108-1` present → **D4 GREEN**.
+  Deps (gtk3, nss, libpulse, hicolor-icon-theme, …) all in the pin's
+  extra/core; no AUR, no unverified source.
+- **featherpad** — `featherpad-1.6.3-1` present → **D5 GREEN**. Deps:
+  `hicolor-icon-theme`, `hunspell`, `qt6-svg` (qt6-svg-6.11.1-1
+  confirmed present; already ships in the image anyway).
+- **colloid-icon-theme** — **ABSENT** from the pin (grep of the full db
+  returns nothing) → per the FID's own law, **D3 resolves to the
+  explicit fallback: Papirus-Dark stays**. Recorded as a gated no-op,
+  not a silent skip. (Re-check on any future snapshot bump; Papirus
+  20260801-1 confirmed present.)
+
 ## Verification Gates
 
 - gate: build/vet/test/fmt per protocol.config.yaml
