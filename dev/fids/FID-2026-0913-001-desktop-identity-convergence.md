@@ -3,7 +3,9 @@
 **Filename:** `FID-2026-0913-001-desktop-identity-convergence.md`
 **ID:** FID-2026-0913-001
 **Severity:** high
-**Status:** fixed
+**Status:** fixed — landed `bd2e62f` (decoration + L&F + theming,
+including the 2026-09-15 hover-glyph primitive fix); rendered proof
+superseded by the pixel measurement recorded in the Resolution section
 **Created:** 2026-09-13
 
 ---

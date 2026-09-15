@@ -3,9 +3,9 @@
 **Filename:** `FID-2026-0914-003-window-close-powerdevil.md`
 **ID:** FID-2026-0914-003
 **Severity:** high
-**Status:** proven — fix verified live on the first image built from this
-tree (close-flow proof passed 2026-09-15; FID closed for engineering
-pending the commit that lands the fix)
+**Status:** proven — landed `bd2e62f` (seed in finalize.sh, identity-apply.sh
+and skel) and `40f36ff` (assemble.sh value probe); close-flow proof passed
+2026-09-15 on the first image built from this tree
 **Created:** 2026-09-14
 **Parent:** FID-2026-0912-002 (Phase 2 desktop) — its "restart/shutdown
 path" premise item; defect discovered live 2026-09-14

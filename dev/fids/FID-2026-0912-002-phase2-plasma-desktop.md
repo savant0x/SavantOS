@@ -3,7 +3,9 @@
 **Filename:** `FID-2026-0912-002-phase2-plasma-desktop.md`
 **ID:** FID-2026-0912-002
 **Severity:** high
-**Status:** converged
+**Status:** converged — landed `bd2e62f` (desktop factory; carries the
+mkosi noto-fonts indent fix and the FID-2026-0914-003 seed), `.gitattributes`
+LF pin in `bd2e62f`
 **Created:** 2026-09-12
 **YAGNI-Compliance:** Pending
 **Parent:** FID-2026-0912-001 (first-party OS pivot — Phase 1 landed `717bb15`)

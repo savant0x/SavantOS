@@ -3,7 +3,9 @@
 **Filename:** `FID-2026-0914-002-factory-and-trust.md`
 **ID:** FID-2026-0914-002
 **Severity:** high
-**Status:** converged
+**Status:** converged — keyring unit + assemble gates landed `40f36ff`,
+release re-point `9e48202`, sandbox pin `34f6fa8`; first-boot keyring proof
+passed 2026-09-15
 **Created:** 2026-09-14 00:56
 **YAGNI-Compliance:** Pending
 **Parent:** FID-2026-0912-001 (first-party OS pivot — Phase 1 converged; Phase 2 landed under FID-2026-0912-002/FID-2026-0913-001)
