@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0912-001-first-party-os-pivot.md`
 **ID:** FID-2026-0912-001
 **Severity:** critical
-**Status:** implemented (Phase 1)
+**Status:** converged
 **Created:** 2026-09-12 00:00
 **YAGNI-Compliance:** Verified
 
@@ -358,7 +358,7 @@ contract in this FID was corrected from the launcher's source, not from memory.
   proof via boot-proof.sh flow (fresh data dir + local release base).
 - **Verification Evidence:** see Implementation Evidence above (gate digests +
   launcher log + guest SSH probe).
-- **Archived:** — (Phase 2/3 continue under new FIDs)
+- **Archived:** — (successor FIDs: Phase 2 → FID-2026-0912-002, Phase 3 → FID-2026-0914-001, Phase 4 → FID-2026-0914-002)
 
 ## Implementation Evidence (REQUIRED for `closed`)
 
