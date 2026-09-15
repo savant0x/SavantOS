@@ -29,13 +29,16 @@ mkdir -p "$out"
 # the build flags pin CGO off (pure-Go, static) and trimpath (no host paths
 # in the binary) so the two assemblies verify byte-identical.
 build_savant_core() {
-    local gocache="$(pwd)/.gocache"
-    mkdir -p "$gocache" "skeletons/usr/bin"
-    ( cd guest-daemon/savant-core && \
+    # Pathed from this script's dir (build.sh anchors its cwd to
+    # guest-image/), reaching the daemon module one level up in the repo.
+    local daemon_dir="$here/../guest-daemon/savant-core"
+    local gocache="$here/.gocache"
+    mkdir -p "$gocache" "$here/skeletons/usr/bin"
+    ( cd "$daemon_dir" && \
         GOCACHE="$gocache" GOFLAGS=-mod=mod CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-        go build -trimpath -ldflags "-s -w" -o "../../skeletons/usr/bin/savant-core" . ) \
+        go build -trimpath -ldflags "-s -w" -o "$here/skeletons/usr/bin/savant-core" . ) \
         || { echo "[build] FATAL: savant-core go build failed" >&2; exit 1; }
-    echo "[build] savant-core built: $(sha256sum skeletons/usr/bin/savant-core | cut -c1-16)"
+    echo "[build] savant-core built: $(sha256sum "$here/skeletons/usr/bin/savant-core" | cut -c1-16)"
 }
 build_savant_core
 
