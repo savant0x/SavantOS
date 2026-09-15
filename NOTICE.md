@@ -9,7 +9,8 @@ project derives from, as required by Section 4(d) of that License.
 Copyright 2026 Spencer Howell (Savant AI)
 
 SavantOS is a hard fork of Try Omarchy for Windows. The Windows launcher
-(`app/`), guest-image patches (`guest-build/`), runtime build
+(`app/`), the legacy guest-image patch train (retired 2026-09-15, history
+in git), runtime build
 (`runtime-build/`), scripts, CI workflows, and documentation in this
 repository derive from the works listed below, imported as a pristine
 baseline commit and then rebranded and extended.
@@ -49,8 +50,8 @@ baseline commit and then rebranded and extended.
 
 ## try-omarchy-win guest image builder
 
-- Source: <https://github.com/jorge-huxley/try-omarchy-win> (pinned in
-  `guest-build/source.lock.json`)
+- Source: <https://github.com/jorge-huxley/try-omarchy-win> (pinned in the
+  retired `guest-build/source.lock.json`; see git history)
 - What is used: the containerized x86_64 guest-image builder and the
   direct-kernel-boot WHPX recipe that produces the factory disk.
 

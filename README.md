@@ -6,19 +6,21 @@
 
 A sovereign agentic OS host for Windows: one signed, self-updating launcher
 that runs a full Linux desktop guest in a window — QEMU on the Windows
-Hypervisor Platform (WHPX), a prebuilt Arch image with the Omarchy desktop
-baked in, rendered on your actual GPU (virgl + Venus Vulkan via
+Hypervisor Platform (WHPX), a first-party Arch image with a Plasma 6 desktop
+and the Savant traffic-lights identity baked in, rendered on your actual GPU
+(virgl + Venus Vulkan via
 [WINQ-EMU](https://github.com/cmspam/winq-emu)) with CPU rendering as the
 automatic fallback. No partitions, no bootloader, no dual boot: everything
 lives in one folder chosen on first run, with `%LOCALAPPDATA%\SavantOS` as the
 default.
 
-Download, boot, Hyprland.
+Download, boot, Plasma.
 
 **Status: working end to end on real hardware.** The launcher pins its trust
-anchors and release URLs to `savant0x/SavantOS`; the first SavantOS factory
+anchors and release URLs to `savant0x/SavantOS`; the Omarchy-era factory
 image shipped as [v0.0.1](https://github.com/savant0x/SavantOS/releases/latest)
-on 2026-09-11. This repository is a hard fork of
+on 2026-09-11, and the first-party Plasma desktop has been the built image
+since 2026-09-15. This repository is a hard fork of
 Try Omarchy for Windows — see [provenance](#provenance-and-credits).
 
 [![Release](https://img.shields.io/github/v/release/savant0x/SavantOS)](https://github.com/savant0x/SavantOS/releases/latest)
@@ -84,11 +86,13 @@ atomically with rollback. To check the wiring without updating anything, run
 
 ## What works today
 
-- **The full Omarchy 4.0.2 desktop on new or reset guests**: Hyprland, the
-  bar, notifications, all 22 themes, the screensavers. On a mid-range Ryzen 5
-  test laptop the desktop is up about 6 seconds after launch, and every launch
-  after setup goes straight there. No Linux login screens, no console text.
-- **GPU acceleration**: Hyprland renders on the host GPU via virgl,
+- **The Savant Plasma 6 desktop on new or reset guests**: Wayland
+  (win Wayland compositor), the single-panel Savant layout, traffic-light
+  window decorations, Savant wallpapers, Kvantum/Papirus theming. On a
+  mid-range Ryzen 5 test laptop the desktop is up about 6 seconds after
+  launch, and every launch after setup goes straight there. No Linux login
+  screens, no console text.
+- **GPU acceleration**: the desktop renders on the host GPU via virgl,
   `vulkaninfo` shows Venus, smooth video and audio; `-cpu host` (AVX2 and all)
   via WINQ-EMU's patched WHPX.
 - **One app, zero prerequisites**: `SavantOS.exe` (~8 MB, no console window).
@@ -382,16 +386,17 @@ anything odd.
   verification, licenses, and provenance tooling
 - `scripts/` — PowerShell path plus QMP tooling (screendump, send-key, WHPX
   smoke test)
-- `guest-build/` — patches on the upstream guest builder that produce our
-  image, plus build instructions
+- `guest-image/` — the first-party builder (mkosi, deterministic dual-build
+  gate) that produces our Plasma 6 image
 - `docs/` — operator documentation and technical findings
 
-The guest image (Omarchy 4.0.2, all upstream themes, screensavers, autologin,
-clipboard bridge) is built from
+The v0.0.x guest images (Omarchy 4.0.2 desktop) were built from
 [jorge-huxley/try-omarchy-win](https://github.com/jorge-huxley/try-omarchy-win)'s
-`win` branch guest builder — an x86_64 retarget of the upstream try-omarchy
-build system — with the patches in `guest-build/` applied. Images are not
-committed; setup downloads the latest release artifact, or build your own.
+`win` branch guest builder with the retired `guest-build/` patch train
+(removed 2026-09-15). Current images are built by `guest-image/` —
+`scripts/release/build-guest.sh` runs the deterministic dual-build gate.
+Images are not committed; setup downloads the latest release artifact, or
+build your own.
 
 ## Provenance and credits
 

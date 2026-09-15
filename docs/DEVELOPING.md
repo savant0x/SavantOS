@@ -54,12 +54,14 @@ scripts/dev/dev-vm.sh shell bash /mnt/host/hello.sh   # share round-trip smoke
   rebuild. `hello.sh` proves the round trip by writing `from-guest.txt` back.
 - **State persists** in the dev disk across reboots: `yay -S <package>`
   (yay and the base-devel toolchain ship in the image), config edits, dotfiles.
-- **Graduation:** a guest change that proves out becomes the next numbered
-  patch in `guest-build/` (`00XX-*.patch`, applied to the pinned upstream
-  builder commit) — that is how all existing patches were authored. Live
-  mutation is the experiment; the patch is the durable form; the rebuilt
-  factory image only ever ships through the release pipeline
-  (`docs/RELEASE.md`).
+- **Graduation:** a guest change that proves out becomes a skeleton/tree
+  change in `guest-image/` (the first-party builder) — verified by the
+  builder's contract gate (`scripts/release/build-guest.sh
+  --contract-only`) and, for image content, the assemble.sh probes. Live
+  mutation is the experiment; the builder tree is the durable form; the
+  rebuilt factory image only ever ships through the release pipeline
+  (`docs/RELEASE.md`). (The old `guest-build/` patch-train flow was
+  retired 2026-09-15 — FID-2026-0914-002.)
 - SSH authorizes your `~/.ssh/id_*.pub` automatically when `-ssh` is used;
   port 2222 is loopback-only (no firewall prompt).
 
@@ -140,5 +142,6 @@ driving patterns are shared between both.
   -unsafeptr=false`, `test`, `gofmt`) — main takes direct pushes; CI runs the same
   gates on every PR.
 - Docs: `bun run lint:md`.
-- Guest changes intended to ship: `guest-build/` patch + the guest contract
-  test, then the release pipeline in `docs/RELEASE.md`.
+- Guest changes intended to ship: `guest-image/` builder-tree change
+  (gate: contract-only + assemble probes), then the release pipeline in
+  `docs/RELEASE.md`.

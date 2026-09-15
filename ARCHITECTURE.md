@@ -20,7 +20,7 @@ launcher that:
 | ---- | ---------- |
 | `app/` | Go launcher (exe `SavantOS.exe`). Supervisor state machine: setup → boot → run → shutdown; setup download/verify/recovery; update state machine; QEMU/QMP control; tray + settings UI; uninstall; backup/restore/reset; portable mode. |
 | `app/cmd/sign-update/` | Release tool that signs `update-v2.json` manifests with the Ed25519 update key. |
-| `guest-build/` | 44 numbered patches applied to the pinned upstream guest-image builder commit (`source.lock.json`); `runtime.lock.json` pins the published factory image the launcher downloads. |
+| `guest-image/` | First-party deterministic builder: mkosi config, Plasma 6 skeletons, wallpapers, assemble + content gates; `scripts/release/build-guest.sh` runs the dual-build digest gate. |
 | `runtime-build/` | Source-locked CI build of the Windows QEMU runtime (WINQ-EMU QEMU + virglrenderer forks, per-commit pins in `sources.lock.json`). |
 | `scripts/` | Host-side PowerShell tooling: launcher bootstrap, VM test harness (`vmtest/`), release pipeline (`release/`), guest overlay files (`guest/`). |
 | `.github/workflows/` | CI (build/vet/test + release-pin validation + guest contract), release (two-phase: guest build+smoke, then sign+publish), runtime build, guest lock refresh. |

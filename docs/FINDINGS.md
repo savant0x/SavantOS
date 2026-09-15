@@ -4,6 +4,14 @@
 > plus their dates) were recorded while this codebase was the upstream
 > try-omarchy-windows project; upstream product and builder names in those
 > records are historical facts, not current identity.
+>
+> **Builder retirement (2026-09-15):** the `guest-build/` patch train this
+> document frequently references was retired with the Omarchy kill list
+> (FID-2026-0914-002); the first-party builder (`guest-image/`) replaced it.
+> The WHPX/QEMU findings below remain load-bearing for the launcher and
+> runtime — read them before touching that code — but any instruction that
+> says "add a patch to `guest-build/`" now means "change `guest-image/`
+> instead".
 
 Working notes on what's proven, what bit us, and the fixes. Dates are 2026-08.
 

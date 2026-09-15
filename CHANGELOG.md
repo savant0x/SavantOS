@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Removed
+- **Omarchy kill list executed (FID-2026-0914-002, operator sign-off
+  2026-09-15):** the legacy `guest-build/` patch train is deleted (51
+  tracked files: 48 patches + README + source/runtime locks). Coupled
+  changes in the same commit: `runtime.lock.json` moved to
+  `scripts/release/runtime.lock.json` beside its only consumer and
+  `prepare-assets.sh` re-pointed; the Omarchy-lock refresher
+  (`scripts/release/refresh-guest-lock.sh`, `scripts/dev/guest-patch.sh`,
+  `.github/workflows/refresh-guest-lock.yml`) removed with it. Docs sweep:
+  COMPATIBILITY.md and MIGRATION.md retired as stubs, FINDINGS.md carries a
+  read-first provenance banner (WHPX/QEMU findings stay load-bearing),
+  README/AGENTS/ARCHITECTURE/knowledge/NOTICE/DEVELOPING forward-looking
+  references updated to the first-party `guest-image/` builder. The vmtest
+  retarget sequences after the next committed-tree boot proof, not with
+  the deletions.
+
 ### Governance
 - ECHO Protocol 0.2.1: new Working Style clause — **no silent deferrals**;
   any element of an approved plan that will not be implemented requires

@@ -34,21 +34,12 @@ edit files on Windows, they appear in the guest at `/mnt/host` instantly.
 Run `bash /mnt/host/hello.sh` inside the guest for the round-trip smoke
 (writes `from-guest.txt` back to the share). The guest's writable disk
 persists local changes across reboots: `yay -S <pkg>` and config edits stay
-in the dev dir. When a guest change proves out, formalize it with the patch
-authoring helper below.
-
-## Patch authoring (`guest-patch.sh`)
-
-Turns live guest files into the next numbered `guest-build/` patch — the
-exact mailbox format `scripts/release/build-guest.sh` consumes with `git am`:
-
-```bash
-scripts/dev/guest-patch.sh stage /usr/local/bin/newtool
-scripts/dev/guest-patch.sh commit "Ship the newtool stub"        # add mode
-scripts/dev/guest-patch.sh stage /usr/local/bin/clipboard-bridge
-scripts/dev/guest-patch.sh commit --modify "Tune the bridge"     # modify mode
-scripts/dev/guest-patch.sh list | clean
-```
+in the dev dir. When a guest change proves out, formalize it as a change in
+the `guest-image/` builder tree (verified by
+`scripts/release/build-guest.sh --contract-only` + the assemble.sh probes).
+The old patch-authoring helper (`guest-patch.sh` → `guest-build/` mailbox
+patches) was retired 2026-09-15 with the Omarchy kill list
+(FID-2026-0914-002); see git history if you need the old flow.
 
 - Mapping handled for you: a guest path `/p/f` becomes builder-tree path
   `guest/factory-overlay/p/f` (that is how guest content reaches the

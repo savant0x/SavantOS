@@ -15,7 +15,8 @@ self-updating Go launcher that runs a Linux desktop guest under QEMU/WHPX.
   fallback via llvmpipe
 - **PowerShell 5.1+** host tooling (`scripts/`)
 - **Python 3** release tooling (`scripts/release/`, `runtime-build/`)
-- **Arch-based guest** built from pinned upstream + 44 patches (`guest-build/`)
+- **Arch-based guest** built by the first-party deterministic builder
+  (`guest-image/`: mkosi, Plasma 6 desktop, dual-build digest gate)
 - **Ed25519 signed updates** with SHA256-authenticated manifests
 
 ## Repo Map
@@ -25,7 +26,7 @@ self-updating Go launcher that runs a Linux desktop guest under QEMU/WHPX.
 | `app/` | Launcher source; tests are colocated `*_test.go` |
 | `app/cmd/sign-update/` | Update-manifest signing tool |
 | `app/testdata/` | Embedded fixtures (SHA256SUMS) |
-| `guest-build/` | Guest-image patch series + source/runtime locks |
+| `guest-image/` | First-party guest builder (mkosi config, skeletons, wallpapers, assemble + gates) |
 | `runtime-build/` | Source-locked QEMU runtime build |
 | `scripts/` | Host tooling (bootstrap, vmtest harness, release pipeline, guest overlay) |
 | `assets/favicon/` | Brand assets — source of truth for `app/icon.ico` |
