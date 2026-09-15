@@ -94,7 +94,8 @@ set → savant-core m1+m2 landed + live-proven; dual-build running)
 
 ## Commit Lineage (this session)
 
-```
+```text
+``text
 34f6fa8 bd2e62f 40f36ff 9e48202 c2e839b 26d54a9 37c3aab   (C1–C6 + statuses)
 d7fa003 docs(gov): master plan
 d0eff94 chore(legacy): Omarchy kill list
