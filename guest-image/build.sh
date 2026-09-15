@@ -117,15 +117,20 @@ import os, sys
 bad = []
 for dirpath, _, files in os.walk("skeletons"):
     for name in files:
-        if name.endswith(".png"):
-            continue
         p = os.path.join(dirpath, name)
         try:
             with open(p, "rb") as f:
-                if b"\r" in f.read():
-                    bad.append(p)
+                data = f.read()
         except OSError:
-            pass
+            continue
+        # Binary files are out of scope: a compiled ELF legitimately
+        # contains 0x0D bytes (run 2 of the 0915 build flagged savant-core
+        # this way). NUL-byte presence is the binary discriminator — the
+        # gate's target (KConfig/unit/theme/text) never contains NULs.
+        if b"\x00" in data:
+            continue
+        if b"\r" in data:
+            bad.append(p)
 print("\n".join(bad))
 sys.exit(1 if bad else 0)
 PYEOF

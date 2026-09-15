@@ -57,15 +57,20 @@ bad = []
 root = os.path.join(os.environ["BUILDER_DIR_ABS"], "skeletons")
 for dirpath, _, files in os.walk(root):
     for name in files:
-        if name.endswith(".png"):
-            continue
         p = os.path.join(dirpath, name)
         try:
             with open(p, "rb") as f:
-                if b"\r" in f.read():
-                    bad.append(p)
+                data = f.read()
         except OSError:
-            pass
+            continue
+        # Binary files are out of scope: a compiled ELF legitimately
+        # contains 0x0D bytes (run 2 of the 0915 build flagged savant-core
+        # this way). NUL-byte presence is the binary discriminator — the
+        # gate's target (KConfig/unit/theme/text) never contains NULs.
+        if b"\x00" in data:
+            continue
+        if b"\r" in data:
+            bad.append(p)
 if bad:
     print("CR bytes found in:", file=sys.stderr)
     print("\n".join(bad), file=sys.stderr)
