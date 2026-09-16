@@ -18,6 +18,8 @@ one track
 
 Governing plan for ALL remaining work after the 2026-09-15 commit landing
 (`717bb15..37c3aab`). Five tracks (T0–T4), each with a named child FID (new
+additive track T5, 2026-09-15: the desktop experience pass, FID-2026-0915-006 —
+closed 2026-09-16).
 files where none exists), a single source FID for every item (no orphan, no
 double-claiming), explicit dependency edges, a recommended sequence, and the
 decision points that belong to the operator. Ordered to protect the two
@@ -85,6 +87,20 @@ of 0914-002 is discharged.
 | 4.6 | AVX2→VLM flag wiring (consumes 3.3) | D1 ruling note | the named wiring gap closes here |
 
 **Exit:** 0914-001's verification section, demonstrated live.
+
+### T5 — Desktop experience pass (additive, 2026-09-15; child FID 0915-006 — CLOSED)
+
+| # | Item | Source | Notes |
+|---|------|--------|-------|
+| 5.1 | Clock/date redesign (compact `ddd d MMM`) | 0915-006 D1 | landed, boot-verified |
+| 5.2 | Wallpaper v3 (deterministic generator, 4K) | 0915-006 D2 | byte-identical on screen |
+| 5.3 | Icon decision (Papirus-Dark retained; colloid absent from pin) | 0915-006 D3 | fallback rule of record |
+| 5.4 | Chromium preload + favorites/taskbar pins | 0915-006 D4 | in-image verified |
+| 5.5 | Featherpad notepad | 0915-006 D5 | in-image verified |
+
+**Exit:** met 2026-09-16 (dual-build GATE GREEN + fresh-image boot proof +
+rendered-desktop screenshot). Ideas ledger (theming, extensions) remains
+open in 0915-006 for future passes.
 
 ## Dependency edges (the plan's spine)
 
