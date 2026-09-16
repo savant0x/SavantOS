@@ -160,3 +160,35 @@ Source: `extra.db` fetched from
 - **Convergence declared:** D1–D5 implementable at automation level 3
   (operator pre-authorized by the request + L3 instruction); D6
   recorded without commitment.
+
+## Execution evidence (2026-09-16, automation level 3)
+
+- **D1+D2+D4+D5 landed** on `92ae5a1`: wallpaper v3 rendered at the
+  **discovered** promotion contract (layout js pins the unsuffixed name;
+  shipped file is 3840×2160; no consumer references a light package —
+  light renders stay staged for future light-theme work, honestly
+  recorded); compact date `ddd d MMM`; chromium + featherpad in
+  mkosi.conf with favorites/taskbar pins.
+- **Boot proof of the 2026-09-15 image found a Phase-3 factory defect**
+  (filed under the FID whose evidence loop caught it): the fresh-image
+  boot via the launcher's `-release` path provisioned manifest-verified
+  artifacts and reached userspace-ready in ~2 min, but `savant-core`
+  crash-looped `status=226/NAMESPACE` — `ReadWritePaths=%t/savant-core`
+  requires the dir to pre-exist and nothing created it. Fixed with
+  `RuntimeDirectory=savant-core` on `7c28421`, plus an assemble-time
+  regression probe (grep of the image's unit file via the pipefail-safe
+  temp-file pattern).
+- **Post-fix live proof in the real guest:** unit `active`, control
+  socket 0600 inside 0700 dir, full law round-trip (fail-closed boot →
+  RESUME armed → PAUSE paused → STATUS exact → KILL severed+
+  killAt journaled → post-kill PAUSE **refused**), watchdog stable
+  (NRestarts=0), restart returns disarmed (`armed=false severed=false
+  rearm=0`) — fail-closed across restarts, m2 exit criteria met in-image.
+- **Accidental-build honesty note:** an exploratory `build.sh
+  --contract-only` was silently ignored by build.sh (no such flag) and
+  started a full assembly A; killed, workspace cleaned. Forward fix
+  owed: build.sh should reject unknown flags (fail-closed CLI).
+- **Dual-build with the full experience pass:** in flight at filing
+  (`build-2026-0915-exp.log`, container installing the ~4.5 GB set incl.
+  chromium + featherpad from the pin); GATE GREEN on this tree is the
+  close condition recorded here.
