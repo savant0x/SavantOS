@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- **Metered-link download pause (FID-2026-0914-002 step 3a):** full
+  payload downloads pause while Windows reports a metered connection,
+  resume when it clears; allow via the settings checkbox or
+  `-allow-metered`. Metadata and cached files are never paused.
+
 ### Removed
 - **Omarchy kill list executed (FID-2026-0914-002, operator sign-off
   2026-09-15):** the legacy `guest-build/` patch train is deleted (51

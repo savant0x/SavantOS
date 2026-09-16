@@ -418,8 +418,39 @@ time — the old patch-train split.
   multi-user.target, asserts the Plasma payload facts + SUCCESS
   `SAVANTOS_SMOKE:savant:phase2` from image-stream. test_smoke_guest.py
   unchanged (tests parse_facts).
-- **Remaining named steps**: 3 launcher probes, 5 deltas, 6 kill list; the
-  exit criterion (full release cycle) runs at the operator's next release.
+- **Remaining named steps**: 3b Vulkan 1.3, 3c AVX2, 5 deltas, 6 kill
+  list; the exit criterion (full release cycle) runs at the operator's
+  next release.
+
+## Implementation Evidence (step 3a — metered pause, landed 2026-09-16)
+
+- **Zero-build verifications first (loop discipline):** live python
+  ctypes probe confirmed `GetNetworkConnectivityHint` is exported by
+  **Iphlpapi.dll** (not the api-ms-win-net-isolation dll the research
+  rows assumed) and a Go scratch program pinned the struct: three 32-bit
+  fields at offsets 0/4/8 — Level, Changed(+pad), Cost — rc=0 on this
+  host (level=3 InternetAccess, cost=0 Unknown). Design cites measured
+  facts, not header guesses.
+- **Micro-contract implemented as designed:** hint API (probe), pause
+  semantics (gate in `ensureVerifiedDownload` — the single wrapper all
+  payload downloads traverse; metadata fetches and cached-valid files
+  exempt; poll 30 s; setup-cancellation honored), settings escape hatch
+  (`AllowMetered` row + settings-dialog checkbox + `-allow-metered`
+  flag; settings first, explicit flag wins — the render-row pattern).
+- **Fail-open rule:** probe error → reported honestly, never blocks;
+  a broken hint cannot hold a normal machine's downloads hostage.
+  Non-Windows builds stub to the same fail-open default so CI's ubuntu
+  gates exercise the full policy matrix.
+- **Gates:** `cd app && go build && go vet -unsafeptr=false && go test
+  && gofmt -l` all green. New tests: 7-case decision matrix (cost ×
+  override), fail-open, cost-classification semantics, real-sleep
+  pause/clear loop proof, cancellation, provenance strings. The gate
+  pause test caught a wrong expectation in its own first draft — fixed
+  to the true invariant (gate open = unmetered OR allowed).
+- **Startup provenance:** one log line records policy state + live link
+  cost + source after precedence resolves; the decision is stored
+  (`meteredState`) for diagnostics.
+
 - **Landing repair (2026-09-14):** the interrupted write batch landed
   smoke-guest.py with four col-0 continuation lines (IndentationError) and
   release.yml with three col-0 tokens (step name + two run-block lines).
