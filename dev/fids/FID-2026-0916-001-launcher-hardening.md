@@ -253,3 +253,56 @@ Converged 2026-09-16 (loop 3). Implementation at automation level 3 is
 approved; D1+D1c+D1b land first (protection), D2–D4 land as one stall-
 visibility pass. Evidence of each gate lands back here as the work
 completes.
+
+## Implementation evidence
+
+### D2–D4 stall-visibility pass — landed 2026-09-16 (`be61dc6`)
+
+- **D2 phase logs:** `phaseEnter` at every pre-boot transition (starting,
+  settings, share-validation, update-check, whp-check, provision-mode,
+  runtime, render-decision, guest-ensure, qemu). Watchdog: warn at 90 s,
+  hidden-dialog hint at 5 min, per-level rate limiting, retires at QEMU
+  spawn. Never auto-kills (loop-1 cut preserved).
+- **D3 headless:** `-headless` flag; `modalChoice`/`modalChoice2` gate the
+  UI-object dialogs (first-boot mode → full personal setup, shortcuts →
+  none, shared-folder setup → skip, all logged); the first-run data-dir
+  chooser has no safe default and refuses headless runs with the remedy
+  (`-dir`); the saved-share-failure infoBox is suppressed headless.
+- **D4 splash mirror:** every phase and watchdog warning mirrors onto the
+  splash status line.
+- **Structure:** platform-neutral core (`phase_core.go`, emitter-injected,
+  Linux-CI-testable) + windows wiring (`phase.go`). G1's unit suite runs
+  in CI on ubuntu (watchdog timing, rate limits, labels, transitions).
+
+### G5 — live boot proof (dev3, dev launcher rebuilt from `be61dc6`)
+
+Normal boot through the launcher, `vm/shell.log` (excerpt):
+
+```text
+16:14:33 phase: settings
+16:14:33 phase: starting
+16:14:33 phase: share-validation
+16:14:33 phase: update-check
+16:14:33 phase: whp-check
+16:14:33 phase: provision-mode
+16:14:33 phase: runtime
+16:14:34 phase: render-decision
+16:14:34 phase: guest-ensure
+16:16:18 preboot-watchdog: no phase progress for 1m45s (current phase: guest-ensure) - still working or waiting
+16:18:03 preboot-watchdog: no phase progress for 3m30s (current phase: guest-ensure) - still working or waiting
+16:20:10 phase: qemu
+```
+
+The watchdog fired during this very boot while the payload-verification
+step held `guest-ensure` for ~5.5 minutes — the exact silent window that
+was the 0915-002 incident signature — and the log now says what it is
+doing instead of nothing. Gate G5 satisfied (phase lines for every pre-
+boot phase on a normal boot; watchdog fires when a phase is held, proven
+by unit tests and this live hold).
+
+### Open from this FID
+
+- G4 headless smoke (live run) — evidence below when collected.
+- D1 (foreign-dir override refusal) + D1c (provenance fields) + D1b
+  (dev-vm.sh anchor): designed above, **not yet implemented** — next
+  work item after this pass.
