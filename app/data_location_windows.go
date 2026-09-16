@@ -100,6 +100,12 @@ func validateStandardDataDrive(path string) error {
 // The folder picker selects a drive or parent folder and the launcher keeps
 // its files together in a SavantOS child directory.
 func chooseFirstRunDataDirectory(defaultDir string) (string, bool, error) {
+	// D3 (FID-2026-0916-001): the only pre-boot dialog with no safe default
+	// — data-location shapes the whole install. Headless runs refuse here
+	// instead of dangling on an invisible dialog; pass -dir explicitly.
+	if headlessRefuse("first-run data-directory chooser") {
+		return "", false, fmt.Errorf("-headless requires -dir pointing at a data directory")
+	}
 	for {
 		answer := msgBox(
 			"Choose where SavantOS stores its virtual machine, graphics runtime, and downloads.\n\n"+

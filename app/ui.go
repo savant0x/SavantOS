@@ -171,30 +171,38 @@ func (ui *progressUI) chooseInstantMode() bool {
 	if !ui.available.Load() {
 		return false
 	}
-	reply := make(chan setupPromptResult, 1)
-	ui.prompts <- setupPromptRequest{kind: setupPromptProvision, reply: reply}
-	result := <-reply
-	ui.setInstantMode(result.primary)
-	return result.primary
+	return modalChoice(false, "first-boot mode (default: full personal setup)", func() bool {
+		reply := make(chan setupPromptResult, 1)
+		ui.prompts <- setupPromptRequest{kind: setupPromptProvision, reply: reply}
+		result := <-reply
+		ui.setInstantMode(result.primary)
+		return result.primary
+	})
 }
 
 func (ui *progressUI) chooseShortcuts() (bool, bool) {
 	if !ui.available.Load() {
 		return false, false
 	}
-	reply := make(chan setupPromptResult, 1)
-	ui.prompts <- setupPromptRequest{kind: setupPromptShortcuts, reply: reply}
-	result := <-reply
-	return result.primary, result.secondary
+	primary, secondary := modalChoice2(false, false, "launcher shortcuts (default: none)", func() (bool, bool) {
+		reply := make(chan setupPromptResult, 1)
+		ui.prompts <- setupPromptRequest{kind: setupPromptShortcuts, reply: reply}
+		result := <-reply
+		return result.primary, result.secondary
+	})
+	return primary, secondary
 }
 
 func (ui *progressUI) chooseSharedFolder() bool {
 	if !ui.available.Load() {
 		return false
 	}
-	reply := make(chan setupPromptResult, 1)
-	ui.prompts <- setupPromptRequest{kind: setupPromptSharedFolder, reply: reply}
-	return (<-reply).primary
+	ok := modalChoice(false, "shared-folder setup (default: skip)", func() bool {
+		reply := make(chan setupPromptResult, 1)
+		ui.prompts <- setupPromptRequest{kind: setupPromptSharedFolder, reply: reply}
+		return (<-reply).primary
+	})
+	return ok
 }
 
 func (ui *progressUI) confirmCancel(hCancel uintptr) bool {

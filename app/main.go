@@ -144,6 +144,7 @@ func main() {
 	flag.BoolVar(&cfg.hostCursor, "host-cursor", false, "force the legacy Windows cursor over the guest")
 	flag.BoolVar(&cfg.instant, "instant", false, "skip first-boot questions and use the trial account")
 	flag.BoolVar(&cfg.portable, "portable", false, "run entirely from data and payload folders beside the executable")
+	headless := flag.Bool("headless", false, "run without dialogs: pre-boot choices take their non-interactive defaults (automation/dev tooling)")
 	var forwards forwardList
 	flag.Var(&forwards, "forward", "forward a Windows loopback port into SavantOS, as tcp:2222:22 or 8080:80 (repeatable)")
 	sshPort := flag.Int("ssh", 0, "forward this Windows loopback port to SavantOS's sshd and start sshd for the session")
@@ -173,6 +174,10 @@ func main() {
 	updateWaitPID := flag.Int("update-wait-pid", 0, "internal: process to wait for before replacing the launcher")
 	updateRestartArgs := flag.String("update-restart-args", "", "internal: encoded launcher restart arguments")
 	flag.Parse()
+	headlessMode.Store(*headless)
+	if *headless {
+		earlyLog = append(earlyLog, fmt.Sprintf("%s headless mode: dialogs take non-interactive defaults", time.Now().Format("15:04:05")))
+	}
 	if *uninstall {
 		if *recoveryAction != "" && *recoveryAction != "uninstall" {
 			fatal("Choose one recovery action: backup, restore, reset, or uninstall.")
@@ -338,6 +343,7 @@ func main() {
 
 	// settings.json holds the rows the settings window edits; explicit flags
 	// win for this launch only.
+	phaseEnter(phaseSettings)
 	settingsFile := settingsPath(cfg.dir)
 	userSettings, err := loadSettingsWithRepair(settingsFile)
 	if err != nil {
@@ -453,6 +459,8 @@ func main() {
 	// through every phase until the SavantOS window itself is visible (the
 	// title enforcer closes it). Setup must never look like nothing happened.
 	getUI().setStatus("Starting SavantOS...")
+	phaseEnter(phaseStarting)
+	phaseEnter(phaseShare)
 	if err := configureRecommendedSharedFolder(cfg, &userSettings, settingsFile, home, explicitFlags["share"]); err != nil {
 		if finishSetupCancellation(cfg, err) {
 			return
@@ -469,7 +477,9 @@ func main() {
 				fatal("Cannot share %s: %v", cfg.share, shareErr)
 			}
 			logf("shared folder disabled for this launch: %v", shareErr)
-			infoBox("The saved shared folder is unavailable and will not be shared this time. SavantOS will still start.\n\n" + shareErr.Error() + "\n\nChoose another folder from Settings.")
+			if !headlessMode.Load() {
+				infoBox("The saved shared folder is unavailable and will not be shared this time. SavantOS will still start.\n\n" + shareErr.Error() + "\n\nChoose another folder from Settings.")
+			}
 			cfg.share = ""
 		} else {
 			cfg.share = validated
@@ -479,14 +489,17 @@ func main() {
 	// previous run must not be mistaken for this one's.
 	os.Remove(filepath.Join(cfg.vmDir, "qemu-stderr.log"))
 
+	phaseEnter(phaseUpdateCheck)
 	if automaticUpdatesEnabled(cfg, *noUpdate, *release, *sumsSHA256) {
 		checkDue := *updateURL != defaultUpdateURL || updateCheckDue(cfg.dir, time.Now())
 		if checkDue {
 			_ = recordUpdateCheck(cfg.dir, time.Now())
 			if updating, updateErr := maybeStartLauncherUpdate(cfg, *updateURL, os.Args[1:]); updateErr != nil {
+				phaseNote("update check skipped: %v", updateErr)
 				logf("update check skipped: %v", updateErr)
 			} else if updating {
 				logf("starting authenticated launcher update")
+				phaseNote("launcher update starting; this process hands over")
 				uiDone()
 				if logFile != nil {
 					logFile.Close()
@@ -500,10 +513,12 @@ func main() {
 	// user through one restart and exit), then a QEMU to run. Existing setups
 	// win - C:\WINQ-EMU, then a previously downloaded runtime, then stock QEMU
 	// from the bootstrap; a bare machine downloads the portable WINQ-EMU tree.
+	phaseEnter(phaseWHPCheck)
 	ensureWHP(cfg)
 	if finishSetupCancellation(cfg, checkSetupCancelled()) {
 		return
 	}
+	phaseEnter(phaseProvisionMode)
 	chooseProvisionMode(cfg, needsProvisioning)
 	if finishSetupCancellation(cfg, checkSetupCancelled()) {
 		return
@@ -523,6 +538,7 @@ func main() {
 		}
 	}
 	if gpuRoot == "" && !(cfg.noGpu && haveStock && cfg.share == "") {
+		phaseEnter(phaseRuntime)
 		if payloadsRolledBack {
 			root := filepath.Join(cfg.dir, "runtime")
 			info, err := os.Stat(filepath.Join(root, "bin", qemuExe))
@@ -553,6 +569,7 @@ func main() {
 		cfg.supportsSharing = true
 		cfg.runtimeID = runtimeIdentity(gpuRoot)
 		cfg.displayDriver = displayDriverIdentity()
+		phaseEnter(phaseRenderDecision)
 		probe, err := loadRenderProbe(cfg.dir)
 		if err != nil {
 			logf("ignoring %s: %v", renderProbeFilename, err)
@@ -568,6 +585,7 @@ func main() {
 
 	// First run: fetch the guest image, or copy and unpack the authenticated
 	// local payload. Portable mode never falls back to the network.
+	phaseEnter(phaseGuestEnsure)
 	if payloadsRolledBack {
 		ready, err := installReceiptMatches(cfg.guestDir, *release, *sumsSHA256, installedGuestArtifacts)
 		if err != nil || !ready {
@@ -710,6 +728,7 @@ func supervise(cfg *config, cmdline string) bool {
 		logf("booting - %s (attempt %d)", mode, attempt)
 		pendingReboot.Store(false)
 		guestReady.Store(false)
+		phaseEnterQemu()
 		proc = exec.Command(cfg.qemu, buildQemuArgs(cfg, cmdline)...)
 		// The w-binary's startup errors (bad args, SDL init) only ever reach
 		// stderr; without this they vanish and a dead QEMU is undebuggable.
