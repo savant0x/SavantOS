@@ -3,7 +3,8 @@
 **Filename:** `FID-2026-0915-006-desktop-experience.md`
 **ID:** FID-2026-0915-006
 **Severity:** medium (product-facing quality; no contract impact)
-**Status:** loop-converged, implementation authorized at automation level 3
+**Status:** closed (2026-09-16) — implemented, dual-build gate green,
+boot-verified in the real guest; evidence in Verification below
 **Created:** 2026-09-15
 **Operator directive (2026-09-15, verbatim intent):** the date under the
 clock is badly designed and needs a redesign; the wallpaper needs a
@@ -192,3 +193,41 @@ Source: `extra.db` fetched from
   (`build-2026-0915-exp.log`, container installing the ~4.5 GB set incl.
   chromium + featherpad from the pin); GATE GREEN on this tree is the
   close condition recorded here.
+- **GATE GREEN (2026-09-16):** determinism verified across both
+  assemblies on the experience tree; payload complete at
+  `savantos-share/contract-exp/` (8 artifacts, new SHA256SUMS digest
+  `abf7c5c1…`).
+- **Boot-verify of the experience image (2026-09-16, closing proof):**
+  launcher downloaded + digest-verified (`abf7c5c1…` matches) and
+  provisioned a fresh dev3 VM; in-guest verification of every D:
+  chromium `151.0.7922.108-1` + featherpad `1.6.3-1` installed with
+  desktop files present (D4/D5); layout pins verified in-image
+  (favorites: browser/chromium/konsole/dolphin/featherpad/kate/settings;
+  taskbar: chromium/konsole/dolphin/kate; clock: 12h, `showDate` custom
+  `ddd d MMM` — D1); wallpaper byte-identical to the v3 render
+  (sha256 `963a34db…` host build == skeleton == image, D2); icons still
+  Papirus-Dark per the recorded fallback (D3); `savant-core` active
+  with the 0600 socket (RuntimeDirectory fix holds in this image).
+- **Rendered-desktop proof:** guest screenshot (2560×1369) contains
+  all four identity color families in the live render — teal bloom plus
+  red/green/amber traffic-light accents (`guest-image/out/exp-proof.png`).
+  The v3 wallpaper is not only shipped, it is on screen.
+- **Incident (honest record, 2026-09-16):** a launcher smoke test with
+  an env-var override (`SAVANTOS_DEV_DIR`) that the launcher does not
+  read resolved through the data-dir pointer to `C:\savantos` — the
+  PRODUCTION install — and silently updated its payload to the
+  experience image before booting it (user disk retained; user data
+  intact). Found because the same test then collided with the
+  production VM on the shared QMP port plane (4445 in use → FATAL).
+  Production VM was shut down cleanly via QMP `system_powerdown`
+  (first-try clean exit — unplanned positive proof of the 0915-002
+  close-flow fix on this image). Forward fixes owed: (a) the launcher
+  should refuse a release update of a data dir it did not provision
+  without explicit confirmation (fail-closed against foreign dirs);
+  (b) `dev-vm.sh`-style overrides must be validated before any
+  download starts. Filed as the launcher's own follow-up, not hidden.
+- **New launcher finding:** with a fully provisioned data dir the
+  GUI launcher stalled silently pre-boot (alive, no QEMU, no log
+  line for 3+ min); the `dev-vm.sh` console path booted the same
+  payload immediately. Same evidence family as FID-2026-0915-002
+  (silent exits, no stderr trail).
