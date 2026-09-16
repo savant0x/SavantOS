@@ -106,7 +106,7 @@ func TestSettingsFromFormParsesAndValidatesEveryRow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := settingsFromForm(true, true, " 6144 ", " 4 ", ` C:\Users\me\Work `, " tcp:2222:22\r\n\r\n udp:5000:5000 ", " "+keyPath+" ", " GPU ")
+	s, err := settingsFromForm(true, true, " 6144 ", " 4 ", ` C:\Users\me\Work `, " tcp:2222:22\r\n\r\n udp:5000:5000 ", " "+keyPath+" ", " GPU ", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,19 +121,19 @@ func TestSettingsFromFormParsesAndValidatesEveryRow(t *testing.T) {
 		"forward":      {"0", "tcp:22", ""},
 		"key":          {"0", "tcp:2222:22", filepath.Join(dir, "missing.pub")},
 	} {
-		if _, err := settingsFromForm(false, false, input[0], "", "", input[1], input[2], ""); err == nil {
+		if _, err := settingsFromForm(false, false, input[0], "", "", input[1], input[2], "", false); err == nil {
 			t.Fatalf("%s input accepted", name)
 		}
 	}
 	for _, cpus := range []string{"many", "0x4", "65", "-1"} {
-		if _, err := settingsFromForm(false, false, "0", cpus, "", "", "", ""); err == nil {
+		if _, err := settingsFromForm(false, false, "0", cpus, "", "", "", "", false); err == nil {
 			t.Fatalf("cpus %q accepted", cpus)
 		}
 	}
-	if _, err := settingsFromForm(false, false, "0", "", "", "", "", "software"); err == nil {
+	if _, err := settingsFromForm(false, false, "0", "", "", "", "", "software", false); err == nil {
 		t.Fatal("unknown render mode accepted")
 	}
-	if s, err := settingsFromForm(false, false, "0", "", "", "", "", " auto "); err != nil || s.Render != "" {
+	if s, err := settingsFromForm(false, false, "0", "", "", "", "", " auto ", false); err != nil || s.Render != "" {
 		t.Fatalf("automatic rendering should be stored as the empty default, got %q %v", s.Render, err)
 	}
 }
@@ -166,7 +166,7 @@ func TestSharedFolderOfferAndEnableState(t *testing.T) {
 		t.Fatalf("disabled share = %q", got)
 	}
 
-	s, err := settingsFromForm(false, false, "0", "", `C:\Users\me\Work`, "", "", "")
+	s, err := settingsFromForm(false, false, "0", "", `C:\Users\me\Work`, "", "", "", false)
 	if err != nil || !s.ShareDisabled || s.activeShare() != "" || !s.SharedFolderPrompted {
 		t.Fatalf("disabled form state = %+v, %v", s, err)
 	}

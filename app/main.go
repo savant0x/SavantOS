@@ -157,6 +157,7 @@ func main() {
 	diagnostics := flag.Bool("diagnostics", false, "write a zip of logs, settings, and machine facts for a bug report, then exit")
 	sshKeyPath := flag.String("ssh-key", "", "public key to authorize for the SavantOS account (default: your ~/.ssh/id_*.pub when -ssh is used)")
 	noUpdate := flag.Bool("no-update", false, "do not check for launcher or guest updates")
+	allowMetered := flag.Bool("allow-metered", false, "download payload updates even on metered (fixed/variable cost) network connections")
 	updateURL := flag.String("update-url", defaultUpdateURL, "authenticated update manifest URL")
 	release := flag.String("release", defaultReleaseURL,
 		"base URL the guest image is downloaded from on first run")
@@ -349,6 +350,16 @@ func main() {
 	if err := applySettings(cfg, userSettings, explicitFlags, &forwards, sshKeyPath); err != nil {
 		fatal("SavantOS cannot use its settings: %v", err)
 	}
+	if explicitFlags["allow-metered"] {
+		allowMeteredOverride.Store(*allowMetered)
+	}
+	// Metered provenance: one line recording the policy state after settings
+	// and flag precedence resolved (FID-2026-0914-002 step 3a).
+	cost, source := probeMeteredLink()
+	recordMeteredDecision(evaluateMeteredPolicy())
+	logf("%s (link now: %s-cost via %s)",
+		describeMeteredGate(allowMeteredOverride.Load(), cost.metered(), source), cost, source)
+
 	if explicitFlags["render"] {
 		mode, err := parseRenderMode(*renderFlag)
 		if err != nil {

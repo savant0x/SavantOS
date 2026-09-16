@@ -43,6 +43,9 @@ type settings struct {
 	// and remembers when this machine cannot run it, "gpu" retries it every
 	// launch, "cpu" never tries it.
 	Render string `json:"render,omitempty"`
+	// AllowMetered lets full payload downloads proceed when Windows reports
+	// a metered (fixed/variable cost) connection instead of pausing them.
+	AllowMetered bool `json:"allowMetered,omitempty"`
 }
 
 const (
@@ -146,11 +149,11 @@ func (s settings) validate() error {
 // settingsFromForm converts the Win32 controls into the persisted model. It
 // stays outside the window procedure so all input and file validation is
 // covered by the platform-independent test suite.
-func settingsFromForm(fullscreen, shareEnabled bool, memory, cpus, share, forwards, sshKey, render string) (settings, error) {
+func settingsFromForm(fullscreen, shareEnabled bool, memory, cpus, share, forwards, sshKey, render string, allowMetered bool) (settings, error) {
 	s := settings{
 		Fullscreen: fullscreen, Share: strings.TrimSpace(share), Render: strings.TrimSpace(render),
 		ShareDisabled: !shareEnabled, SharedFolderPrompted: true,
-		SSHKey: strings.TrimSpace(sshKey),
+		SSHKey: strings.TrimSpace(sshKey), AllowMetered: allowMetered,
 	}
 	if s.Share == "" {
 		s.ShareDisabled = false
@@ -238,6 +241,9 @@ func applySettings(cfg *config, s settings, explicit map[string]bool, forwards *
 			return err
 		}
 		cfg.renderMode = mode
+	}
+	if !explicit["allow-metered"] {
+		allowMeteredOverride.Store(s.AllowMetered)
 	}
 	return nil
 }

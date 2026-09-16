@@ -67,6 +67,7 @@ const (
 	settingsRenderCPUID  = 2025
 	settingsCPUsID       = 2026
 	settingsUninstallID  = 2027
+	settingsMeteredID    = 2028
 	bsAutoradiobutton    = 0x0009
 	wsGroup              = 0x00020000
 	settingsRecoveryDone = 0x8010
@@ -97,7 +98,7 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 	className, _ := syscall.UTF16PtrFromString("SavantOSSettings")
 	var hwnd uintptr
 	var hFull, hMem, hCPUs, hDisk, hShare, hShareOn, hFwd, hKey uintptr
-	var hRenderAuto, hRenderGPU, hRenderCPU uintptr
+	var hRenderAuto, hRenderGPU, hRenderCPU, hMetered uintptr
 
 	text := func(handle uintptr) string {
 		n, _, _ := procSendMessageW.Call(handle, wmGettextlength, 0, 0)
@@ -118,8 +119,9 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 		} else if r, _, _ := procSendMessageW.Call(hRenderCPU, bmGetcheck, 0, 0); r == bstChecked {
 			render = renderCPU
 		}
+		metered, _, _ := procSendMessageW.Call(hMetered, bmGetcheck, 0, 0)
 		return settingsFromForm(checked == bstChecked, shareChecked == bstChecked,
-			text(hMem), text(hCPUs), text(hShare), text(hFwd), text(hKey), render)
+			text(hMem), text(hCPUs), text(hShare), text(hFwd), text(hKey), render, metered == bstChecked)
 	}
 	browseFolder := func() {
 		if selected, ok := browseForFolder(hwnd, "Choose the Windows folder to share with SavantOS"); ok {
@@ -272,6 +274,11 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 	y += 24
 	mk("STATIC", "Automatic tries the GPU and remembers when this PC cannot use it. GPU retries every launch.", left, y, clientW-2*left, 20, ssNoprefix, 0)
 	y += 28
+	hMetered = mk("BUTTON", "Download updates on metered connections", left, y, 340, 22, bsAutocheckbox|wsTabstop, settingsMeteredID)
+	if current.AllowMetered {
+		procSendMessageW.Call(hMetered, bmSetcheck, bstChecked, 0)
+	}
+	y += 26
 	mk("STATIC", "Guest memory (MiB)", left, y+3, labelW, 20, ssNoprefix, 0)
 	hMem = mk("EDIT", strconv.Itoa(current.MemoryMiB), fieldX, y, 100, 24, wsBorder|wsTabstop|esAutohscroll, settingsMemID)
 	mk("STATIC", "0 = automatic", fieldX+112, y+3, fieldW-112, 20, ssNoprefix, 0)

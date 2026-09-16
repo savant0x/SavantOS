@@ -224,6 +224,12 @@ func ensureVerifiedDownload(client *http.Client, url, dest, wantSum, status stri
 	if err := removeCachedFile(dest); err != nil {
 		return err
 	}
+	// Metered gate (FID-2026-0914-002 step 3a): full payload downloads pause
+	// while Windows reports a metered link, until it clears or the operator
+	// allows them. Cached-valid files above never wait on this.
+	if err := waitMeteredGate(); err != nil {
+		return err
+	}
 	ui.setStatus("%s", status)
 	return download(client, url, dest, wantSum, ui)
 }
