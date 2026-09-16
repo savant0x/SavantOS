@@ -50,3 +50,5 @@ ses.md
 sesh.md
 SCOPE.md
 savant-docs/
+# vendored at build time by fetch_cursor (FID-2026-0916-002)
+guest-image/skeletons/usr/bin/cursor
