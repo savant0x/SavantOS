@@ -13,7 +13,12 @@ import os
 from PIL import Image, ImageDraw, ImageFilter
 
 STAGE = os.path.join(os.path.dirname(__file__), "wall-v3")
-SIZES = [(2560, 1440), (1920, 1080)]
+# Promotion contract discovered from the skeleton (FID-2026-0915-006 D2
+# evidence): the layout js pins the UNSUFFIXED name and the shipped file is
+# 3840x2160; a -4k duplicate sits beside it. No consumer references a
+# savant-light package (one dark color scheme ships), so light renders stay
+# staged for the future light-theme work.
+SIZES = [(3840, 2160)]
 
 THEMES = {
     "savant": {
@@ -118,9 +123,10 @@ def main():
         d = os.path.join(STAGE, name, "contents", "images")
         os.makedirs(d, exist_ok=True)
         for w, h in SIZES:
-            suffix = "" if (w, h) == (1920, 1080) else f"-{h}p"
-            build(name, w, h).save(os.path.join(d, f"savant-traffic-lights{suffix}.png"))
-        print(f"{name}: {', '.join(str(s) for s in SIZES)} written to stage")
+            img = build(name, w, h)
+            img.save(os.path.join(d, "savant-traffic-lights.png"))
+            img.save(os.path.join(d, "savant-traffic-lights-4k.png"))
+        print(f"{name}: {SIZES[0]} primary + -4k duplicate written to stage")
 
 
 if __name__ == "__main__":
