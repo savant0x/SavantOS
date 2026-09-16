@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **Pre-boot stall visibility (FID-2026-0916-001 D2–D4):** every pre-boot
+  phase transition is logged and mirrored on the splash; a watchdog names
+  the held phase after 90 s of silence (hidden-dialog hint at 5 min,
+  never auto-kills); `-headless` runs dialogs as logged non-interactive
+  defaults so automation can no longer dangle invisibly.
 - **Metered-link download pause (FID-2026-0914-002 step 3a):** full
   payload downloads pause while Windows reports a metered connection,
   resume when it clears; allow via the settings checkbox or

@@ -139,6 +139,35 @@ func TestWatchdogRateLimitsPerLevel(t *testing.T) {
 	}
 }
 
+func TestModalChoiceHeadlessDefaults(t *testing.T) {
+	old := headlessMode.Load()
+	defer headlessMode.Store(old)
+
+	headlessMode.Store(true)
+	if got := modalChoice(false, "test-choice", func() bool {
+		t.Fatal("interactive path ran under headless")
+		return true
+	}); got {
+		t.Error("want the headless default (false)")
+	}
+	p, s := modalChoice2(true, false, "test-choice2", func() (bool, bool) {
+		t.Fatal("interactive path ran under headless")
+		return false, false
+	})
+	if !p || s {
+		t.Errorf("want the headless pair (true, false), got (%v, %v)", p, s)
+	}
+
+	headlessMode.Store(false)
+	called := false
+	if got := modalChoice(true, "interactive-path", func() bool {
+		called = true
+		return true
+	}); !got || !called {
+		t.Error("non-headless runs must call the interactive path")
+	}
+}
+
 func TestCurrentPhaseTracking(t *testing.T) {
 	core := newPhaseCore(func(string) {}, nil)
 	if got := core.currentPhase(); got != "" {
