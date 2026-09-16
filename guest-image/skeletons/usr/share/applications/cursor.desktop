@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Cursor
+Comment=AI-first code editor built on VS Code
+GenericName=Text Editor
+Exec=/usr/bin/cursor --no-sandbox %F
+Terminal=false
+Type=Application
+Categories=Development;IDE;TextEditor;
+StartupWMClass=Cursor
+MimeType=x-scheme-handler/cursor;
+Icon=cursor
+Keywords=cursor;editor;code;ai;

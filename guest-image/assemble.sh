@@ -139,7 +139,9 @@ for probe in \
     /usr/lib/systemd/user/savant-core.service \
     /usr/lib/systemd/user-preset/91-savantos-desktop.preset \
     /usr/bin/chromium \
-    /usr/bin/featherpad; do
+    /usr/bin/featherpad \
+    /usr/bin/cursor \
+    /usr/share/applications/cursor.desktop; do
     if ! debugfs -R "stat "$probe"" "$img" >/dev/null 2>&1; then
         echo "assemble: desktop content assertion FAILED — $probe missing" >&2
         exit 1
@@ -158,7 +160,42 @@ if ! grep -q "^RuntimeDirectory=savant-core$" "$dbg_unit"; then
     exit 1
 fi
 rm -f "$dbg_unit"
-echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit/savant-core/chromium/featherpad/unit-RuntimeDirectory)"
+echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit/savant-core/chromium/featherpad/cursor/unit-RuntimeDirectory)"
+
+# cursor (FID-2026-0916-002): the vendor-locked AppImage must be the real
+# pinned bytes — ELF magic (AppImages are ELF) + the digest of record from
+# cursor.lock.json, computed from the image content itself. A stale cache
+# or partial download otherwise ships silently.
+cursor_tmp=$(mktemp)
+debugfs -R "cat /usr/bin/cursor" "$img" > "$cursor_tmp" 2>/dev/null
+if ! head -c 4 "$cursor_tmp" | grep -q $'\x7fELF'; then
+    echo "assemble: cursor is not an AppImage (ELF magic missing)" >&2
+    rm -f "$cursor_tmp"
+    exit 1
+fi
+want_cursor=$(python3 -c "import json; print(json.load(open('/work/cursor.lock.json'))['sha256'])" 2>/dev/null || true)
+have_cursor=$(sha256sum "$cursor_tmp" | cut -d' ' -f1)
+rm -f "$cursor_tmp"
+if [ -z "$want_cursor" ]; then
+    echo "assemble: cursor.lock.json unreadable — cannot verify vendor digest" >&2
+    exit 1
+fi
+if [ "$have_cursor" != "$want_cursor" ]; then
+    echo "assemble: cursor digest mismatch (have ${have_cursor:0:16}, want ${want_cursor:0:16})" >&2
+    exit 1
+fi
+echo "assemble: cursor vendor digest verified (${have_cursor:0:16})"
+# Icon must ship too: extract from the verified AppImage and check hicolor
+# 512px exists (the desktop entry references Icon=cursor).
+icon_tmp=$(mktemp -d)
+debugfs -R "cat /usr/share/icons/hicolor/512x512/apps/cursor.png" "$img" > "$icon_tmp/cursor.png" 2>/dev/null
+if ! head -c 8 "$icon_tmp/cursor.png" | grep -q $'\x89PNG\r\n\x1a\n'; then
+    echo "assemble: cursor icon missing or corrupt (PNG magic check failed)" >&2
+    rm -rf "$icon_tmp"
+    exit 1
+fi
+rm -rf "$icon_tmp"
+echo "assemble: cursor icon verified"
 
 # savant-core (FID-2026-0915-005 m2) must be the real cross-compiled
 # binary, not a stale artifact from a previous build on this tree: an

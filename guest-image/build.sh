@@ -42,6 +42,48 @@ build_savant_core() {
 }
 build_savant_core
 
+# --- Phase 4: fetch the vendor-locked Cursor IDE AppImage into the
+# skeleton tree (FID-2026-0916-002). Runs before BOTH assemblies so A and
+# B embed identical bytes; the digest in cursor.lock.json is the trust
+# anchor (fail-closed on mismatch), so determinism holds despite a
+# network fetch. Uses a host-local cache so repeat builds don't re-download
+# 292 MB; the cache file is verified against the lock either way.
+fetch_cursor() {
+    local lock="$here/cursor.lock.json"
+    local want url
+    want=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['sha256'])" "$lock")
+    url=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['source'])" "$lock")
+    [ -n "$want" ] && [ -n "$url" ] || { echo "[build] FATAL: cursor.lock.json missing fields" >&2; exit 1; }
+    local cache="$here/out/cursor.AppImage"
+    mkdir -p "$here/out"
+    if [ -f "$cache" ]; then
+        local have; have=$(sha256sum "$cache" | cut -d' ' -f1)
+        if [ "$have" = "$want" ]; then
+            echo "[build] cursor AppImage cache hit: ${have:0:16}"
+        else
+            echo "[build] cursor AppImage cache digest mismatch — re-fetching" >&2
+            rm -f "$cache"
+        fi
+    fi
+    if [ ! -f "$cache" ]; then
+        echo "[build] fetching Cursor AppImage (vendor-locked digest)..."
+        curl -fsSL --retry 3 --retry-delay 5 -o "$cache.part" "$url" \
+            || { echo "[build] FATAL: cursor AppImage download failed" >&2; rm -f "$cache.part"; exit 1; }
+        mv "$cache.part" "$cache"
+    fi
+    local have; have=$(sha256sum "$cache" | cut -d' ' -f1)
+    if [ "$have" != "$want" ]; then
+        echo "[build] FATAL: cursor AppImage digest mismatch" >&2
+        echo "  want: $want" >&2
+        echo "  have: $have" >&2
+        echo "  (vendor re-released? re-verify and update cursor.lock.json in one commit)" >&2
+        exit 1
+    fi
+    install -m 0755 "$cache" "$here/skeletons/usr/bin/cursor"
+    echo "[build] cursor staged: ${have:0:16}"
+}
+fetch_cursor
+
 run_build() {
     local tag=$1
     # MSYS_NO_PATHCONV: Git Bash rewrites POSIX paths in argv to Windows paths

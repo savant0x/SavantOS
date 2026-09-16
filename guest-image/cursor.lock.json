@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "app": "cursor",
+  "version": "3.20.21",
+  "source": "https://api2.cursor.sh/updates/download/golden/linux-x64/cursor/3.20",
+  "resolvedUrl": "https://downloads.cursor.com/production/f09fca384ceca23f7bf21f9c23655b162641d747/linux/x64/Cursor-3.20.21-x86_64.AppImage",
+  "sha256": "b9ec1e26de767323da056ad6b1b2fba3a4233213a1752de0ebf575afff063bc9",
+  "bytes": 305666552,
+  "lockedAt": "2026-09-16",
+  "note": "Vendor-pinned Cursor IDE AppImage (FID-2026-0916-002). The digest is the trust anchor: build.sh fetches the AppImage and fails closed unless the bytes hash to this value. Bump = re-verify vendor URL, update all fields in one commit."
+}
