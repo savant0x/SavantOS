@@ -10,6 +10,9 @@ After=plasma-workspace.target
 # so systemd never guesses whether the control socket is up.
 Type=notify
 ExecStart=/usr/bin/savant-core
+# Creates %t/savant-core before ExecStart — ReadWritePaths below fails the
+# whole start (226/NAMESPACE) if the path does not already exist.
+RuntimeDirectory=savant-core
 Restart=on-failure
 RestartSec=1
 # A hung core is killed and restarted WITHOUT capability (re-arm required):

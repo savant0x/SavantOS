@@ -137,13 +137,28 @@ for probe in \
     /etc/systemd/system/savantos-keyring-init.service \
     /usr/bin/savant-core \
     /usr/lib/systemd/user/savant-core.service \
-    /usr/lib/systemd/user-preset/91-savantos-desktop.preset; do
+    /usr/lib/systemd/user-preset/91-savantos-desktop.preset \
+    /usr/bin/chromium \
+    /usr/bin/featherpad; do
     if ! debugfs -R "stat "$probe"" "$img" >/dev/null 2>&1; then
         echo "assemble: desktop content assertion FAILED — $probe missing" >&2
         exit 1
     fi
 done
-echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit/savant-core)"
+# Regression guard (FID-2026-0915-006 evidence): the shipped unit MUST set
+# RuntimeDirectory — without it ReadWritePaths=%t/savant-core fails mount
+# namespacing (226/NAMESPACE) and the daemon crash-loops into start-limit
+# (found by the first boot of the 2026-09-15 image). Temp file: same
+# SIGPIPE/pipefail discipline as the ELF probe below.
+dbg_unit=$(mktemp)
+debugfs -R "cat /usr/lib/systemd/user/savant-core.service" "$img" > "$dbg_unit" 2>/dev/null
+if ! grep -q "^RuntimeDirectory=savant-core$" "$dbg_unit"; then
+    rm -f "$dbg_unit"
+    echo "assemble: savant-core.service missing RuntimeDirectory (226/NAMESPACE regression)" >&2
+    exit 1
+fi
+rm -f "$dbg_unit"
+echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit/savant-core/chromium/featherpad/unit-RuntimeDirectory)"
 
 # savant-core (FID-2026-0915-005 m2) must be the real cross-compiled
 # binary, not a stale artifact from a previous build on this tree: an
