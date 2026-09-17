@@ -15,3 +15,7 @@ lastses.md
 ses.md
 sesh.md
 savant-docs/
+
+# Vendored CLI assets (savant-code app dir, staged untarred by
+# guest-image/build.sh): upstream vendor content, not hand-written docs.
+guest-image/skeletons/usr/lib/savant-code/
