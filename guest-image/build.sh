@@ -84,6 +84,53 @@ fetch_cursor() {
 }
 fetch_cursor
 
+# Savant Code CLI (FID-2026-0917-002): the embedded agent ships as native
+# software via the same vendor-lock discipline as Cursor — digest-pinned
+# release tarball, host-local cache, fail-closed on any mismatch.
+fetch_savant_code() {
+    local lock="$here/savant-code.lock.json"
+    local want url
+    want=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['sha256'])" "$lock")
+    url=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['source'])" "$lock")
+    [ -n "$want" ] && [ -n "$url" ] || { echo "[build] FATAL: savant-code.lock.json missing fields" >&2; exit 1; }
+    local cache="$here/out/savant-code.tar.gz"
+    mkdir -p "$here/out"
+    if [ -f "$cache" ]; then
+        local have; have=$(sha256sum "$cache" | cut -d' ' -f1)
+        if [ "$have" = "$want" ]; then
+            echo "[build] savant-code cache hit: ${have:0:16}"
+        else
+            echo "[build] savant-code cache digest mismatch — re-fetching" >&2
+            rm -f "$cache"
+        fi
+    fi
+    if [ ! -f "$cache" ]; then
+        echo "[build] fetching savant-code release tarball (vendor-locked digest)..."
+        curl -fsSL --retry 3 --retry-delay 5 -o "$cache.part" "$url" \
+            || { echo "[build] FATAL: savant-code download failed" >&2; rm -f "$cache.part"; exit 1; }
+        mv "$cache.part" "$cache"
+    fi
+    have=$(sha256sum "$cache" | cut -d' ' -f1)
+    if [ "$have" != "$want" ]; then
+        echo "[build] FATAL: savant-code digest mismatch (have $have want $want)" >&2
+        exit 1
+    fi
+    # Install: the tarball's root 'savant-code' ELF plus its sibling assets
+    # land at /usr/lib/savant-code/ (Bun standalones resolve assets relative
+    # to the binary), and a PATH wrapper goes to /usr/bin/savant.
+    rm -rf "$here/skeletons/usr/lib/savant-code"
+    mkdir -p "$here/skeletons/usr/lib/savant-code" "$here/skeletons/usr/bin"
+    tar -xzf "$cache" -C "$here/skeletons/usr/lib/savant-code"
+    [ -x "$here/skeletons/usr/lib/savant-code/savant-code" ] \
+        || { echo "[build] FATAL: savant-code binary missing after untar" >&2; exit 1; }
+    chmod 0755 "$here/skeletons/usr/lib/savant-code/savant-code"
+    printf '#!/bin/sh\nexec /usr/lib/savant-code/savant-code "$@"\n' \
+        > "$here/skeletons/usr/bin/savant"
+    chmod 0755 "$here/skeletons/usr/bin/savant"
+    echo "[build] savant-code staged: ${have:0:16} (binary $(sha256sum "$here/skeletons/usr/lib/savant-code/savant-code" | cut -c1-16))"
+}
+fetch_savant_code
+
 run_build() {
     local tag=$1
     # MSYS_NO_PATHCONV: Git Bash rewrites POSIX paths in argv to Windows paths

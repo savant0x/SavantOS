@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "app": "savant-code",
+  "version": "0.0.31",
+  "source": "https://github.com/savant0x/savant-code/releases/download/v0.0.31/savant-code-linux-x64.tar.gz",
+  "sha256": "61b3ce772f285b870eaa16930104dd71a1c87e323ad7c608c2d084cd6df18ad3",
+  "bytes": 66378192,
+  "binary": "savant-code",
+  "binarySha256": "187873c8d274ae959aba7e36abd83320c9111e95eecc105d021dd36a4738663b",
+  "lockedAt": "2026-09-17",
+  "note": "Vendor-pinned Savant Code CLI, linux-x64 Bun standalone (FID-2026-0917-002). The tarball root 'savant-code' is the whole app (90 entries; assets are siblings). sha256 pins the tarball (build fetch gate); binarySha256 pins the ELF as installed (image content probe). Both verified live in the guest: --version -> 0.0.31. Bump = update all fields in one commit after a live guest probe."
+}

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Savant Code
+Comment=Embedded coding agent (ECHO-governed)
+Exec=konsole -e /usr/bin/savant
+Terminal=false
+Type=Application
+Categories=Development;
+Icon=savant-code
+Keywords=savant;agent;code;ai;

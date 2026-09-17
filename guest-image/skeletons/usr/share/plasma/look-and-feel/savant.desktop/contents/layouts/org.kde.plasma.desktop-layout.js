@@ -31,12 +31,12 @@ panel.floating = false;
 var kickoff = panel.addWidget("org.kde.plasma.kickoff");
 kickoff.currentConfigGroup = ["General"];
 kickoff.writeConfig("icon", "savant-start");
-kickoff.writeConfig("favorites", "preferred://browser,applications:chromium.desktop,applications:cursor.desktop,applications:org.kde.konsole.desktop,applications:org.kde.dolphin.desktop,applications:featherpad.desktop,applications:org.kde.kate.desktop,applications:org.kde.systemsettings.desktop");
+kickoff.writeConfig("favorites", "preferred://browser,applications:chromium.desktop,applications:cursor.desktop,applications:savant-code.desktop,applications:org.kde.konsole.desktop,applications:org.kde.dolphin.desktop,applications:featherpad.desktop,applications:org.kde.kate.desktop,applications:org.kde.systemsettings.desktop");
 
 // Pinned launchers (icons-only task manager: running + pinned apps).
 var tasks = panel.addWidget("org.kde.plasma.icontasks");
 tasks.currentConfigGroup = ["General"];
-tasks.writeConfig("launchers", "applications:chromium.desktop,applications:cursor.desktop,applications:org.kde.konsole.desktop,applications:org.kde.dolphin.desktop,applications:org.kde.kate.desktop");
+tasks.writeConfig("launchers", "applications:chromium.desktop,applications:cursor.desktop,applications:savant-code.desktop,applications:org.kde.konsole.desktop,applications:org.kde.dolphin.desktop,applications:org.kde.kate.desktop");
 
 // Expanding spacer pushes tray/clock right.
 panel.addWidget("org.kde.plasma.panelspacer");

@@ -52,3 +52,6 @@ SCOPE.md
 savant-docs/
 # vendored at build time by fetch_cursor (FID-2026-0916-002)
 guest-image/skeletons/usr/bin/cursor
+# vendored at build time by fetch_savant_code (FID-2026-0917-002)
+guest-image/skeletons/usr/lib/savant-code/
+guest-image/out/savant-code.tar.gz

@@ -141,7 +141,9 @@ for probe in \
     /usr/bin/chromium \
     /usr/bin/featherpad \
     /usr/bin/cursor \
-    /usr/share/applications/cursor.desktop; do
+    /usr/share/applications/cursor.desktop \
+    /usr/bin/savant \
+    /usr/lib/savant-code/savant-code; do
     if ! debugfs -R "stat "$probe"" "$img" >/dev/null 2>&1; then
         echo "assemble: desktop content assertion FAILED — $probe missing" >&2
         exit 1
@@ -196,6 +198,40 @@ if ! head -c 8 "$icon_tmp/cursor.png" | grep -q $'\x89PNG\r\n\x1a\n'; then
 fi
 rm -rf "$icon_tmp"
 echo "assemble: cursor icon verified"
+
+# savant-code (FID-2026-0917-002): the embedded agent ships as native
+# software. The image carries the untarred app at /usr/lib/savant-code/
+# (Bun standalones resolve their sibling assets relative to the binary)
+# with a /usr/bin/savant wrapper. Probe: ELF magic + the lock's
+# binarySha256, computed from the image content itself — an existence
+# probe alone would let a truncated or stale install ship silently.
+sc_tmp=$(mktemp)
+debugfs -R "cat /usr/lib/savant-code/savant-code" "$img" > "$sc_tmp" 2>/dev/null
+if ! head -c 4 "$sc_tmp" | grep -q $'\x7fELF'; then
+    echo "assemble: savant-code binary is not an ELF (magic missing)" >&2
+    rm -f "$sc_tmp"
+    exit 1
+fi
+want_sc=$(python3 -c "import json; print(json.load(open('/work/savant-code.lock.json'))['binarySha256'])" 2>/dev/null || true)
+have_sc=$(sha256sum "$sc_tmp" | cut -d' ' -f1)
+rm -f "$sc_tmp"
+if [ -z "$want_sc" ]; then
+    echo "assemble: savant-code.lock.json unreadable — cannot verify vendor digest" >&2
+    exit 1
+fi
+if [ "$have_sc" != "$want_sc" ]; then
+    echo "assemble: savant-code digest mismatch (have ${have_sc:0:16}, want ${want_sc:0:16})" >&2
+    exit 1
+fi
+wrapper_tmp=$(mktemp)
+debugfs -R "cat /usr/bin/savant" "$img" > "$wrapper_tmp" 2>/dev/null
+if ! grep -q "exec /usr/lib/savant-code/savant-code" "$wrapper_tmp"; then
+    echo "assemble: /usr/bin/savant wrapper missing or wrong target" >&2
+    rm -f "$wrapper_tmp"
+    exit 1
+fi
+rm -f "$wrapper_tmp"
+echo "assemble: savant-code vendor digest verified (${have_sc:0:16})"
 
 # savant-core (FID-2026-0915-005 m2) must be the real cross-compiled
 # binary, not a stale artifact from a previous build on this tree: an

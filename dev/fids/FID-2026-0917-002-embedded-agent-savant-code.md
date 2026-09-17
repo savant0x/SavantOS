@@ -3,7 +3,9 @@
 **Filename:** `FID-2026-0917-002-embedded-agent-savant-code.md`
 **ID:** FID-2026-0917-002
 **Severity:** high (Phase 3 direction setter)
-**Status:** converged (design of record; implementation follows the loop)
+**Status:** in progress — steps 1–2 landed (lock + fetch chain verified);
+step 3 partial (entry + pins done, key-provisioning hook open); step 4
+awaits the next image build
 **Created:** 2026-09-17
 **Parent:** FID-2026-0912-001 (pivot), FID-2026-0915-005 (savant-core — now
 a downstream consumer of this design, not a prerequisite)
@@ -106,8 +108,26 @@ embedded agent is Savant Code itself, shipped in the OS.
 
 ## Open items (in order)
 
-1. Ground the distribution fact: locate the CLI artifact source, pin a
-   version + digest, write `savant-code.lock.json`.
-2. `fetch_savant_code` in `build.sh` + install/layout + assemble probes.
-3. Desktop pins + desktop-entry + first-boot key-provisioning hook.
-4. Boot proof on the next image build (CPU mode per FID-2026-0917-001).
+1. ~~Ground the distribution fact~~ **DONE 2026-09-17:** upstream is
+   `github.com/savant0x/savant-code`, release pipeline ships
+   `savant-code-linux-x64.tar.gz`; v0.0.31 pinned in
+   `guest-image/savant-code.lock.json` (tarball sha256 `61b3ce77…18ad3`
+   from the GitHub API, re-verified against the local download;
+   binary sha256 `187873c8…` recorded for the image-content probe).
+   Tarball layout confirmed FLAT (binary + sibling assets) → untars
+   directly into `/usr/lib/savant-code/`.
+2. ~~`fetch_savant_code` + install/layout + assemble probes~~ **DONE
+   2026-09-17:** `build.sh` fetches digest-verified with cache; stages the
+   untarred app into the skeleton tree and generates the
+   `/usr/bin/savant` wrapper; `assemble.sh` probes ELF magic + lock-digest
+   match on the image content; flat-tarball layout asserted live in the
+   grounding extraction. Syntax + lock-parse verified; `python3` in the
+   build container proven by the identical Cursor lock probe.
+3. Desktop integration **partial:** `savant-code.desktop` entry (TUI
+   launched inside Konsole, `Icon=savant-code`) + kickoff/tasks pins are
+   in; a square traffic-lights app icon was derived from
+   `savant-start.svg`. **Still open:** first-boot API-key provisioning
+   (host→guest clipboard bridge into a 0600 config — no keys in the
+   image) and the first-party agent definitions in the payload.
+4. Boot proof on the next image build (CPU mode per FID-2026-0917-001):
+   `savant --version` over SSH + one real agent session recorded.
