@@ -370,10 +370,38 @@ flag (`main.go:150`) already existed for exactly this regression family.
 → `sdl,gl=on,show-cursor=on`. FINDINGS.md notes the trade (two pointers
 can flash during fast motion); acceptable until a real fix lands.
 
-**Proper fix (open):** make the guest render its cursor in-frame so the
-guest-only path works under Plasma: `KWIN_DRM` hardware-cursor-plane
-disable for virtual GPUs, or QEMU/Venus cursor-plane passthrough fix.
-Tracked as a follow-up work item; needs its own probe pass.
+**Follow-up (same day) — the `-host-cursor` workaround is input-lethal:**
+
+With `show-cursor=on`, the operator's next symptom was a "frozen" Cursor
+folder dialog. Discriminated to the bottom with paired host-injection and
+guest-evdev-capture experiments (raw `/dev/input/event3` reads, passwordless
+sudo capture during scripted Windows clicks):
+
+- Real Windows clicks + synthetic cursor sweeps → **0 bytes** at the guest
+  kernel (host pointer path dead below SDL).
+- QMP `input-send-event` → events arrive (168 bytes = exactly the injected
+  set) — QEMU→kernel delivery is fine.
+- Keyboard kept working throughout (explains "typed `dev` but OK never
+  fired": text reached the field, the click never reached the dialog).
+- Portals/GVfs/LibreOffice retractions: portal processes alive and polling,
+  DBus names registered, machine idle (load 0.2) — the original portal
+  suspicion was wrong; the frozen dialog was dead input.
+
+Conclusion: on this QEMU/Windows build both values of SDL's cursor flag
+fail differently — `off` drops cursor-plane *visibility* on click;
+`on` drops host pointer *input*. Input is non-negotiable → revert.
+
+**Proper fix (landed):** `KWIN_FORCE_SW_CURSOR=1` (found by enumerating
+libkwin's 50 KWIN_* env vars on-image). Software cursor draws the pointer
+in-frame — through the normal display path that demonstrably survives —
+so visibility works with the product-default `show-cursor=off`, and host
+input stays live (verified: 8,712 evdev bytes during a scripted host
+click on the fixed boot).
+
+Shipped as: (a) live guest drop-in
+`~/.config/systemd/user/plasma-kwin_wayland.service.d/10-sw-cursor.conf`;
+(b) image skeleton copy of the same drop-in (every future image); (c)
+`-host-cursor` flag help now carries the input-death warning.
 
 **Also ruled out this session:** the four 16:27–16:29 kate coredumps are
 the agent's own `kate --version` probes from bare SSH (xcb fatal, fixed

@@ -147,7 +147,7 @@ func main() {
 	timeZoneFlag := flag.String("timezone", "", "guest time zone: blank follows Windows, keep leaves the guest alone, or an IANA name such as Europe/Berlin")
 	keyboardFlag := flag.String("keyboard", "", "guest keyboard layout: blank follows Windows, keep leaves the guest alone, or an XKB layout such as de or us:intl")
 	localeFlag := flag.String("locale", "", "guest language: blank follows Windows, keep leaves the guest alone, or a locale such as de_DE")
-	flag.BoolVar(&cfg.hostCursor, "host-cursor", false, "force the legacy Windows cursor over the guest")
+	flag.BoolVar(&cfg.hostCursor, "host-cursor", false, "diagnostic: draw SDL's Windows cursor over the guest. WARNING: on current QEMU/Windows builds this also stops host pointer events reaching the guest (input dies; keyboard survives) - the shipped fix is KWIN_FORCE_SW_CURSOR=1 in the guest instead")
 	flag.BoolVar(&cfg.instant, "instant", false, "skip first-boot questions and use the trial account")
 	flag.BoolVar(&cfg.portable, "portable", false, "run entirely from data and payload folders beside the executable")
 	headless := flag.Bool("headless", false, "run without dialogs: pre-boot choices take their non-interactive defaults (automation/dev tooling)")
