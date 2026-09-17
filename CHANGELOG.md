@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Added
+- **Kate + Cursor preinstall verified on-image (FID-2026-0916-002):**
+  fresh provision of the build-2026-0916 payload boots with Cursor at the
+  vendor-locked digest (launch proof: full Electron tree + screenshot) and
+  Kate 26.04.3 present. Incident found during the proof and fixed: the
+  image lacked `xcb-util-cursor`, so any Qt app launched without a Wayland
+  env (bare SSH, script tooling) aborted with the Qt xcb fatal;
+  `xcb-util-cursor` now ships in the payload pin.
+- **Headless fatal discipline (FID-2026-0916-001 D3):** `fatal()` no longer
+  calls the blocking topmost MessageBoxW under `-headless` — a fatal now
+  logs and exits so automation cannot dangle on an invisible dialog
+  (found via a 15-minute silent stall at the runtime-verify step).
 - **Pre-boot stall visibility (FID-2026-0916-001 D2–D4):** every pre-boot
   phase transition is logged and mirrored on the splash; a watchdog names
   the held phase after 90 s of silence (hidden-dialog hint at 5 min,

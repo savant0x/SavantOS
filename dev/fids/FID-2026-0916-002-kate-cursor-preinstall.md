@@ -71,7 +71,43 @@ Desktop file + hicolor icon + favorites/taskbar pins in the savant layout.
 - Full dual-build GATE GREEN with `fetch_cursor` in the chain, then boot
   proof: `cursor` launches in-guest, Kate present — filed back here.
 
+## Boot proof (2026-09-17, image build-2026-0916)
+
+- Dual-build (run `build-2026-0916`) reached the six-file digest list only
+  after the A==B determinism comparison passed; the final packaging leg was
+  reconstructed honestly after the run died at the missing runtime zip
+  (builder hardened: missing-zip is now a fatal, not a warn). GATE GREEN,
+  sums digest `a6ccbc5c…d439`.
+- Fresh provision of that payload at `C:\savantos` (old writable disk
+  retained): receipt verified, disk reseeded, GPU boot, userspace ready.
+- Guest ground truth: `/usr/bin/cursor` present at the exact vendor-lock
+  size (305,666,552 B), `cursor.desktop` present, `fuse2 2.9.9-5` installed,
+  Kate `26.04.3` present.
+- Cursor launch proof: launches over SSH with the session env sourced —
+  full Electron tree up (15 procs); screenshot captured
+  (`dev/scratchpad/theme-shots/cursor-running.png`, 2.4 MB).
+
+## Incident found during the boot proof: Qt xcb fatal (fixed)
+
+- `kate --version` over a bare SSH session SIGABRTs: Qt falls back to the
+  xcb platform plugin and the image ships **without `xcb-util-cursor`**
+  (`Could not load the Qt platform plugin "xcb" ... libxcb-cursor0 is
+  needed`). Any Qt GUI app launched without a Wayland env (SSH, kdialog
+  from scripts, xdg-open edge paths) dies the same way.
+- Fixed live in the guest (`pacman -S xcb-util-cursor`): `kate --version`
+  now passes under both `xcb` and `offscreen` platforms. Payload fix:
+  `xcb-util-cursor` added to `guest-image/mkosi.conf`, ships with the next
+  image.
+- Note on the earlier "Kate takes down the taskbar" report: the disk where
+  that reproduced (dev3) carried my theme-eval leftovers (Tela cursor/icon
+  themes) and was superseded by this fresh provision; the fresh guest is
+  factory-clean (empty theme overrides) and kwin/plasmashell stayed up
+  through every Kate/Cursor launch in this proof. If it reproduces here,
+  it gets its own FID with a coredump trail.
+
 ## Resolution
 
 Implemented 2026-09-16. Kate ships (evidence recorded); Cursor ships via
-vendor lock. Boot verification follows the next image build.
+vendor lock. Boot verification completed 2026-09-17 (fresh provision of
+build-2026-0916): Cursor launches, Kate present, xcb-cursor incident found
+and fixed in-guest + in the payload pin.

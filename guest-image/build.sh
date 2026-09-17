@@ -216,9 +216,12 @@ runtime_zip_src="${RUNTIME_ZIP:-$USERPROFILE/Downloads/winq-emu-alpha10-portable
 if [[ -f $runtime_zip_src ]]; then
     cp -f "$runtime_zip_src" "$out/contract/"
 else
-    echo "[build] WARNING: runtime archive not found at $runtime_zip_src" >&2
-    echo "[build] WARNING: the local release base will fail launcher runtime setup;" >&2
-    echo "[build] WARNING: set RUNTIME_ZIP=<path> to include it." >&2
+    # Fail-closed (2026-0916 build): a warning here produced a payload whose
+    # SHA256SUMS step died minutes later with an opaque sha256sum error. The
+    # launcher's runtime path cannot authenticate without the archive.
+    echo "[build] FATAL: runtime archive not found at $runtime_zip_src" >&2
+    echo "[build]        set RUNTIME_ZIP=<path> and rerun." >&2
+    exit 1
 fi
 
 (
