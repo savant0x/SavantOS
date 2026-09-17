@@ -72,7 +72,33 @@ Probe discipline errors the loop caught (recorded so they never recur):
    looks like a healthy "no change". Always verify `pgrep -c app > 0`
    after launch.
 
-## Fix candidates (ordered by information gain)
+## Verdict matrix (COMPLETE)
+
+| arm | stack | SW cursor | app | verdict |
+|-----|-------|-----------|-----|---------|
+| A   | GPU venus=on, traffic-lights | on | kate | WEDGE |
+| B   | GPU venus=on, plastik | on | kate | WEDGE |
+| C   | GPU venus=on, Breeze C++ | on | kate | WEDGE |
+| D1  | (invalid — env omissions) | | | discarded |
+| D2  | GPU venus=on, traffic-lights | off | kate | WEDGE |
+| E   | GPU venus=on, kate as CSD | off | kate | WEDGE |
+| G   | GPU venus=on, KWIN_DRM_NO_DIRECT_SCANOUT=1 | off | kate+kcalc | WEDGE (wchan: dma_fence_default_wait) |
+| E1  | **CPU mode (llvmpipe, sdl gl=off)** | off | kate+kcalc | **CLEAN (rc=0 everywhere, main thread idle-polling)** |
+| E2  | **GPU venus=off (base virgl capset)** | off | kate | WEDGE (same fence) |
+
+**Final attribution:** the host-side virgl loop (virgl renderer process
+feeding SDL-GL on Windows/WHPX) fails to signal a fence KWin legitimately
+waits on when the first server-decorated window maps. Guest-side flags,
+decorations, and Venus itself are all exonerated. The old pre-0916 image
+worked on the same stack — the delta is the guest userspace (newer
+KWin/Mesa issuing the fence-using submission the old stack never made),
+not the QEMU/runtime bits, which did not change.
+
+**Immediate mitigation (operator-facing):** run `-render cpu` (llvmpipe)
+— verified clean with Kate + kcalc on the shipping disk. GPU mode stays
+blocked until the fence path is fixed or the guest stack is pinned.
+
+## Fix candidates (updated by verdicts)
 
 - **G: `KWIN_DRM_NO_DIRECT_SCANOUT=1`** — direct scanout waits on scanout
   fences; decorated/SSD windows are the classic scanout candidates. A
@@ -111,9 +137,20 @@ Probe discipline errors the loop caught (recorded so they never recur):
 
 ## Open items
 
-- Run G, then E1 (then E2 if needed); record verdicts in the table.
-- Pick the minimal durable fix; land it in the skeleton + live VM.
-- Retire `KWIN_FORCE_SW_CURSOR` guidance from FID-2026-0916-001 if the
-  cursor-visibility problem needs a different answer after the wedge is
-  fixed (re-test visibility on a healthy compositor).
-- Upstream tracking once the trigger is pinned to a component.
+- ~~Run G, then E1 (then E2 if needed)~~ DONE — see verdict matrix.
+- **Launcher guard (next implementation):** the render probe / boot path
+  must either default to CPU for this runtime+guest combination or warn
+  loudly on GPU boot that Qt/SSD apps will wedge the compositor. GPU is
+  the launcher's proud default — shipping it in this state is shipping a
+  desktop that dies on the first text-editor click.
+- Root-cause the host fence (which fence, which submission): capture the
+  fence ctx/seqno from the guest (`/sys/kernel/debug/dma_buf/bufinfo`,
+  virtio-gpu debugfs) at wedge time, and instrument host virgl (Sandbox
+  virglrenderer log) if needed.
+- Version-delta audit old-rootfs vs new (dev3 disk holds the old
+  userspace) — identify the exact KWin/Mesa change that introduced the
+  fence-using submission.
+- Re-test cursor visibility (FID-2026-0916-001) once GPU returns; CPU
+  mode's `sdl,gl=off` path needs its own cursor-visibility check.
+- Upstream: QEMU virgl / virglrenderer fence-signal issue on Windows
+  hosts, with the bisect table as the report body.
