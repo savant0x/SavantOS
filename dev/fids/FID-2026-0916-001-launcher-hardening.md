@@ -300,9 +300,83 @@ doing instead of nothing. Gate G5 satisfied (phase lines for every pre-
 boot phase on a normal boot; watchdog fires when a phase is held, proven
 by unit tests and this live hold).
 
+### Stage-1 platform-boundary correction — 2026-09-16
+
+The approved completion baseline reproduced Linux-target vet failure at
+`phase.go:35:3: undefined: fatal`. Windows launcher build/vet/tests passed
+on the same starting tree (HEAD `fd5a888`).
+
+Correction: `phase.go` now declares `//go:build windows`, matching its
+existing Windows-wiring contract. Platform-neutral modal helpers reference
+`preboot`, so the existing non-Windows test harness now supplies a tracker
+using its existing log adapter. The build constraint alone exposed that
+second dependency; both parts are required. No production behavior, modal
+policy, watchdog timing, or guest operation changed.
+
+Verification after both edits:
+
+```text
+Windows app/:
+  go build ./...                     exit 0
+  go vet -unsafeptr=false ./...      exit 0
+  go test ./...                     ok (cached)
+  gofmt -l .                        empty output
+Linux target (Windows Go, GOOS=linux GOARCH=amd64 CGO_ENABLED=0):
+  go vet ./...                      exit 0
+  go test -c -o <temporary-test-binary> .  exit 0
+WSL Ubuntu, compiled launcher test binary:
+  -test.timeout=90s                  PASS
+```
+
+Static call-site audit still finds phase transitions in Windows `main.go`
+and `headlessRefuse` in `data_location_windows.go`. `modalFatal` remains
+without a production caller; this correction does not claim D3 completion.
+Native Linux `go test -race ./...` remains outstanding because the WSL
+environment has no Go toolchain on PATH. Cross-compilation and non-race
+runtime tests are not represented as remote CI/race parity.
+
 ### Open from this FID
 
 - G4 headless smoke (live run) — evidence below when collected.
 - D1 (foreign-dir override refusal) + D1c (provenance fields) + D1b
   (dev-vm.sh anchor): designed above, **not yet implemented** — next
   work item after this pass.
+
+## Incident 2026-09-17: guest cursor plane invisible under SDL-GL (Plasma)
+
+**Symptom (operator, live):** clicking anything in the VM window made the
+mouse pointer disappear and the desktop appear unclickable. Input kept
+working (KWin healthy: instant DBus ping, no coredumps, factory theme
+config) — only the pointer rendering died.
+
+**Root cause chain:**
+
+1. The launcher boots SDL with `show-cursor=off` (guest-cursor path;
+   `qemu.go:140`), trusting the guest to render the pointer.
+2. Plasma/KWin 6.7.4 renders the Wayland cursor on the DRM hardware
+   cursor plane. Through `virtio-vga-gl` + Venus on WHPX/Windows-SDL-GL,
+   that plane's content never reaches the host window on the click path
+   (cursor moves between sprites/planes on activation).
+3. Result: no host cursor (told off) and no guest cursor (plane dropped)
+   = invisible pointer over a fully live desktop.
+
+**Provenance note:** FINDINGS.md documented the SDL cursor fragility in
+the Omarchy/Hyprland era (guest cursor rendered in-frame; guest-only path
+worked). Plasma changed the mechanism: the cursor moved to a GPU plane,
+which the Windows SDL-GL frontend drops. The `-host-cursor` diagnostic
+flag (`main.go:150`) already existed for exactly this regression family.
+
+**Immediate fix (live VM):** clean poweroff, relaunch with `-host-cursor`
+→ `sdl,gl=on,show-cursor=on`. FINDINGS.md notes the trade (two pointers
+can flash during fast motion); acceptable until a real fix lands.
+
+**Proper fix (open):** make the guest render its cursor in-frame so the
+guest-only path works under Plasma: `KWIN_DRM` hardware-cursor-plane
+disable for virtual GPUs, or QEMU/Venus cursor-plane passthrough fix.
+Tracked as a follow-up work item; needs its own probe pass.
+
+**Also ruled out this session:** the four 16:27–16:29 kate coredumps are
+the agent's own `kate --version` probes from bare SSH (xcb fatal, fixed
+by `xcb-util-cursor` in commit 9c490b1), NOT user-caused; a stalled
+`supportInformation` call was a 30s-timeout artifact on emulated CPU,
+not a KWin hang (busctl Ping returns instantly).
