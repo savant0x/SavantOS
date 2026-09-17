@@ -44,6 +44,9 @@ type config struct {
 
 type progressUI struct{}
 
+// Match the Windows tracker dependency for platform-neutral modal tests.
+var preboot = newPhaseCore(func(line string) { logf("%s", line) }, nil)
+
 func getUI() *progressUI                             { return &progressUI{} }
 func (*progressUI) setStatus(string, ...any)         {}
 func (*progressUI) setProgress(current, total int64) {}

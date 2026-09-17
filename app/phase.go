@@ -1,3 +1,5 @@
+//go:build windows
+
 package main
 
 // Windows wiring for pre-boot phase tracking (FID-2026-0916-001 H2): the

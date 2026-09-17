@@ -91,7 +91,17 @@ func runRecoveryUI(dir, action string) error {
 }
 
 // Backup failure or cancellation must never fall through into reset.
+//
+// Headless (D3, FID-2026-0916-001): -fresh on the command line is already
+// the operator's explicit confirmation, and resetStandardDisk retains the
+// old writable disk for recovery either way, so the non-interactive default
+// is to proceed without the optional full backup. The decision is logged so
+// headless runs are attributable in vm/shell.log.
 func confirmResetBackup(dir string) (bool, error) {
+	if headlessMode.Load() {
+		preboot.emit("headless: reset confirm -> proceed without full backup (old disk retained by reset)")
+		return !setupCancelled(), checkSetupCancelled()
+	}
 	choice := msgBox("Start over with a clean SavantOS guest?\n\nThis resets the guest account, installed apps, and guest files. Windows shared folders and launcher settings are kept. The old disk will be retained for recovery.\n\nCreate a full backup first?\nYes: choose a backup. No: skip the full backup. Cancel: do nothing.", 3|mbIconQuestion|0x200)
 	if choice != idYes && choice != idNo {
 		return false, nil

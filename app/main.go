@@ -102,6 +102,12 @@ func logf(format string, a ...any) {
 func fatal(format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 	logf("FATAL %s", msg)
+	// D3 discipline (FID-2026-0916-001): under -headless there is nobody to
+	// click an error box. MessageBoxW blocks forever, so a fatal error would
+	// park the process silently instead of exiting — log loudly and exit.
+	if headlessMode.Load() {
+		os.Exit(1)
+	}
 	errorBox(msg)
 	os.Exit(1)
 }
