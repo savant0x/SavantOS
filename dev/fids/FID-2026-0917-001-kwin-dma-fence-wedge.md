@@ -135,6 +135,29 @@ blocked until the fence path is fixed or the guest stack is pinned.
    version-delta audit become the path; the FID is updated, not the
    narrative.
 
+## Pointer-visibility follow-up (CPU mode, 2026-09-17 late)
+
+On the clean CPU boot the operator reported "any click on the desktop
+kills my pointer" — the CPU-mode twin of the original visibility bug:
+`show-cursor=off` trusts the guest cursor surface, and the click-path
+surface update doesn't reach the SDL window here either. Fix applied:
+`KWIN_FORCE_SW_CURSOR=1` drop-in restored (its exoneration from the
+wedge stands — arm D2 wedged without it; Kate+kcalc verified healthy
+WITH it on CPU mode).
+
+Measurement honesty: the synthetic host-click rig produced two false
+negatives (foreground held by another app; SetForegroundWindow steal
+failed even via AttachThreadInput), so "0 evdev bytes" readings from the
+rig are NOT evidence about the guest. The only valid input verdicts
+remain: QMP injection arrives (kernel-level), and the 17:25 physical-
+context capture (8,712 bytes) plus operator reports. Physical operator
+verification is the accept test for the cursor fix.
+
+Current shipped state: `-render cpu` + `KWIN_FORCE_SW_CURSOR=1`.
+Fallback lever if the pointer still dies on click: `-host-cursor` ON
+CPU MODE (its input-death was only ever proven on GPU mode; untested
+here) — arm F was interrupted before testing that combination.
+
 ## Open items
 
 - ~~Run G, then E1 (then E2 if needed)~~ DONE — see verdict matrix.
