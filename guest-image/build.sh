@@ -121,9 +121,12 @@ fetch_savant_code() {
     rm -rf "$here/skeletons/usr/lib/savant-code"
     mkdir -p "$here/skeletons/usr/lib/savant-code" "$here/skeletons/usr/bin"
     tar -xzf "$cache" -C "$here/skeletons/usr/lib/savant-code"
-    [ -x "$here/skeletons/usr/lib/savant-code/savant-code" ] \
+    # MSYS tar does not preserve the exec bit on Windows, and host chmod is
+    # a no-op on it (both proved live): assert existence only here; the
+    # executable bit is asserted in-container (where the bind presents it)
+    # and again at assemble time on the image content.
+    [ -f "$here/skeletons/usr/lib/savant-code/savant-code" ] \
         || { echo "[build] FATAL: savant-code binary missing after untar" >&2; exit 1; }
-    chmod 0755 "$here/skeletons/usr/lib/savant-code/savant-code"
     printf '#!/bin/sh\nexec /usr/lib/savant-code/savant-code "$@"\n' \
         > "$here/skeletons/usr/bin/savant"
     chmod 0755 "$here/skeletons/usr/bin/savant"
@@ -180,6 +183,15 @@ run_build() {
             echo "[build] FATAL: wallpaper PNGs missing from skeletons (run gen-wallpaper.py host-side)" >&2
             exit 1
         fi
+        # Savant Code (FID-2026-0917-002): MSYS cannot represent the exec
+        # bit on the host bind (proved: chmod no-op, [ -x ] false on the
+        # host while the file presents 777 IN-container). So executability
+        # is asserted HERE, where the bit is real, before mkosi copies the
+        # tree; assemble.sh re-probes mode+digest on the image content.
+        for scexe in /work/skeletons/usr/lib/savant-code/savant-code /work/skeletons/usr/bin/savant; do
+            [[ -x $scexe ]] || { echo "[build] FATAL: $scexe not executable in-container" >&2; exit 1; }
+        done
+        echo "[build] savant-code exec bits verified in-container"
         cp -f /work/wallpapers/metadata.desktop \
               /work/skeletons/usr/share/wallpapers/savant/metadata.desktop
         mkosi --directory=/work --package-cache-dir=/mkosi-cache --output-directory=/mkosi-ws/'"$tag"'/out --workspace-directory=/mkosi-ws/'"$tag"'/ws --force

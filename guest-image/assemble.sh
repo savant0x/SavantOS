@@ -223,6 +223,15 @@ if [ "$have_sc" != "$want_sc" ]; then
     echo "assemble: savant-code digest mismatch (have ${have_sc:0:16}, want ${want_sc:0:16})" >&2
     exit 1
 fi
+# Mode probe: the MSYS host cannot represent the exec bit (proved during
+# wiring), so the image content is the only honest place to assert it —
+# a 0644 binary here would mean mkosi copied a dead tree. Format verified
+# live: debugfs 1.47.4 prints 'Mode:  0755' (decimal, leading zero).
+sc_mode=$(debugfs -R "stat /usr/lib/savant-code/savant-code" "$img" 2>/dev/null | grep -m1 -E "Mode: *0755" || true)
+if [ -z "$sc_mode" ]; then
+    echo "assemble: savant-code binary not 0755 in image content" >&2
+    exit 1
+fi
 wrapper_tmp=$(mktemp)
 debugfs -R "cat /usr/bin/savant" "$img" > "$wrapper_tmp" 2>/dev/null
 if ! grep -q "exec /usr/lib/savant-code/savant-code" "$wrapper_tmp"; then
