@@ -123,6 +123,14 @@ embedded agent is Savant Code itself, shipped in the OS.
    match on the image content; flat-tarball layout asserted live in the
    grounding extraction. Syntax + lock-parse verified; `python3` in the
    build container proven by the identical Cursor lock probe.
+   **Live-found during the first real runs (both fixed, both caught by
+   gates, not by shipping):** (a) MSYS cannot represent the exec bit —
+   host chmod no-ops and `[ -x ]` lies, while the container bind presents
+   777, so executability is asserted in-container and in the image
+   content only; (b) mkosi normalizes bind-mounted trees to mode 0777
+   (proved: the shipped cursor binary is 0777 and runs), so the image
+   probe asserts the owner-exec bit via debugfs, not octal 0755 —
+   validated against the real image (777/755 pass, 644 rejected).
 3. Desktop integration **partial:** `savant-code.desktop` entry (TUI
    launched inside Konsole, `Icon=savant-code`) + kickoff/tasks pins are
    in; a square traffic-lights app icon was derived from
