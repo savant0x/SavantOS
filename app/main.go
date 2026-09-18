@@ -158,6 +158,7 @@ func main() {
 	uninstall := flag.Bool("uninstall", false, "remove this SavantOS installation: shortcuts, the Apps & features entry, and the data folder")
 	uninstallFinish := flag.Bool("uninstall-finish", false, "internal: delete the data folder after the launcher inside it exits")
 	reclaim := flag.Bool("reclaim", false, "ask the running SavantOS to zero its free space so the disk file shrinks after shutdown, then exit")
+	provisionSpec := flag.String("provision-key", "", "deliver an API key to the running SavantOS for Savant Code, as PROVIDER:KEY (e.g. OPENROUTER:sk-or-...), then exit")
 	backupPath := flag.String("backup", "", "back up a stopped standard VM to a new ZIP file, then exit")
 	restorePath := flag.String("restore", "", "restore a trusted backup into a new folder selected with -dir, then exit")
 	openSettings := flag.Bool("settings", false, "open the settings window, then exit")
@@ -222,6 +223,9 @@ func main() {
 	}
 	if *reclaim {
 		os.Exit(sendLifecycleCommand("reclaim"))
+	}
+	if *provisionSpec != "" {
+		os.Exit(lifecycleProvision(*provisionSpec))
 	}
 	if *uninstallFinish {
 		if !explicitFlags["dir"] {
@@ -974,6 +978,21 @@ func runLifecycleListener() {
 					guestReady.Store(true)
 				case "reclaim":
 					requestReclaim()
+				case "provision":
+					// FID-2026-0917-002: forwarded from -provision-key. Run in
+					// goroutine — the response must not wait 90s for the ack;
+					// the second launcher polls its own clipboard instead.
+					spec := strings.TrimSpace(strings.TrimPrefix(line, "provision"))
+					go func() {
+						if rc := provisionKeySend(spec); rc == 0 {
+							c.Write([]byte("ok\n"))
+						} else {
+							c.Write([]byte("failed\n"))
+						}
+					}()
+					// Keep the connection open for the async reply.
+					time.Sleep(95 * time.Second)
+					return
 				}
 			}(c)
 		}

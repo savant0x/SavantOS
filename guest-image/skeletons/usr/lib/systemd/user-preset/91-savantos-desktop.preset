@@ -8,7 +8,12 @@
 # Phase 3 (FID-2026-0915-005): savant-core joins the session. It binds NO
 # capability at start (armed=false, mechanism=none) — the unit running is
 # not the agent acting; fail-closed from first boot.
+#
+# FID-2026-0917-002: the clipboard bridge joins the session — the guest
+# half of the launcher's host->guest text channel; the Savant Code key
+# provisioner rides it (no keys in the image, by design).
 
 enable savantos-identity.service
 enable savantos-keepawake.service
 enable savant-core.service
+enable savantos-clipboard.service

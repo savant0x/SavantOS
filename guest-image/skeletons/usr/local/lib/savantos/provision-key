@@ -1,0 +1,86 @@
+#!/bin/bash
+# Savant Code API-key provisioning (FID-2026-0917-002).
+#
+# Watches the Wayland clipboard for the provisioning sentinel, then writes
+# the key into Savant Code's own credentials store:
+#   ~/.savant-code/credentials.json  {"providerApiKeys":{"OPENROUTER_API_KEY":"..."}}
+# The schema, path, and 0600 mode are the CLI's own (verified in the v0.0.31
+# binary: YN() writes credentials.json via chmodSync(384) into $gHH =
+# ".savant-code"). Keys never touch the image; they arrive over the existing
+# host->guest clipboard bridge (launcher 4449 -> wl-copy).
+#
+# Sentinel format (one clipboard item):
+#   SAVANTOS-KEY:OPENROUTER:<the key>
+# On success: config written 0600, host clipboard set to an ack, local
+# clipboard overwritten with the ack so the key does not linger.
+#
+# Runs as the desktop user from login (XDG autostart) until configured, then
+# exits; also exits if the CLI config already holds a key (no re-arm loop).
+
+set -u
+SENTINEL_PREFIX="SAVANTOS-KEY:"
+CRED="$HOME/.savant-code/credentials.json"
+ACK="savantos: key provisioned"
+MAX_WAIT_MIN=120
+
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+log() { printf '%s provision-key: %s\n' "$(date +%H:%M:%S)" "$*" >> "$XDG_RUNTIME_DIR/provision-key.log"; }
+
+log "started (cred exists: $( [ -f "$CRED" ] && echo yes || echo no ))"
+
+# Already provisioned (any provider key present) -> nothing to do.
+if [ -f "$CRED" ] && grep -q "API_KEY" "$CRED" 2>/dev/null; then
+  log "credentials.json already holds a provider key; exiting"
+  exit 0
+fi
+
+# Wait for the graphical session's clipboard tools to be usable.
+for _ in $(seq 1 30); do
+  if wl-paste --type text --list-types >/dev/null 2>&1; then break; fi
+  sleep 2
+done
+
+deadline=$(( $(date +%s) + MAX_WAIT_MIN * 60 ))
+while [ "$(date +%s)" -lt "$deadline" ]; do
+  sel=$(wl-paste --type text --no-newline 2>/dev/null || true)
+  case "$sel" in
+    "$SENTINEL_PREFIX"*)
+      payload=${sel#"$SENTINEL_PREFIX"}
+      provider=${payload%%:*}
+      key=${payload#*:}
+      if [ -z "$key" ] || [ "$key" = "$payload" ]; then
+        log "sentinel seen but malformed (no key/provider split); waiting"
+        sleep 5
+        continue
+      fi
+      case "$provider" in
+        OPENROUTER) env_var="OPENROUTER_API_KEY" ;;
+        *) log "unknown provider '$provider'; waiting"; sleep 5; continue ;;
+      esac
+      # Fresh check: the operator may have configured the CLI meanwhile.
+      if [ -f "$CRED" ] && grep -q "API_KEY" "$CRED" 2>/dev/null; then
+        log "credentials appeared while waiting; exiting"
+        exit 0
+      fi
+      mkdir -p "$HOME/.savant-code"
+      chmod 700 "$HOME/.savant-code"
+      umask 077
+      tmp="$CRED.tmp.$$"
+      printf '{\n  "providerApiKeys": {\n    "%s": "%s"\n  }\n}\n' "$env_var" "$key" > "$tmp"
+      chmod 600 "$tmp"
+      mv "$tmp" "$CRED"
+      log "credentials written for $env_var (mode $(stat -c %a "$CRED"))"
+      # Overwrite every trace of the key in the local clipboard, and ack on
+      # the host side through the bridge's push path. Push frames are
+      # base64(text)+LF (verified against the launcher's decodeClipFrame).
+      printf '%s' "$ACK" | wl-copy --type text 2>/dev/null || true
+      { base64 -w0 <<< "$ACK"; echo; } | socat -u - TCP:10.0.2.2:4448,connect-timeout=3 2>/dev/null || true
+      printf '%s' "$ACK" > "$XDG_RUNTIME_DIR/provision-ack"
+      log "done"
+      exit 0
+      ;;
+  esac
+  sleep 3
+done
+log "gave up waiting after ${MAX_WAIT_MIN}m"
+exit 1

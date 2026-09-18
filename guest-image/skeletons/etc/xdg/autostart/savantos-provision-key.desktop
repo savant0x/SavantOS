@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Savant Code key provisioning
+Comment=Waits for the operator's provisioning key on the clipboard (FID-2026-0917-002)
+Exec=/usr/local/lib/savantos/provision-key
+Terminal=false
+X-KDE-autostart-phase=0
+NoDisplay=true

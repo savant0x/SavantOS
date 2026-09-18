@@ -3,9 +3,10 @@
 **Filename:** `FID-2026-0917-002-embedded-agent-savant-code.md`
 **ID:** FID-2026-0917-002
 **Severity:** high (Phase 3 direction setter)
-**Status:** in progress — steps 1–2 landed (lock + fetch chain verified);
-step 3 partial (entry + pins done, key-provisioning hook open); step 4
-awaits the next image build
+**Status:** provisioning implemented + live-proven (bridge → sentinel →
+0600 credentials.json → ack); agent definitions payload item open; full
+headless session blocked on dev-VM memory (documented in open item 3);
+next image build carries the whole chain
 **Created:** 2026-09-17
 **Parent:** FID-2026-0912-001 (pivot), FID-2026-0915-005 (savant-core — now
 a downstream consumer of this design, not a prerequisite)
@@ -134,9 +135,43 @@ embedded agent is Savant Code itself, shipped in the OS.
 3. Desktop integration **partial:** `savant-code.desktop` entry (TUI
    launched inside Konsole, `Icon=savant-code`) + kickoff/tasks pins are
    in; a square traffic-lights app icon was derived from
-   `savant-start.svg`. **Still open:** first-boot API-key provisioning
-   (host→guest clipboard bridge into a 0600 config — no keys in the
-   image) and the first-party agent definitions in the payload.
+   `savant-start.svg`.
+   **Key provisioning IMPLEMENTED + live-proven 2026-09-17/18:**
+   grounding corrected the design — the CLI's own store is
+   `~/.savant-code/credentials.json` (0600, schema
+   `{providerApiKeys:{OPENROUTER_API_KEY:…}}`, verified in the v0.0.31
+   binary: chmodSync(384), gHH=".savant-code"), NOT the FID's guessed
+   `~/.config/savant/`. Chain shipped: (1) guest half of the clipboard
+   bridge (scripts/guest/clipboard-bridge.sh →
+   /usr/local/bin + savantos-clipboard.user unit + preset enable) — the
+   host listeners 4448/4449 existed but the image never shipped the
+   guest daemon; (2) `socat`+`wl-clipboard` added to mkosi Packages
+   (verified on the 2026-08-11 pin); (3) `provision-key` watcher (XDG
+   autostart): watches the Wayland clipboard for
+   `SAVANTOS-KEY:PROVIDER:<key>`, writes the CLI's own credentials.json
+   0600, overwrites the guest clipboard with the ack, pushes the
+   base64-frame ack to the host, exits; (4) launcher `-provision-key
+   PROVIDER:KEY` sets the Windows clipboard via the lifecycle port
+   (`provision` verb) and polls for the ack.
+   **Live proof in the running guest:** deps installed via the factory
+   runtime-pacman criterion; bridge connected ("clipboard: guest
+   connected" in the launcher log); sentinel placed on the host
+   clipboard → provisioner wrote credentials.json **mode 600** with the
+   exact CLI schema → guest clipboard = ack text → **host clipboard read
+   back `savantos: key provisioned`** → key scrubbed from both sides.
+   First push attempt failed (raw text vs base64 frame) — caught and
+   fixed against the launcher's decodeClipFrame, re-proven.
+   **Honest limit:** the full headless agent session
+   (`--print`) did NOT complete on the current dev VM — the Bun
+   standalone (172 MB binary) page-thrashes against the 1 GB guest's
+   ~10 MB MemAvailable (PSI IO ~65%, stuck in filemap_fault); TUI
+   commands (`--version`, `--help` over pty) succeed when memory frees.
+   `--print` on a default-sized VM (or the TUI interactively) remains
+   the operator proof; the test key was invalid by construction so an
+   OpenRouter auth error was the expected best case. Also surfaced:
+   `SAVANT_CODE_RG_PATH` needed for ripgrep in headless runs (no rg in
+   the payload) — queued with the D-series work.
+   **Still open:** first-party agent definitions in the payload.
 4. Boot proof on the next image build (CPU mode per FID-2026-0917-001):
    **DONE 2026-09-17.** Dual-build (assemblies A+B) GREEN — all six
    contract files byte-identical (rootfs.ext4 `6e63b67a…`, zst

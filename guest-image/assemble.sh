@@ -143,7 +143,11 @@ for probe in \
     /usr/bin/cursor \
     /usr/share/applications/cursor.desktop \
     /usr/bin/savant \
-    /usr/lib/savant-code/savant-code; do
+    /usr/lib/savant-code/savant-code \
+    /usr/local/lib/savantos/provision-key \
+    /usr/local/bin/clipboard-bridge \
+    /usr/lib/systemd/user/savantos-clipboard.service \
+    /etc/xdg/autostart/savantos-provision-key.desktop; do
     if ! debugfs -R "stat "$probe"" "$img" >/dev/null 2>&1; then
         echo "assemble: desktop content assertion FAILED — $probe missing" >&2
         exit 1
