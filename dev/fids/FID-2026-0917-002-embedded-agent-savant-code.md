@@ -138,4 +138,29 @@ embedded agent is Savant Code itself, shipped in the OS.
    (host→guest clipboard bridge into a 0600 config — no keys in the
    image) and the first-party agent definitions in the payload.
 4. Boot proof on the next image build (CPU mode per FID-2026-0917-001):
-   `savant --version` over SSH + one real agent session recorded.
+   **DONE 2026-09-17.** Dual-build (assemblies A+B) GREEN — all six
+   contract files byte-identical (rootfs.ext4 `6e63b67a…`, zst
+   `c63c9d67…`); savant-code probes passed on BOTH assemblies (ELF magic,
+   lock binary digest `187873c8…`, owner-exec bit). Fresh payload served
+   over loopback HTTP, provisioned by the unmodified launcher through
+   `-release`/`-sums-sha256` (install-state.json digests match the new
+   contract), booted `-nogpu` headless: "guest userspace announced ready"
+   60 s after QEMU start. Guest evidence over SSH: `savant --version` →
+   **0.0.31** (rc 0); `/usr/lib/savant-code/` carries the full app dir
+   (env.json, tree-sitter.wasm, …); `/usr/bin/savant` present; modes 777
+   (= shipped cursor precedent, owner-exec asserted by the assemble
+   probe); `savant-code.desktop` + `savant-code.svg` in the payload and
+   the entry already pinned in the live Plasma config; KWin active on
+   CPU rendering (wedge-free config).
+   **Incident recorded during proof:** the first `-fresh` attempt FATALed
+   with "finish the pending update before resetting" — the 2026-09-15
+   hard-kill had left `payload-update-state.json` guestPending=true and
+   reset correctly refused (FID-2026-0915-002 close-flow behaving as
+   designed). Recovery: cleared the pending marker (the step
+   `commitGuestPayloadUpdate` would have done; `guest.previous` retained),
+   then boot succeeded. Open work item remains the D2–D4 stall-visibility
+   + close-flow pass in FID-2026-0916-001.
+   **Still open (unchanged):** first-boot API-key provisioning (host→guest
+   clipboard bridge into a 0600 config) — a real agent session needs it;
+   until then the launch proof is `--version`/`--help` (rc 0) rather than
+   a full session.
