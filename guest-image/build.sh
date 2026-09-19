@@ -202,6 +202,48 @@ run_build() {
     return $rc
 }
 
+# --- Disk-rotation guard (operator mandate 2026-09-18: "rotate them and
+# only keep one"). A build peak is: 2 workspaces (~12G) + 2 contracts
+# (~14G) + the published payload (~8G) + the data-dir staging (~10G). If a
+# prior run died before its cleanup (publish-tail trap: twice on 0917/0918)
+# those copies pile up and can fill the host drive. So: fail-closed on low
+# space, and drop every stale artifact before starting.
+free_mb=$(df -Pm "$here" | awk 'NR==2 {print $4}')
+if (( free_mb < 35000 )); then
+    echo "[build] FATAL: only ${free_mb} MiB free on the build drive; a build" >&2
+    echo "[build]        needs ~35 GiB of transient headroom. Clean old" >&2
+    echo "[build]        payloads/data dirs first (SavantOS-* dirs, guest-image/out)." >&2
+    exit 1
+fi
+echo "[build] rotation guard: ${free_mb} MiB free, pruning stale artifacts"
+rm -rf "$here/build-a" "$here/build-b"
+# Any exit from here on (gate failure, publish-tail error, success) removes
+# the two contract copies — the published payload in out/contract is the
+# only retained image.
+trap 'rm -rf "$here/build-a" "$here/build-b"' EXIT
+
+# Prior published payloads: keep the newest, remove older siblings. The
+# launcher data dirs (~/savantos-*) each carry ONE retained previous
+# payload (guest.previous) as recovery — that lifetime belongs to the
+# launcher's own rotation, not to the build; everything else under a data
+# dir root named like a prior payload (created by manual publishes) goes.
+# (find -maxdepth 1 -print0 | sort -rz: newest payload dir first.)
+while IFS= read -r -d '' stale; do
+    echo "[build] rotation guard: removing stale payload $(basename "$stale")"
+    rm -rf -- "$stale"
+done < <(find "$out" -maxdepth 1 -type d -name 'contract-*' -print0 | sort -rz | tail -n +2)
+
+# Stale named workspaces from runs whose container died before the
+# volume rm (crash, host reboot): every ws volume except the one the next
+# build will create is garbage.
+if "$container_bin" info >/dev/null 2>&1; then
+    "$container_bin" volume ls --format '{{.Name}}' | grep '^guest-image-ws-' | \
+        while IFS= read -r v; do
+            echo "[build] rotation guard: removing stale workspace volume $v"
+            "$container_bin" volume rm "$v" >/dev/null 2>&1 || true
+        done || true
+fi
+
 echo "[build] assembly A"
 run_build a
 echo "[build] assembly B (determinism gate)"
@@ -252,6 +294,8 @@ for f in rootfs.ext4 rootfs.ext4.zst vmlinuz-linux initramfs-linux.img build-spe
     fi
     echo "  $f  $a"
 done
+
+
 
 # Publish build A as the payload; drop the gate copy.
 rm -rf "$out/contract"
