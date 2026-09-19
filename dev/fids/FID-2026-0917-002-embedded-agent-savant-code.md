@@ -199,3 +199,44 @@ embedded agent is Savant Code itself, shipped in the OS.
    clipboard bridge into a 0600 config) — a real agent session needs it;
    until then the launch proof is `--version`/`--help` (rc 0) rather than
    a full session.
+
+## Build & disk status (2026-09-18/19)
+
+### Disk near-fill incident (operator escalation) — fixed
+
+The pipeline kept full copies of every artifact (build-a + build-b
+workspaces + contract copies, ~50 GB at peak) and only cleaned on
+success; two publish-tail failures left everything behind and nearly
+filled the drive. Fixes (commit `adcba2f`): the `build.sh` rotation
+guard removes stale workspaces/old contract dirs at startup (exactly
+one payload survives each run) and a fail-path self-clean trap runs on
+gate failure. One-time sweep removed the duplicates
+(`contract-0917`, `guest.previous`, stale `out/contract`); the runtime
+zip moved to `guest-image/out/runtime-archive/` as its durable home.
+
+### Engine deaths + watchdog
+
+Three runs died to the Docker/WSL engine vanishing mid-build (01:20
+overnight, ~14:50, ~17:00 — roughly a 2 h cadence; AC/DC standby are
+already "never", machine appears to be a desktop on the High
+performance scheme, so the trigger is still unidentified).
+`dev/scratchpad/build-watchdog.sh` runs the build detached and
+respawns it on pre-verdict engine death (safe: the rotation guard
+makes every attempt a clean start). Watchdog attempt 1 died to the
+engine; attempt 2's assembly A passed; attempt 3 ran the full ~2 h
+7 m without an engine death.
+
+### Attempt 3 verdict: dual gate GREEN, publish tail FATAL — fixed
+
+Both assemblies green (content assertions incl. the full provisioning
+chain; savant-code vendor digest `187873c8…` and Cursor `b9ec1e26…`
+verified in-image). Dual-digest comparison: all six contract files
+matched (rootfs.ext4 `28bcc259…`, zst `682a8433…`). The publish tail
+then FATALed: the runtime zip was expected at `Downloads/` (the
+pre-rotation default) and my sweep had moved it — a build-input
+reference that survives nowhere in the repo. Fixed (`1f6c0d7`):
+`RUNTIME_ZIP` resolution falls back to
+`out/runtime-archive/winq-emu-alpha10-portable.zip`. Lesson recorded:
+a fail-closed publish tail must be able to find its inputs from the
+repo itself, or "fully green build, zero payload" can happen again.
+Final run in flight under the watchdog; verdict + publish on arrival.
