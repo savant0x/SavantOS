@@ -316,6 +316,13 @@ rm -rf build-a build-b
 # receipt of every installed launcher). Copied in when present, with a clear
 # failure otherwise.
 runtime_zip_src="${RUNTIME_ZIP:-$USERPROFILE/Downloads/winq-emu-alpha10-portable.zip}"
+# Fallback: the user's Downloads copy is disposable; the repo-adjacent
+# archive (out/runtime-archive/) is the durable home. (2026-0919: a disk
+# rotation moved the Downloads copy and the publish tail FATALed after a
+# fully green dual verdict — 2h of build wasted. Never again.)
+if [[ ! -f $runtime_zip_src && -f $here/out/runtime-archive/winq-emu-alpha10-portable.zip ]]; then
+    runtime_zip_src="$here/out/runtime-archive/winq-emu-alpha10-portable.zip"
+fi
 if [[ -f $runtime_zip_src ]]; then
     cp -f "$runtime_zip_src" "$out/contract/"
 else
