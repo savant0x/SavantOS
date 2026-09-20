@@ -107,6 +107,37 @@ embedded agent is Savant Code itself, shipped in the OS.
   agent session run recorded in the journal/transcript.
 - No `guest-daemon/` changes in the implementation commit.
 
+### Factory out-of-box proof — DONE 2026-09-20 12:10–12:15 EDT
+
+The dual-build that carried the provisioning chain completed (GATE GREEN,
+all content assertions + vendor-digest probe + dual-determinism digest
+match; published to `out/contract` after the runtime-zip fallback fix
+`1f6c0d7` — see Build & disk status below). Fresh boot via the
+unmodified launcher (`-fresh -release http://127.0.0.1:8091 -sums-sha256
+1dcede27…`), CPU render, headless:
+
+- Reset flow behaved exactly per FID-2026-0915-002: first attempt FATALed
+  on the 0915-era `guestPending` marker (refusal by design); the pending
+  update was cleared the sanctioned way (`guest.previous` removed, state
+  committed — what `commitGuestPayloadUpdate` does on a ready boot), then
+  reset-confirm (headless default) provisioned the new payload.
+- Out of the box, zero manual steps: `provision-key` autostart running
+  (pid 933), `savantos-clipboard.service` active with the `wl-paste`
+  watcher, bridge connected (`clipboard: guest connected` in the
+  launcher log).
+- Shipped content verified live: `savant-code.desktop` + v0.0.31 binary
+  at `/usr/lib/savant-code/`, `cursor` (`/usr/bin/cursor`), `kate`,
+  `savant-core`, `socat`, `wl-paste`.
+- Full provisioning E2E on the fresh boot: sentinel placed on the host
+  clipboard → guest pulled → `~/.savant-code/credentials.json` written
+  mode 600, schema `{providerApiKeys:{OPENROUTER_API_KEY:…}}` → guest
+  clipboard scrubbed → host ack `savantos: key provisioned`. Total
+  latency sentinel→ack ≈ 3 s.
+- Remaining operator proof (unchanged): one real agent session against
+  OpenRouter with a live key; the 1 GB dev-VM memory limit on the Bun
+  standalone still stands as an environment constraint, not a shipping
+  blocker.
+
 ## Open items (in order)
 
 1. ~~Ground the distribution fact~~ **DONE 2026-09-17:** upstream is
