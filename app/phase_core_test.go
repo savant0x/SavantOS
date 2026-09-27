@@ -53,6 +53,7 @@ func TestPhaseTransitionsAreLoggedAndMirrored(t *testing.T) {
 		splash = append(splash, text)
 		splashMu.Unlock()
 	})
+	t.Cleanup(core.stopWatchdog)
 	core.enter("settings")
 	core.enter("update-check")
 	core.note("update check outcome: none due")
@@ -83,6 +84,7 @@ func TestWatchdogWarnsThenHintsAndRetires(t *testing.T) {
 	withFastWatchdog(t)
 	var col lineCollector
 	core := newPhaseCore(col.emit, nil)
+	t.Cleanup(core.stopWatchdog)
 	core.enter("runtime") // starts the watchdog
 
 	// Hold the phase past warn and hint thresholds.
@@ -120,6 +122,7 @@ func TestWatchdogRateLimitsPerLevel(t *testing.T) {
 	withFastWatchdog(t)
 	var col lineCollector
 	core := newPhaseCore(col.emit, nil)
+	t.Cleanup(core.stopWatchdog)
 	core.enter("guest-ensure")
 
 	// One silence stretch must yield at most one warn and one hint even
@@ -170,6 +173,7 @@ func TestModalChoiceHeadlessDefaults(t *testing.T) {
 
 func TestCurrentPhaseTracking(t *testing.T) {
 	core := newPhaseCore(func(string) {}, nil)
+	t.Cleanup(core.stopWatchdog)
 	if got := core.currentPhase(); got != "" {
 		t.Errorf("before any transition currentPhase = %q, want empty", got)
 	}

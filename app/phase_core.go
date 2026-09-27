@@ -71,6 +71,24 @@ var (
 	phaseHintEvery = 5 * time.Minute
 )
 
+// watchdogTuning is an immutable snapshot of the threshold vars, taken on
+// the caller's goroutine before the watchdog starts. The vars stay
+// test-tunable, but the running watchdog never reads shared state, so a
+// later write (test restore, future runtime re-tuning) cannot race it.
+type watchdogTuning struct {
+	warnAfter, hintAfter, pollEvery, warnEvery, hintEvery time.Duration
+}
+
+func currentTuning() watchdogTuning {
+	return watchdogTuning{
+		warnAfter: phaseWarnAfter,
+		hintAfter: phaseHintAfter,
+		pollEvery: phasePollEvery,
+		warnEvery: phaseWarnEvery,
+		hintEvery: phaseHintEvery,
+	}
+}
+
 // phaseCore records the current pre-boot phase and drives the watchdog.
 // enterQemu is the terminal transition: after QEMU spawns, the guest and
 // the QEMU supervisor produce their own evidence, so the watchdog retires.
@@ -102,7 +120,7 @@ func (c *phaseCore) enter(name string) {
 	c.mu.Lock()
 	if !c.started {
 		c.started = true
-		go c.watch()
+		go c.watch(currentTuning())
 	}
 	c.phase = name
 	c.since = time.Now()
@@ -120,6 +138,13 @@ func (c *phaseCore) note(format string, a ...any) {
 	c.emit("phase: " + fmt.Sprintf(format, a...))
 }
 
+// stopWatchdog retires the watchdog goroutine. enterQemu calls it at the
+// terminal transition; tests call it in cleanup so no goroutine outlives
+// its test.
+func (c *phaseCore) stopWatchdog() {
+	c.stopOnce.Do(func() { close(c.stop) })
+}
+
 // enterQemu is the terminal transition; the watchdog retires after it.
 func (c *phaseCore) enterQemu() {
 	c.mu.Lock()
@@ -131,7 +156,7 @@ func (c *phaseCore) enterQemu() {
 	if c.status != nil {
 		c.status("SavantOS: starting the virtual machine")
 	}
-	c.stopOnce.Do(func() { close(c.stop) })
+	c.stopWatchdog()
 }
 
 // warnBoth surfaces a watchdog warning on the log and the splash (D4:
@@ -151,8 +176,8 @@ func (c *phaseCore) currentPhase() string {
 	return c.phase
 }
 
-func (c *phaseCore) watch() {
-	tick := time.NewTicker(phasePollEvery)
+func (c *phaseCore) watch(cfg watchdogTuning) {
+	tick := time.NewTicker(cfg.pollEvery)
 	defer tick.Stop()
 	for {
 		select {
@@ -167,8 +192,8 @@ func (c *phaseCore) watch() {
 			}
 			silent := time.Since(since)
 			now := time.Now()
-			if silent >= phaseHintAfter {
-				if now.Sub(c.lastHint()) >= phaseHintEvery {
+			if silent >= cfg.hintAfter {
+				if now.Sub(c.lastHint()) >= cfg.hintEvery {
 					c.warnBoth("no phase progress for "+silent.Round(time.Second).String()+
 						" (current phase: "+phase+"). If a dialog is open, it may be hidden behind another window; -headless runs avoid dialogs entirely. The launcher keeps waiting; kill it if this phase cannot finish.",
 						"still waiting: "+phaseLabel(phase)+" ("+silent.Round(time.Second).String()+")")
@@ -176,7 +201,7 @@ func (c *phaseCore) watch() {
 				}
 				continue
 			}
-			if silent >= phaseWarnAfter && now.Sub(c.lastWarn()) >= phaseWarnEvery {
+			if silent >= cfg.warnAfter && now.Sub(c.lastWarn()) >= cfg.warnEvery {
 				c.warnBoth("no phase progress for "+silent.Round(time.Second).String()+
 					" (current phase: "+phase+") - still working or waiting",
 					"still working: "+phaseLabel(phase)+" ("+silent.Round(time.Second).String()+")")

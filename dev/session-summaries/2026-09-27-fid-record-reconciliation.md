@@ -89,6 +89,16 @@
   runtime lock, docs); remote CI run #91 decoded via read-only API
   (both red-job root causes identified and fixed in-tree)
 
+### Task 5: Watchdog race fix (CI run #92 finding)
+
+- **Status:** completed
+- **FIDs Created/Updated:** FID-2026-0916-001 (race confirmed + fixed)
+- **Changes Made:** `app/phase_core.go` (tuning snapshot into the
+  watchdog goroutine + `stopWatchdog()`), `app/phase_core_test.go`
+  (cleanup retirement in every phase test)
+- **Verification:** build/vet/test/fmt green both targets; CI race suite
+  on the fix commit is the `-race` acceptance evidence (no gcc locally)
+
 ## Validation Results
 
 - [x] `bun run lint:md` on changed docs: PASS (zero violations)

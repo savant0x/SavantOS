@@ -342,6 +342,34 @@ runtime tests are not represented as remote CI/race parity.
   (dev-vm.sh anchor): designed above, **not yet implemented** — next
   work item after this pass.
 
+### Watchdog data race — confirmed on CI and fixed (2026-09-27)
+
+The suspected watchdog goroutine race became measurable the moment the
+race suite could compile and run: CI run #92 (`2a22281`, 2026-09-27)
+executed `go test -race ./...` on ubuntu and flagged it (run #91 died at
+the provisioning compile break before any test ran).
+
+- **Race (report excerpt):** `(*phaseCore).watch()` reads the threshold
+  vars (`phase_core.go:155`) while `withFastWatchdog` writes them
+  (`phase_core_test.go:39` setup, `:41` cleanup restore). The watchdog
+  goroutine started by `enter()` (`phase_core.go:105`) outlives its test
+  — `TestWatchdogRateLimitsPerLevel` and `TestCurrentPhaseTracking`
+  never retired it — so a leaked reader met the next test's writes.
+  `--- FAIL: TestCreateQcow2Overlay ... race detected during execution
+  of test` is only the detection site; the racing pair is the leaked
+  watchdog and the test's tuning writes.
+- **Fix (operator-approved 2026-09-27, option A):** the threshold vars
+  are snapshotted on the caller's goroutine in `enter()` and passed into
+  `go c.watch(cfg)` (`watchdogTuning`), so the running watchdog never
+  reads shared state; a new `stopWatchdog()` (called by `enterQemu` and
+  by `t.Cleanup` in every phase test) retires the goroutine and closes
+  the leak. Thresholds, rate limits, and messages are unchanged; the
+  vars stay test-tunable.
+- **Verification:** Windows build/vet(-unsafeptr=false)/test/fmt clean;
+  Linux-target vet + test compile clean. `go test -race` cannot run on
+  this host (no gcc — recorded environment limit), so CI's race suite on
+  the fix commit is the acceptance evidence.
+
 ## Incident 2026-09-17: guest cursor plane invisible under SDL-GL (Plasma)
 
 **Symptom (operator, live):** clicking anything in the VM window made the
