@@ -9,6 +9,18 @@
 # Host prerequisites: docker (or podman) and bash. No root on the host.
 set -euo pipefail
 
+# Fail-closed CLI (forward fix from FID-2026-0915-006's accidental-build
+# note): build.sh takes NO arguments. An exploratory
+# `build.sh --contract-only` was silently ignored (no such flag) and
+# started a full assembly; now any argument is rejected before the build
+# does any work — parity with scripts/release/build-guest.sh's arg loop
+# (the contract-only gate lives there, not here).
+while (($#)); do
+    echo "Unknown argument: $1" >&2
+    echo "usage: build.sh takes no arguments (contract checks: scripts/release/build-guest.sh --contract-only)" >&2
+    exit 2
+done
+
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$here/.." && pwd)"
 out="$here/out"
