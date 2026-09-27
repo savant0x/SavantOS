@@ -151,6 +151,52 @@ The published payload (`guest-image/out/contract/`) therefore carries the
 fixed `clipboard-bridge` with `--receive-image`; fresh boots get the image
 copy path without any dev-disk experiment.
 
+## Factory out-of-box proof (2026-09-27)
+
+The host → guest image path was proven on a fresh factory install of the
+published 2026-09-22 payload — no dev disk, no drop-ins, stock bridge:
+
+- Fresh data dir, unmodified launcher; guest **and** runtime provisioned
+  from `out/contract` over loopback HTTP (`-release`/`-runtime-release
+  http://127.0.0.1:8091`, `-sums-sha256 3ef63506…37263`), CPU rendering
+  (the guarded default, FID-2026-0917-001), `-instant -headless`.
+  Userspace announced ready ~90 s after launch.
+- Stock service live out of the box: `savantos-clipboard.service`
+  active with `ExecStart=/usr/local/bin/clipboard-bridge` (no
+  override), shipped script carrying `--receive-image` (6 markers; no
+  `push-image` — this payload predates the guest → host work below).
+- **Real image copy, host → guest:** the fixture
+  (`out/savant/backgrounds/savant.png`, 47,509 bytes, 1920×1080) copied
+  on Windows as a classic CF_DIB image (`Clipboard::SetImage`) →
+  launcher `clipboard: sent png to guest (79055 bytes)` → guest
+  `wl-paste --list-types` = `image/png`; `wl-paste --type image/png` =
+  79,055 bytes (`PNG image data, 1920 x 1080`) — wire count equals the
+  log line exactly, dimensions equal the fixture exactly. The host
+  re-encodes DIB → PNG, so the bytes differ from the source PNG while
+  the pixels match.
+- Text regression after the image: `Set-Clipboard` → guest `wl-paste` =
+  sentinel. Guest → host text: `wl-copy` → Windows clipboard = sentinel
+  (`clipboard: received text from guest (17 bytes)`).
+- Loop prevention by design: re-copying the identical image is
+  suppressed by the `lastSeen` key (no duplicate `sent png` line).
+- A browser-style copy (bitmap + registered `PNG` format) falls back to
+  the DIB path on this host — the .NET-placed "PNG" handle is not
+  readable through `GetClipboardData` — so it deduplicates against the
+  identical DIB conversion; a distinct image still crosses via that
+  path.
+
+Measurement note (launcher process lifetime, not a bridge defect): the
+first proof run's launcher was terminated externally minutes after its
+spawning command completed — reproduced exactly with unrelated marker
+processes (a spawn from a completing command is swept within ~2 min,
+one from a timed-out command after a few more), so its apparent
+"silent stall" was a dead process, not a wedged bridge (every probe of
+that run is void). The second run's launcher served every cell above
+before the same sweep landed: no panic trace (stderr captured to a
+file), no FATAL log, no WER application-error event — clean external
+termination. When a launcher is found dead with QEMU orphaned, rule
+out external tooling cleanup before suspecting the clipboard path.
+
 ## Guest → host image push (deferred item, operator-approved 2026-09-27)
 
 The operator approved building the deferred symmetric image capability on
