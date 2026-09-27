@@ -103,6 +103,12 @@ cmd_init() {
     echo "[dev-vm] payload (~1.7 GB) and digest-verifies it automatically."
     mkdir -p "$DEV_DIR"
   fi
+  # Dev anchor (FID-2026-0916-001 D1b): marks this data directory as dev
+  # tooling territory so the launcher's override guard accepts payload
+  # overrides here. Schema must match devAnchor in app/provision_guard.go
+  # exactly (unknown fields invalidate it).
+  printf '{"kind": "savantos-dev-anchor", "version": 1}\n' > "$DEV_DIR/dev-anchor.json"
+  echo "[dev-vm] wrote dev-anchor.json (override-guard anchor)"
   echo "[dev-vm] init complete. Next: scripts/dev/dev-vm.sh boot"
 }
 

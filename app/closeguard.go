@@ -3,8 +3,14 @@
 package main
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -61,10 +67,14 @@ func requestQuitConfirm() {
 	}
 }
 
-// runCloseGuard owns the confirmation dialog and the graceful shutdown.
-func runCloseGuard() {
+// runCloseGuard owns the confirmation dialog and the bounded close ladder
+// (FID-2026-0915-002): one confirmed close always drives the guest down -
+// graceful first, escalated second, forced stop last. The guest's power
+// button handler can silently drop the event, so the launcher is authoritative.
+func runCloseGuard(forwards []portForward) {
 	text, _ := syscall.UTF16PtrFromString("Shut down SavantOS?\n\nAnything unsaved inside SavantOS will be lost.")
 	caption, _ := syscall.UTF16PtrFromString(appTitle)
+	var closeStarted atomic.Bool
 	for range confirmQuit {
 		if confirmOpen.Swap(true) {
 			continue // dialog already up
@@ -75,12 +85,97 @@ func runCloseGuard() {
 			mbYesNo|mbIconQuestion|mbDefbutton2|mbTopmost|mbSetForeground)
 		if r == idYes {
 			logf("close confirmed - graceful guest shutdown")
-			if c := qmpConnect(qmpToolsPort, 8e9); c != nil {
-				c.writeLine(`{"execute":"system_powerdown"}`)
-				c.close()
+			if !closeStarted.Swap(true) {
+				go runCloseLadder(closeLadderOps{
+					powerdown:    qmpPowerdown,
+					stillRunning: closeGuestStillRunning,
+					escalate:     sshPoweroffEscalation(forwards),
+					forceStop:    forceStopQemu,
+					logf:         logf,
+				}, defaultCloseLadderTimings)
 			}
-			// The guest shuts down; the supervisor reaps/exits as usual.
 		}
 		confirmOpen.Store(false)
+	}
+}
+
+// qmpPowerdown sends the graceful ACPI power button over QMP.
+func qmpPowerdown() error {
+	c := qmpConnect(qmpToolsPort, 8*time.Second)
+	if c == nil {
+		return fmt.Errorf("QMP tools port %d not answering", qmpToolsPort)
+	}
+	defer c.close()
+	return c.writeLine(`{"execute":"system_powerdown"}`)
+}
+
+// closeGuestStillRunning reports whether the guest has NOT started going
+// down. Ground truth is the supervisor's QEMU pid plus QMP query-status: an
+// exited QEMU or an explicit shutdown status reads as down; a quiet monitor
+// on a live process reads as still up so the ladder keeps escalating.
+func closeGuestStillRunning() bool {
+	if qemuPid.Load() == 0 {
+		return false
+	}
+	c := qmpConnect(qmpToolsPort, 3*time.Second)
+	if c == nil {
+		return true
+	}
+	defer c.close()
+	if err := c.writeLine(`{"execute":"query-status"}`); err != nil {
+		return true
+	}
+	lines := c.readLines()
+	deadline := time.After(3 * time.Second)
+	for {
+		select {
+		case line, ok := <-lines:
+			if !ok {
+				return true
+			}
+			if !strings.Contains(line, `"return"`) {
+				continue // greeting or async event
+			}
+			// Only an explicit shutdown status counts as "going down"; a
+			// guest-panicked or wedged guest keeps the ladder escalating.
+			return !strings.Contains(line, `"status":"shutdown"`)
+		case <-deadline:
+			return true
+		}
+	}
+}
+
+// forceStopQemu is the confirmed close's final fallback (the waitExit-class
+// kill): the supervisor reaps the process and finishes its bookkeeping.
+func forceStopQemu() {
+	if pid := qemuPid.Load(); pid != 0 {
+		if p, err := os.FindProcess(int(pid)); err == nil {
+			p.Kill()
+		}
+	}
+}
+
+// sshPoweroffEscalation returns the ladder's privileged escalation over the
+// session's ssh plane, or nil when there is none (no forward to the guest's
+// sshd). `systemctl poweroff -i` ignores inhibitor locks: PowerDevil's
+// handle-power-key block inhibitor is exactly what dropped the original
+// close. The guest account is the factory's (build-spec guest.username).
+func sshPoweroffEscalation(forwards []portForward) func() error {
+	port := sshHostPort(forwards)
+	if port == 0 {
+		return nil
+	}
+	return func() error {
+		cmd := exec.Command("ssh",
+			"-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new",
+			"-o", "ConnectTimeout=5", "-p", strconv.Itoa(port),
+			"savant@127.0.0.1", "systemctl poweroff -i")
+		// A windowsgui parent must not flash a console window.
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000 /* CREATE_NO_WINDOW */}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("ssh poweroff: %v (%s)", err, strings.TrimSpace(string(out)))
+		}
+		return nil
 	}
 }

@@ -143,7 +143,7 @@ func TestPinRestoredPayloadsUsesInstalledReceipts(t *testing.T) {
 	for _, name := range guestFiles {
 		guestSums[name] = testSHA256([]byte(name))
 	}
-	if err := writeInstallReceipt(guest, "https://example.invalid/v0.0.8-preview", guestManifest, guestFiles, guestSums); err != nil {
+	if err := writeInstallReceipt(guest, "https://example.invalid/v0.0.8-preview", guestManifest, guestFiles, guestSums, installProvenance{}); err != nil {
 		t.Fatal(err)
 	}
 

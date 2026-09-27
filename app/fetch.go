@@ -19,7 +19,7 @@ import (
 // GitHub release on first launch (with a progress window), verifies it against
 // the authenticated SHA256SUMS, and decompresses the rootfs.
 
-func ensureGuest(cfg *config, release, sumsSHA256 string) error {
+func ensureGuest(cfg *config, release, sumsSHA256, channel string) error {
 	ready, err := installReceiptMatches(cfg.guestDir, release, sumsSHA256, installedGuestArtifacts)
 	if err != nil {
 		return fmt.Errorf("reading verified install state: %w", err)
@@ -32,7 +32,7 @@ func ensureGuest(cfg *config, release, sumsSHA256 string) error {
 	isReleaseUpdate := haveOldReceipt && (!releaseLocationsEquivalent(oldRelease, release) ||
 		oldManifest != normalizedSHA256(sumsSHA256))
 	if !isReleaseUpdate {
-		return ensureGuestFiles(cfg, release, sumsSHA256)
+		return ensureGuestFiles(cfg, release, sumsSHA256, channel)
 	}
 
 	ui := getUI()
@@ -43,7 +43,7 @@ func ensureGuest(cfg *config, release, sumsSHA256 string) error {
 	}
 	stagedCfg := *cfg
 	stagedCfg.guestDir = staged
-	if err := ensureGuestFiles(&stagedCfg, release, sumsSHA256); err != nil {
+	if err := ensureGuestFiles(&stagedCfg, release, sumsSHA256, channel); err != nil {
 		_ = os.RemoveAll(staged)
 		return err
 	}
@@ -58,7 +58,7 @@ func ensureGuest(cfg *config, release, sumsSHA256 string) error {
 	return nil
 }
 
-func ensureGuestFiles(cfg *config, release, sumsSHA256 string) error {
+func ensureGuestFiles(cfg *config, release, sumsSHA256, channel string) error {
 	if err := checkSetupCancelled(); err != nil {
 		return err
 	}
@@ -165,7 +165,8 @@ func ensureGuestFiles(cfg *config, release, sumsSHA256 string) error {
 			return fmt.Errorf("unpacking rootfs: %w", err)
 		}
 	}
-	if err := writeInstallReceipt(cfg.guestDir, release, sumsSHA256, installedGuestArtifacts, sums); err != nil {
+	if err := writeInstallReceipt(cfg.guestDir, release, sumsSHA256, installedGuestArtifacts, sums,
+		installProvenance{ProvisionedBy: currentVersion, Channel: channel}); err != nil {
 		return fmt.Errorf("recording verified install state: %w", err)
 	}
 	if removeZst {

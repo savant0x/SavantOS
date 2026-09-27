@@ -60,8 +60,13 @@ func TestInstallReceiptTracksReleaseAndFileMetadata(t *testing.T) {
 		sums[name] = testSHA256(data)
 	}
 	manifestSHA256 := testSHA256([]byte("manifest"))
-	if err := writeInstallReceipt(dir, "https://example.test/release/", manifestSHA256, names, sums); err != nil {
+	if err := writeInstallReceipt(dir, "https://example.test/release/", manifestSHA256, names, sums,
+		installProvenance{ProvisionedBy: "v0.0.0-test", Channel: "dev"}); err != nil {
 		t.Fatal(err)
+	}
+	// D1c (FID-2026-0916-001): provenance round-trips through the receipt.
+	if receipt, ok := readInstallReceipt(dir); !ok || receipt.ProvisionedBy != "v0.0.0-test" || receipt.Channel != "dev" {
+		t.Fatalf("provenance round-trip = %+v ok=%v", receipt, ok)
 	}
 	ok, err := installReceiptMatches(dir, "https://example.test/release", manifestSHA256, names)
 	if err != nil {

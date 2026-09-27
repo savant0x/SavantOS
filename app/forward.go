@@ -106,14 +106,20 @@ func netdevArg(forwards []portForward) string {
 	return arg
 }
 
-// sshRequested reports whether any TCP forward targets the guest's sshd.
-func sshRequested(forwards []portForward) bool {
+// sshHostPort returns the Windows loopback port forwarded to the guest's
+// sshd, or 0 when the session has none.
+func sshHostPort(forwards []portForward) int {
 	for _, f := range forwards {
 		if f.proto == "tcp" && f.guestPort == 22 {
-			return true
+			return f.hostPort
 		}
 	}
-	return false
+	return 0
+}
+
+// sshRequested reports whether any TCP forward targets the guest's sshd.
+func sshRequested(forwards []portForward) bool {
+	return sshHostPort(forwards) != 0
 }
 
 var publicKeyLine = regexp.MustCompile(`^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com) [A-Za-z0-9+/=]+( [^[:cntrl:]]*)?$`)

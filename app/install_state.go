@@ -27,20 +27,45 @@ type installReceipt struct {
 	Version        int                         `json:"version"`
 	Release        string                      `json:"release"`
 	ManifestSHA256 string                      `json:"manifestSHA256"`
+	ProvisionedBy  string                      `json:"provisionedBy"`
+	Channel        string                      `json:"channel"`
 	Files          map[string]verifiedArtifact `json:"files"`
 }
 
+// installProvenance records who provisioned an install and from which channel
+// (FID-2026-0916-001 D1c: observability, so incident forensics is one cat
+// away). Recorded at provision time and logged at startup; receipts written
+// before this existed simply carry empty fields.
+type installProvenance struct {
+	// ProvisionedBy is the launcher version that wrote the receipt.
+	ProvisionedBy string
+	// Channel is "dev" for caller-pinned payload sources and "production"
+	// for the shipped release pins.
+	Channel string
+}
+
 func installReceiptIdentity(dir string) (string, string, bool) {
+	receipt, ok := readInstallReceipt(dir)
+	if !ok {
+		return "", "", false
+	}
+	return receipt.Release, receipt.ManifestSHA256, true
+}
+
+// readInstallReceipt loads the full receipt once for callers that need more
+// than the identity pair (D1c provenance, startup logging). Invalid receipts
+// report absent.
+func readInstallReceipt(dir string) (installReceipt, bool) {
 	data, err := os.ReadFile(filepath.Join(dir, installReceiptFilename))
 	if err != nil || len(data) > maxInstallReceiptBytes {
-		return "", "", false
+		return installReceipt{}, false
 	}
 	var receipt installReceipt
 	if json.Unmarshal(data, &receipt) != nil || receipt.Version != installReceiptVersion ||
 		receipt.Release == "" || !validSHA256(receipt.ManifestSHA256) {
-		return "", "", false
+		return installReceipt{}, false
 	}
-	return receipt.Release, receipt.ManifestSHA256, true
+	return receipt, true
 }
 
 func installReceiptArtifactSHA256(dir, name string) (string, bool) {
@@ -120,11 +145,13 @@ func installReceiptMatches(dir, release, manifestSHA256 string, names []string) 
 // writeInstallReceipt records metadata only after every required file has
 // been authenticated. Writing through a sibling temp file makes interruption
 // leave either the old complete receipt or no usable new receipt.
-func writeInstallReceipt(dir, release, manifestSHA256 string, names []string, sums map[string]string) error {
+func writeInstallReceipt(dir, release, manifestSHA256 string, names []string, sums map[string]string, provenance installProvenance) error {
 	receipt := installReceipt{
 		Version:        installReceiptVersion,
 		Release:        normalizedRelease(release),
 		ManifestSHA256: normalizedSHA256(manifestSHA256),
+		ProvisionedBy:  provenance.ProvisionedBy,
+		Channel:        provenance.Channel,
 		Files:          make(map[string]verifiedArtifact, len(names)),
 	}
 	if !validSHA256(receipt.ManifestSHA256) {

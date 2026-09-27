@@ -19,7 +19,7 @@ func writePortableGuestReceipt(t *testing.T, guest string, rootfs []byte) string
 	}
 	digest := testSHA256(rootfs)
 	if err := writeInstallReceipt(guest, "https://example.invalid/v0.0.9-preview", testSHA256([]byte("manifest")),
-		[]string{"rootfs.ext4"}, map[string]string{"rootfs.ext4": digest}); err != nil {
+		[]string{"rootfs.ext4"}, map[string]string{"rootfs.ext4": digest}, installProvenance{}); err != nil {
 		t.Fatal(err)
 	}
 	return digest

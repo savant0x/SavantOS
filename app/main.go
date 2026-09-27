@@ -90,6 +90,40 @@ var logFile *os.File
 // session's log instead of vanishing.
 var earlyLog []string
 
+// earlyLogPath names the durable session log while shell.log is still closed.
+// Set as soon as the data directory is known: no exit path may lose its reason
+// (FID-2026-0915-002 - the launcher must never exit silently).
+var earlyLogPath atomic.Pointer[string]
+
+func setEarlyLogPath(path string) {
+	earlyLogPath.Store(&path)
+}
+
+// flushEarlyLog persists the buffered pre-log lines exactly once, when the
+// session log is still closed. Called from fatal and from main's deferred
+// drain, so error exits and quiet returns alike leave their reason behind.
+func flushEarlyLog() {
+	if logFile != nil || len(earlyLog) == 0 {
+		return
+	}
+	path := earlyLogPath.Load()
+	if path == nil {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(*path), 0o755); err != nil {
+		return
+	}
+	f, err := os.OpenFile(*path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	for _, line := range earlyLog {
+		fmt.Fprintln(f, line)
+	}
+	earlyLog = nil
+}
+
 func logf(format string, a ...any) {
 	line := fmt.Sprintf("%s %s", time.Now().Format("15:04:05"), fmt.Sprintf(format, a...))
 	if logFile != nil {
@@ -102,6 +136,9 @@ func logf(format string, a ...any) {
 func fatal(format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 	logf("FATAL %s", msg)
+	// Never exit silently (FID-2026-0915-002): the reason must reach
+	// vm/shell.log even when the session log is not open yet.
+	flushEarlyLog()
 	// D3 discipline (FID-2026-0916-001): under -headless there is nobody to
 	// click an error box. MessageBoxW blocks forever, so a fatal error would
 	// park the process silently instead of exiting — log loudly and exit.
@@ -181,6 +218,7 @@ func main() {
 	updateWaitPID := flag.Int("update-wait-pid", 0, "internal: process to wait for before replacing the launcher")
 	updateRestartArgs := flag.String("update-restart-args", "", "internal: encoded launcher restart arguments")
 	flag.Parse()
+	defer flushEarlyLog() // every exit path leaves its reason (FID-2026-0915-002)
 	headlessMode.Store(*headless)
 	if *headless {
 		earlyLog = append(earlyLog, fmt.Sprintf("%s headless mode: dialogs take non-interactive defaults", time.Now().Format("15:04:05")))
@@ -233,6 +271,9 @@ func main() {
 		}
 		os.Exit(finishUninstall(cfg.dir, *updateWaitPID))
 	}
+	// The data directory is known this early from the flag alone; point the
+	// durable early log at it before anything can fail (FID-2026-0915-002).
+	setEarlyLogPath(filepath.Join(cfg.dir, "vm", "shell.log"))
 	// Bind before the first-run location prompt. Two quick launches must not
 	// race each other through the folder choice or write the same pointer and
 	// payload files. Settings, diagnostics, and update helpers remain usable
@@ -248,6 +289,7 @@ func main() {
 		root := filepath.Dir(self)
 		cfg.dir = filepath.Join(root, "data")
 		cfg.payloadDir = filepath.Join(root, "payload")
+		setEarlyLogPath(filepath.Join(cfg.dir, "vm", "shell.log"))
 		removeDataOnCancel, err = dataDirectoryEmpty(cfg.dir)
 		if err != nil {
 			fatal("SavantOS cannot inspect its portable data location: %v", err)
@@ -264,6 +306,7 @@ func main() {
 			fatal("SavantOS cannot resolve its data location: %v\n\nIf a saved location is damaged, fix or delete %s, then open SavantOS again.", err, dataLocationPointerPath(defaultDir))
 		}
 		if !proceed {
+			logf("exit: data location selection cancelled")
 			return
 		}
 		if !explicitFlags["dir"] && !pathsEqual(selected, defaultDir) {
@@ -273,15 +316,16 @@ func main() {
 		}
 		cfg.dir = selected
 		cfg.hostDir = cfg.dir
+		setEarlyLogPath(filepath.Join(cfg.dir, "vm", "shell.log"))
 		removeDataOnCancel, err = dataDirectoryEmpty(cfg.dir)
 		if err != nil {
 			fatal("SavantOS cannot inspect its data location: %v", err)
 		}
 		if *applyLauncherUpdateFlag || *applyLauncherRollbackFlag {
 			if err := applyLauncherUpdate(cfg.dir, *updateWaitPID, *updateRestartArgs, *applyLauncherRollbackFlag); err != nil {
-				errorBox("SavantOS could not finish applying its update.\n\n" + err.Error())
-				os.Exit(1)
+				fatal("SavantOS could not finish applying its update.\n\n%v", err)
 			}
+			logf("exit: launcher update step finished")
 			return
 		}
 		// Settings and diagnostics may be opened from the running app's tray.
@@ -294,17 +338,49 @@ func main() {
 			if rollingBack, recoverErr := recoverLauncherUpdate(cfg.dir, restartArgs); recoverErr != nil {
 				logf("launcher update recovery: %v", recoverErr)
 			} else if rollingBack {
+				logf("exit: launcher update rollback in progress - this process hands over")
 				return
 			}
 		}
+	}
+
+	// D1 override refusal (FID-2026-0916-001): a run carrying non-default
+	// payload pins may only update a data directory the caller named, and an
+	// existing install in a named directory needs the dev anchor. Fires before
+	// any network I/O (the update check is the first), so an incident-shaped
+	// run exits with a refusal instead of provisioning foreign bytes.
+	overrides := payloadOverridesActive(*release, *sumsSHA256, *runtimeRelease, *runtimeSumsSHA256)
+	channel := "production"
+	if overrides {
+		channel = "dev"
+	}
+	if overrides && !maintenance && !*openSettings && !*diagnostics {
+		if err := checkPayloadOverrideTarget(overrides, explicitFlags["dir"] || cfg.portable, cfg.dir); err != nil {
+			fatal("%v", err)
+		}
+	}
+	if receipt, ok := readInstallReceipt(filepath.Join(cfg.dir, "guest")); ok {
+		// D1c startup provenance (FID-2026-0916-001): one line of forensics.
+		by := receipt.ProvisionedBy
+		if by == "" {
+			by = "unrecorded"
+		}
+		provenance := receipt.Channel
+		if provenance == "" {
+			provenance = "unrecorded (receipt predates provenance)"
+		}
+		logf("install: guest release %s, provisioned by launcher %s, channel %s", receipt.Release, by, provenance)
 	}
 
 	if *recoveryAction != "" {
 		err := runRecoveryUI(cfg.dir, *recoveryAction)
 		reportRecoveryResult(err)
 		if err != nil && !errors.Is(err, errSetupCancelled) {
+			logf("FATAL recovery action %s failed: %v", *recoveryAction, err)
+			flushEarlyLog()
 			os.Exit(1)
 		}
+		logf("exit: recovery action %s finished", *recoveryAction)
 		return
 	}
 	if maintenance {
@@ -318,17 +394,18 @@ func main() {
 		}
 		uiDone()
 		if errors.Is(err, errSetupCancelled) {
+			logf("exit: backup/restore cancelled")
 			return
 		}
 		if err != nil {
-			errorBox("SavantOS could not finish the backup or restore.\n\n" + err.Error())
-			os.Exit(1)
+			fatal("SavantOS could not finish the backup or restore.\n\n%v", err)
 		}
 		if *backupPath != "" {
 			infoBox("Backup saved to:\n\n" + *backupPath + "\n\nIt contains your guest files and settings. Keep it private. Shared Windows folders are not included.")
 		} else {
 			infoBox("Backup restored to:\n\n" + cfg.dir + "\n\nStart SavantOS with -dir pointing to this folder. Your original installation was not changed.")
 		}
+		logf("exit: backup/restore finished")
 		return
 	}
 
@@ -337,8 +414,7 @@ func main() {
 	if *diagnostics {
 		bundle, err := writeDiagnostics(cfg.dir, launcherFacts(cfg))
 		if err != nil {
-			errorBox("SavantOS could not write the diagnostics bundle.\n\n" + err.Error())
-			os.Exit(1)
+			fatal("SavantOS could not write the diagnostics bundle.\n\n%v", err)
 		}
 		infoBox("Diagnostics written to:\n\n" + bundle + "\n\nIt contains redacted settings, recent logs, and machine facts, but no disk images or home-folder files. Review it before attaching it to an issue because logs can still contain local details.")
 		return
@@ -347,6 +423,8 @@ func main() {
 	if *openSettings {
 		if runSettingsDialog(settingsPath(cfg.dir), cfg.dir, cfg.portable) {
 			logf("settings saved to %s", settingsPath(cfg.dir))
+		} else {
+			logf("exit: settings closed without saving")
 		}
 		return
 	}
@@ -608,7 +686,7 @@ func main() {
 			fatal("The restored SavantOS image is incomplete. Reinstall SavantOS to recover it.")
 		}
 	} else {
-		if err := ensureGuest(cfg, *release, *sumsSHA256); err != nil {
+		if err := ensureGuest(cfg, *release, *sumsSHA256, channel); err != nil {
 			if finishSetupCancellation(cfg, err) {
 				return
 			}
@@ -704,7 +782,7 @@ func main() {
 	go runWinKeyQmp()
 	go runTitleEnforcer(cfg.dir, cfg.fullscreen)
 	go runCursorReleaseGuard()
-	go runCloseGuard()
+	go runCloseGuard(cfg.forwards)
 	runClipboardBridge()
 
 	cfg.audio = "dsound"
