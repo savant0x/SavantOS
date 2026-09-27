@@ -166,7 +166,18 @@ if ! grep -q "^RuntimeDirectory=savant-core$" "$dbg_unit"; then
     exit 1
 fi
 rm -f "$dbg_unit"
-echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit/savant-core/chromium/featherpad/cursor/unit-RuntimeDirectory)"
+# Clipboard bridge guard (FID-2026-0922-001 D1): the shipped guest bridge MUST
+# know how to apply host image frames — without --receive-image the launcher's
+# png: frames fail base64 decoding and drop silently.
+dbg_clip=$(mktemp)
+debugfs -R "cat /usr/local/bin/clipboard-bridge" "$img" > "$dbg_clip" 2>/dev/null
+if ! grep -q "receive-image" "$dbg_clip"; then
+    rm -f "$dbg_clip"
+    echo "assemble: clipboard-bridge lacks --receive-image (host image frames would drop silently)" >&2
+    exit 1
+fi
+rm -f "$dbg_clip"
+echo "assemble: content assertion passed (kwin/plasma/sddm/savant scheme/keyring unit/savant-core/chromium/featherpad/cursor/unit-RuntimeDirectory/clipboard-image)"
 
 # cursor (FID-2026-0916-002): the vendor-locked AppImage must be the real
 # pinned bytes — ELF magic (AppImages are ELF) + the digest of record from

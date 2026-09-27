@@ -14,21 +14,37 @@ mkdir -p "$STATE"
 
 # wl-paste supplies the selected text on stdin. Keeping it in a file preserves
 # trailing newlines and avoids a second clipboard read after the selection moves.
-if [ "${1:-}" = --push ] || [ "${1:-}" = --receive ]; then
+# --receive-image applies a host PNG frame (the launcher's "png:" prefix form,
+# already stripped by the pull loop) with the same locking and sha state.
+if [ "${1:-}" = --push ] || [ "${1:-}" = --receive ] || [ "${1:-}" = --receive-image ]; then
   outgoing=$(mktemp "$STATE/outgoing.XXXXXX") || exit 1
   trap 'rm -f "$outgoing"' EXIT
-  head -c 8388609 > "$outgoing" || exit 1
-  size=$(wc -c < "$outgoing")
-  [ "$size" -gt 0 ] && [ "$size" -le 8388608 ] || exit 0
+  if [ "${1:-}" = --receive-image ]; then
+    # Mirrors maxClipboardImageBytes (16 MiB) on the host side.
+    head -c 16777217 > "$outgoing" || exit 1
+    size=$(wc -c < "$outgoing")
+    [ "$size" -gt 8 ] && [ "$size" -le 16777216 ] || exit 0
+    # PNG signature, mirroring the launcher's clipItem.allowed().
+    [ "$(od -An -tx1 -N8 "$outgoing" | tr -d ' \n')" = "89504e470d0a1a0a" ] || exit 0
+  else
+    head -c 8388609 > "$outgoing" || exit 1
+    size=$(wc -c < "$outgoing")
+    [ "$size" -gt 0 ] && [ "$size" -le 8388608 ] || exit 0
+  fi
   # Serialize both directions, including delivery. A completed push must not
   # overwrite the state of a newer host value received while it was sending.
   exec 9> "$STATE/lock"
   flock -x 9 || exit 1
   sha=$(sha256sum < "$outgoing" | cut -d' ' -f1)
-  if [ "$1" = --receive ]; then
+  if [ "$1" = --receive ] || [ "$1" = --receive-image ]; then
     printf '%s\n' "$sha" > "$STATE/last_content"
     # wl-copy forks a clipboard owner. It must not inherit the lock descriptor.
-    if ! wl-copy < "$outgoing" 9>&-; then
+    copy_ok=1
+    case "$1" in
+      --receive-image) wl-copy --type image/png < "$outgoing" 9>&- || copy_ok=0 ;;
+      *)               wl-copy < "$outgoing" 9>&- || copy_ok=0 ;;
+    esac
+    if [ "$copy_ok" != 1 ]; then
       rm -f "$STATE/last_content"
       exit 1
     fi
@@ -87,8 +103,10 @@ while :; do
       # small clipboard payloads and makes ordinary text appear stuck.
       socat -u TCP:$HOST:$PULL_PORT,connect-timeout=3 - 2>/dev/null | while IFS= read -r line; do
         line=${line%"$(printf '\r')"}
+        frame=--receive
+        case "$line" in png:*) frame=--receive-image; line=${line#png:} ;; esac
         printf '%s' "$line" | base64 -d > "$STATE/incoming" 2>/dev/null || continue
-        "$0" --receive < "$STATE/incoming" || break
+        "$0" "$frame" < "$STATE/incoming" || break
       done
       sleep 2
     done

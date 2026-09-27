@@ -116,6 +116,7 @@ func (b *clipBridge) sendCurrentHost(conn net.Conn) {
 		return
 	}
 	b.state.markHostSent(cur)
+	logf("clipboard: sent %s to guest (%d bytes)", cur.Kind, len(cur.Data))
 }
 
 // Serialize clipboard access with state changes so polling cannot echo a guest
@@ -128,6 +129,7 @@ func (b *clipBridge) acceptGuestItem(item clipItem) {
 	}
 	if b.setHost(item) {
 		b.state.markGuestAccepted(item)
+		logf("clipboard: received %s from guest (%d bytes)", item.Kind, len(item.Data))
 		if b.sequence != nil {
 			// Our own write bumps the sequence; do not echo it back.
 			b.lastSequence = b.sequence()
