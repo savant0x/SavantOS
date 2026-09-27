@@ -17,7 +17,8 @@ import (
 	"time"
 )
 
-const provisionSentinel = "SAVANTOS-KEY:"
+// provisionSentinel lives in provision_contract.go (platform-neutral; the
+// cross-platform contract pins share it).
 
 // provisionKeySend sets the host clipboard to the sentinel and waits for the
 // guest's ack (a clipboard item equal to ackText, delivered guest->host over
