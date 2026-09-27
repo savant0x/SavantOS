@@ -20,7 +20,10 @@ image=archlinux:base-devel
 release_name=${RELEASE_NAME:-local/phase1}
 version=${VERSION:-0.0.0-phase1}
 
-"$here/check-snapshot-lock.sh" "$here/snapshot.lock.json" "$here/mkosi.conf"
+# Explicit interpreter: this tree's scripts are tracked 100644 and Windows
+# checkouts cannot carry exec bits — direct exec fails with exit 126 on
+# any Linux host (see scripts/release/build-guest.sh's matching note).
+bash "$here/check-snapshot-lock.sh" "$here/snapshot.lock.json" "$here/mkosi.conf"
 
 mkdir -p "$out"
 

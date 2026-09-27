@@ -37,7 +37,11 @@ fi
 # 1. Snapshot-lock consistency: mkosi.conf AND sandbox/pacman.conf must pin
 #    the same Arch snapshot as the lock file — a silent pin drift ships a
 #    guest from a different archive than the one that was tested.
-"$builder_dir/check-snapshot-lock.sh" "$builder_dir/snapshot.lock.json" "$builder_dir/mkosi.conf"
+# Explicit interpreter (bash, not direct exec): the builder tree's scripts
+# are tracked 100644 and Windows checkouts cannot carry exec bits (the
+# recorded MSYS lesson), so a direct exec dies with exit 126 on Linux CI
+# (observed: Guest-contract job, run #91) while appearing fine in Git Bash.
+bash "$builder_dir/check-snapshot-lock.sh" "$builder_dir/snapshot.lock.json" "$builder_dir/mkosi.conf"
 
 # 2. Builder scripts must parse (a syntax-broken gate is a gate that fails).
 bash -n "$builder_dir/build.sh" "$builder_dir/assemble.sh" \
@@ -110,7 +114,7 @@ fi
 # gate) → six contract files + SHA256SUMS. RELEASE_NAME/VERSION flow through
 # from the environment when set; docker (or podman) on the runner, no root
 # on the host.
-( cd "$builder_dir" && ./build.sh )
+( cd "$builder_dir" && bash build.sh )
 
 # The builder publishes the payload in guest-image/out/contract; move the
 # finished artifacts to the requested output directory (mv, not cp: the
