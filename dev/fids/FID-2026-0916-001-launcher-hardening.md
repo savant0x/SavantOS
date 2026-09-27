@@ -4,7 +4,7 @@
 **ID:** FID-2026-0916-001
 **Severity:** high (data-integrity guard for the production install + the
 0915-002 silent-exit evidence family gets its forward fix)
-**Status:** converged (loop 3) — implementation approved at automation level 3
+**Status:** fixed (D1–D4 implemented; live acceptance gates G3-boot/G4/G6 pending an approved disposable target)
 **Created:** 2026-09-16
 **Parent:** FID-2026-0915-002 (launcher defect family); master plan
 FID-2026-0915-001 as additive work under T3/T4 hardening.
@@ -335,12 +335,59 @@ Native Linux `go test -race ./...` remains outstanding because the WSL
 environment has no Go toolchain on PATH. Cross-compilation and non-race
 runtime tests are not represented as remote CI/race parity.
 
-### Open from this FID
+### D1+D1b+D1c override-refusal pass — landed 2026-09-27 (Stage 2 pass 1)
 
-- G4 headless smoke (live run) — evidence below when collected.
-- D1 (foreign-dir override refusal) + D1c (provenance fields) + D1b
-  (dev-vm.sh anchor): designed above, **not yet implemented** — next
-  work item after this pass.
+- **D1 guard:** `app/provision_guard.go` (platform-neutral and
+  Linux-CI-testable, phase_core precedent) carries the table:
+  `payloadOverridesActive` (value-based: any payload pin differing from
+  the shipped defaults; blank runtime pins follow the release pins),
+  `checkPayloadOverrideTarget` (overrides + launcher-resolved dir →
+  refuse, naming the resolved dir and the `-dir` remedy; overrides +
+  caller-named dir → proceed only with `dev-anchor.json` or with no
+  install yet; no overrides → the production path is unchanged),
+  `guestInstallPresent` (any `guest/` content counts as an install —
+  damaged and partial installs included; a runtime-only directory
+  carries no guest payload to protect), and a fail-closed anchor
+  reader. Wired in `main.go` after data-directory resolution and
+  before the first network I/O (the update check), covering boot runs
+  including `-fresh`; refusals exit non-zero through `fatal`.
+- **D1b:** `scripts/dev/dev-vm.sh init` writes
+  `{"kind": "savantos-dev-anchor", "version": 1}` into the dev data
+  directory (verified live under gate G3).
+- **D1c:** `install-state.json` records `provisionedBy` (launcher
+  version) and `channel` (`dev` for caller-pinned payload sources,
+  `production` for the shipped pins) at provision time, and the pair is
+  logged at startup ("install: guest release …, provisioned by launcher
+  …, channel …"). Receipts predating this carry empty fields and log
+  as unrecorded.
+- **G1 (unit table):** `provision_guard_test.go` — all five G1 rows
+  plus damaged/partial-install, runtime-only, empty-guest, and four
+  malformed-anchor cases; the override detector's seven cases run too
+  (including trailing-slash release normalization). Green on both
+  targets.
+- **G2 (incident-shape regression, run 2026-09-27):** a scripted run
+  with the 11:36 flag shape (`-release http://127.0.0.1:8765
+  -sums-sha256 abf7c5c1…`, no `-dir`, a data-location pointer aimed at
+  a staged foreign install; isolated `LOCALAPPDATA` so nothing real was
+  touched; `-headless` so the script cannot hang on the error box)
+  exited **1** with the refusal in the resolved directory's
+  `vm/shell.log`, before any network I/O:
+
+  ```text
+  FATAL payload overrides (-release/-sums-sha256/-runtime-*) may not update
+  ...\foreign: this data directory was resolved by SavantOS, not named by
+  the caller
+
+  Re-run with -dir naming a dev data directory (scripts/dev/dev-vm.sh init
+  writes dev-anchor.json), or drop the overrides to use the production release
+  ```
+
+- **G3:** anchor write proven live (init output: `wrote dev-anchor.json
+  (override-guard anchor)`); the `dev-vm.sh boot` half stays a live
+  gate.
+- **Open, blocked on an approved disposable VM target:** G3 boot half,
+  G4 headless smoke, G6 stall-family closure, and the stage-2 exit
+  evidence (live damaged/partial-install and runtime-only runs).
 
 ### Watchdog data race — confirmed on CI and fixed (2026-09-27)
 

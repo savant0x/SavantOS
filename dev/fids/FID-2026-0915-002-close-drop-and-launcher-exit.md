@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0915-002-close-drop-and-launcher-exit.md`
 **ID:** FID-2026-0915-002
 **Severity:** medium-high
-**Status:** analyzed (both reproduced with evidence; fixes designed, not implemented)
+**Status:** fixed (both fixes implemented 2026-09-27; the 10-cycle acceptance below awaits an approved disposable target)
 **Created:** 2026-09-15
 **Parent:** FID-2026-0914-003 (window close / PowerDevil) — this is a
 regression-shaped intermittent residue of the same mechanism
@@ -110,3 +110,38 @@ user-visible error, not a silent exit.
 - **CHANGE DELTA:** n/a (new document).
 - **Convergence declared:** analyzed; implementation queued under T1 of
   the master plan.
+
+## Implementation evidence — 2026-09-27 (Stage 2 pass 1)
+
+Both fixes from the design of record are implemented (launcher-only, no
+image change):
+
+- **Bounded close ladder** (`app/close_ladder.go`, wired from
+  `runCloseGuard`): a confirmed close now runs the full ladder — QMP
+  `system_powerdown`, a bounded 10 s verify (QEMU pid plus QMP
+  `query-status`; only an explicit shutdown status reads as "going
+  down"), then the guest-side privileged shutdown over the session's
+  ssh plane (`systemctl poweroff -i` — `-i` is `--ignore-inhibitors`,
+  verified against systemd's docs; the PowerDevil block inhibitor is
+  exactly what dropped the original event) with a second powerdown, a
+  20 s verify, and finally the forced stop this confirmed close already
+  authorizes (the waitExit-class QEMU kill, reaped by the supervisor).
+  Every step logs to `vm/shell.log`, so a dropped power event can never
+  again look like a clean close. Sessions without an ssh forward log
+  the missing escalation plane and stay bounded. The policy core is
+  platform-neutral and unit-tested: graceful, escalate-then-down,
+  force-stop, and no-plane paths all green.
+- **Never-silent-exit:** `fatal()` flushes the durable early log
+  (`vm/shell.log`) before exiting; `main` drains it on quiet returns;
+  every boot exit path logs its reason (`exit: …`); the bare
+  `errorBox`+`os.Exit` sites route through `fatal`. The port-collision
+  pre-flight from the design already existed (`runLifecycleListener`
+  binds before the disk is touched and fatals with a user-visible
+  error) and its reason is now durable too. Proven live: the
+  incident-shape regression run of FID-2026-0916-001 (its G2) wrote the
+  FATAL line to `vm/shell.log` from an exit path that predates the
+  session log.
+- **Verification:** build/vet/test/fmt clean on both targets; ladder
+  unit suite green. **Blocked (needs an approved disposable VM
+  target):** this FID's Verification gates — 10 close cycles with zero
+  hangs, and 10 relaunch cycles including a forced-kill predecessor.

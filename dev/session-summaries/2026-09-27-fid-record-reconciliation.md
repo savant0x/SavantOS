@@ -132,6 +132,42 @@
   mode-extraction probe verified against 4- and 6-digit debugfs `Mode:`
   formats; full gate set green below.
 
+### Task 7: Stage 2 pass 1 — launcher protection (intent, logged pre-implementation per Law 8)
+
+Operator directive 2026-09-27: start Stage 2 — 0916-001 override
+refusal and the 0915-002 bounded close sequence. Intended changes:
+
+1. D1 guard (FID-2026-0916-001): platform-neutral
+   `app/provision_guard.go` — overrides + launcher-resolved dir →
+   refuse before any network I/O; overrides + explicit dir → proceed
+   only with `dev-anchor.json` or no install yet; no overrides →
+   unchanged. G1 unit table + damaged/partial/runtime-only cases.
+2. D1b: `scripts/dev/dev-vm.sh init` writes the schema'd dev anchor.
+3. D1c: `install-state.json` gains `provisionedBy` + `channel`, logged
+   at startup.
+4. 0915-002 close ladder: platform-neutral `app/close_ladder.go` —
+   powerdown → bounded verify → ssh `systemctl poweroff -i`
+   (--ignore-inhibitors, verified) + powerdown again → force-stop (the
+   waitExit kill), wired from `runCloseGuard`.
+5. 0915-002 never-silent-exit: durable early-log flush in `fatal()` +
+   every boot exit path leaves a reason in `vm/shell.log`.
+
+**Outcome (same day):** all five landed. D1: `app/provision_guard.go`
+(value-based override detection + the refusal table + fail-closed
+`dev-anchor.json` reader) wired in `main.go` before any network I/O;
+D1b: `dev-vm.sh init` writes the anchor; D1c: `install-state.json`
+carries `provisionedBy` + `channel`, logged at startup; 0915-002:
+platform-neutral `app/close_ladder.go` (powerdown → bounded verify →
+`systemctl poweroff -i` over ssh + powerdown → forced stop) wired from
+`runCloseGuard`, plus never-silent-exit (durable early-log flush in
+`fatal`, exit reasons on every boot return path). Evidence: G1 unit
+table (13 cases + 7 detector cases) green on both targets; G2
+incident-shape scripted run exited 1 with the refusal in the resolved
+dir's `vm/shell.log` before any network I/O; G3 anchor write proven
+live. Runtime acceptance (10 close + 10 relaunch cycles, G4 headless
+smoke, G6) needs an approved disposable VM target — presented as
+blocked.
+
 ## Validation Results
 
 - [x] `bun run lint:md` on changed docs: PASS (zero violations)
@@ -149,6 +185,20 @@ Rulings-pass gates (2026-09-27, fresh, all green):
 - [x] `bun run lint:md` + `git diff --check` — clean
 - [x] `bash -n` on `guest-image/build.sh` + `guest-image/assemble.sh`;
   negative run exits 2 as designed
+
+Stage-2 pass-1 gates (2026-09-27, fresh, all green):
+
+- [x] `app/`: build + `go vet -unsafeptr=false` + `go test -count=1`
+  (ok 9.8s) + `gofmt -l` — clean (one gofmt column fix on the new
+  guard test during the pass)
+- [x] `app/` Linux target: vet + `go test -c` compile — clean
+- [x] `guest-daemon/savant-core/` vet/test/gofmt — clean;
+  `scripts/release/build-guest.sh --contract-only` — PASS
+- [x] G1 guard table (13 cases) + override detector (7 cases) + close
+  ladder suite (4 paths) — PASS
+- [x] G2 incident-shape scripted run: exit 1 + durable refusal in
+  `vm/shell.log` — PASS
+- [x] G3 `dev-vm.sh init` anchor write — PASS (`bash -n` clean)
 
 ---
 
