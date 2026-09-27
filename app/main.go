@@ -580,14 +580,20 @@ func main() {
 		cfg.runtimeID = runtimeIdentity(gpuRoot)
 		cfg.displayDriver = displayDriverIdentity()
 		phaseEnter(phaseRenderDecision)
-		probe, err := loadRenderProbe(cfg.dir)
-		if err != nil {
-			logf("ignoring %s: %v", renderProbeFilename, err)
-		}
 		var reason string
-		cfg.useGpu, reason = startWithGPU(cfg.renderMode, probe, cfg.runtimeID, cfg.displayDriver, time.Now())
+		cfg.useGpu, reason = startWithGPU(cfg.renderMode)
 		if reason != "" {
 			logf("rendering: %s", reason)
+		}
+		if cfg.useGpu {
+			// Forced GPU on a guarded build (FID-2026-0917-001): warn loudly
+			// on every launch. The log line always lands; the modal is logged
+			// and skipped under -headless (D3 discipline).
+			logf("rendering warning: forced GPU rendering can freeze the desktop when a window with a titlebar opens (FID-2026-0917-001); CPU rendering is the safe default")
+			modalChoice(true, "gpu rendering warning", func() bool {
+				infoBox("You forced GPU rendering. On this build the GPU path can freeze the whole desktop: when a window with a titlebar opens (for example Kate or any Qt app), the compositor stops redrawing and only a session restart recovers it (FID-2026-0917-001).\n\nCPU rendering (Automatic or CPU in Settings) is the safe default. Keep GPU rendering only to test the GPU path.")
+				return true
+			})
 		}
 	} else {
 		cfg.qemu = stockQemu
@@ -1019,10 +1025,11 @@ func waitExit(exited <-chan error, grace time.Duration, cfg *config) bool {
 }
 
 // recordRenderResult remembers which rendering path reached userspace with
-// the current runtime and drivers, so the next launch can skip attempts that
-// this machine cannot pass. A CPU result written while GPU was never tried
-// (settings say CPU) must not later be mistaken for a probe failure, so only
-// automatic and forced-GPU launches record CPU.
+// the current runtime and drivers. The record feeds keepUpdatedRuntimeOnCPU,
+// which separates "this machine never ran the GPU path" (keep a pending
+// runtime update on a GPU startup failure) from "the update broke a working
+// GPU path" (roll it back). An explicit CPU choice never attempts GPU, so it
+// must not record; automatic and forced-GPU launches do.
 func recordRenderResult(cfg *config) {
 	if cfg.runtimeID == "" || (cfg.renderMode == renderCPU && !cfg.useGpu) {
 		return

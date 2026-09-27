@@ -30,32 +30,31 @@ func TestRenderProbeRoundTrip(t *testing.T) {
 	}
 }
 
-func TestStartWithGPUSkipsOnlyAMatchingRecentCPUResult(t *testing.T) {
-	now := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
-	cpu := &renderProbe{Result: renderCPU, RuntimeID: "rt1", DisplayDriver: "drv1", RecordedAt: now.Add(-time.Hour)}
+// TestStartWithGPUGuardsTheAutoDefault pins the P0 guard (FID-2026-0917-001):
+// auto (and any unrecognized mode) boots CPU unconditionally, because the
+// wedge strikes after a successful boot and no probe memory can protect the
+// desktop. Only an explicit gpu choice boots GPU.
+func TestStartWithGPUGuardsTheAutoDefault(t *testing.T) {
 	cases := []struct {
-		name          string
-		mode          string
-		probe         *renderProbe
-		runtime, drv  string
-		wantGPU       bool
-		reasonContain string
+		name           string
+		mode           string
+		wantGPU        bool
+		reasonContains []string
 	}{
-		{"no history", renderAuto, nil, "rt1", "drv1", true, ""},
-		{"matching cpu result", renderAuto, cpu, "rt1", "drv1", false, "using CPU rendering"},
-		{"runtime changed", renderAuto, cpu, "rt2", "drv1", true, ""},
-		{"driver changed", renderAuto, cpu, "rt1", "drv2", true, ""},
-		{"gpu result", renderAuto, &renderProbe{Result: renderGPU, RuntimeID: "rt1", DisplayDriver: "drv1", RecordedAt: now}, "rt1", "drv1", true, ""},
-		{"stale cpu result", renderAuto, &renderProbe{Result: renderCPU, RuntimeID: "rt1", DisplayDriver: "drv1", RecordedAt: now.Add(-25 * time.Hour)}, "rt1", "drv1", true, ""},
-		{"future timestamp", renderAuto, &renderProbe{Result: renderCPU, RuntimeID: "rt1", DisplayDriver: "drv1", RecordedAt: now.Add(48 * time.Hour)}, "rt1", "drv1", true, ""},
-		{"empty runtime id never matches", renderAuto, &renderProbe{Result: renderCPU, RecordedAt: now}, "", "", true, ""},
-		{"forced gpu", renderGPU, cpu, "rt1", "drv1", true, "GPU rendering chosen"},
-		{"forced cpu", renderCPU, nil, "rt1", "drv1", false, "CPU rendering chosen"},
+		{"auto is guarded to cpu", renderAuto, false, []string{"CPU rendering", "FID-2026-0917-001"}},
+		{"empty mode is guarded to cpu", "", false, []string{"CPU rendering", "FID-2026-0917-001"}},
+		{"forced gpu boots gpu", renderGPU, true, []string{"GPU rendering chosen"}},
+		{"forced cpu boots cpu", renderCPU, false, []string{"CPU rendering chosen"}},
 	}
 	for _, c := range cases {
-		gpu, reason := startWithGPU(c.mode, c.probe, c.runtime, c.drv, now)
-		if gpu != c.wantGPU || !strings.Contains(reason, c.reasonContain) {
-			t.Errorf("%s: got gpu=%v reason=%q, want gpu=%v containing %q", c.name, gpu, reason, c.wantGPU, c.reasonContain)
+		gpu, reason := startWithGPU(c.mode)
+		if gpu != c.wantGPU {
+			t.Errorf("%s: got gpu=%v (reason %q), want gpu=%v", c.name, gpu, reason, c.wantGPU)
+		}
+		for _, want := range c.reasonContains {
+			if !strings.Contains(reason, want) {
+				t.Errorf("%s: reason %q does not contain %q", c.name, reason, want)
+			}
 		}
 	}
 }

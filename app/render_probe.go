@@ -17,17 +17,11 @@ const (
 	renderCPU  = "cpu"
 )
 
-// renderProbeFilename remembers how the last launch ended up rendering, so a
-// machine whose graphics driver cannot run the GPU path stops paying for two
-// failed GPU attempts and a runtime rollback on every launch.
+// renderProbeFilename remembers how the last launch reached userspace, so a
+// forced-GPU startup failure can tell "this machine never ran the GPU path"
+// (keep the pending runtime update) from "the update broke a working GPU
+// path" (roll it back). See keepUpdatedRuntimeOnCPU.
 const renderProbeFilename = "render-probe.json"
-
-// renderProbeRetryAfter bounds how long a remembered CPU result is trusted.
-// Drivers and remote sessions change without touching the two identities
-// below, so the GPU path gets a fresh chance every day: one failed attempt
-// costs a few seconds, a week on llvmpipe after a transient failure costs
-// the user the product.
-const renderProbeRetryAfter = 24 * time.Hour
 
 type renderProbe struct {
 	Schema int `json:"schema"`
@@ -79,30 +73,20 @@ func saveRenderProbe(dir string, p renderProbe) error {
 	return nil
 }
 
-// current reports whether the record describes this runtime and driver set
-// and is recent enough to act on.
-func (p *renderProbe) current(runtimeID, displayDriver string, now time.Time) bool {
-	if p == nil || p.RuntimeID == "" || p.RuntimeID != runtimeID || p.DisplayDriver != displayDriver {
-		return false
-	}
-	return !p.RecordedAt.IsZero() && now.Sub(p.RecordedAt) < renderProbeRetryAfter && !p.RecordedAt.After(now.Add(time.Hour))
-}
-
-// startWithGPU decides the first launch attempt's rendering path. GPU stays
-// the default; only a remembered CPU result for the same runtime and driver
-// set skips it, and an explicit -render gpu always retries.
-func startWithGPU(mode string, probe *renderProbe, runtimeID, displayDriver string, now time.Time) (bool, string) {
+// startWithGPU decides the launch's rendering path. CPU is the guarded
+// default (FID-2026-0917-001): the GPU path can wedge the compositor when
+// the first server-decorated window maps - long after a successful boot, so
+// no boot-time probe can prove it safe and "auto" must not gamble the
+// desktop on it. Only an explicit gpu choice boots GPU, and the caller warns
+// loudly on every such launch.
+func startWithGPU(mode string) (bool, string) {
 	switch mode {
 	case renderCPU:
 		return false, "CPU rendering chosen in settings"
 	case renderGPU:
 		return true, "GPU rendering chosen in settings"
 	}
-	if probe != nil && probe.Result == renderCPU && probe.current(runtimeID, displayDriver, now) {
-		return false, fmt.Sprintf("GPU rendering failed with this runtime and driver on %s; using CPU rendering (choose GPU in Settings to retry now)",
-			probe.RecordedAt.Local().Format("2006-01-02"))
-	}
-	return true, ""
+	return false, "CPU rendering (guarded default): GPU rendering can freeze the desktop when a window with a titlebar opens (FID-2026-0917-001); choose GPU in Settings or pass -render gpu to force it"
 }
 
 // keepUpdatedRuntimeOnCPU decides what a GPU startup failure means while a

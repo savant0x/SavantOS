@@ -39,9 +39,10 @@ type settings struct {
 	// Public key file authorized for the SavantOS account when a forward
 	// targets sshd. Empty picks the usual ~/.ssh/id_*.pub.
 	SSHKey string `json:"sshKey"`
-	// Render picks the rendering path: "auto" (or empty) tries the GPU path
-	// and remembers when this machine cannot run it, "gpu" retries it every
-	// launch, "cpu" never tries it.
+	// Render picks the rendering path: "auto" (or empty) is the guarded
+	// default and boots CPU rendering (the GPU path can freeze the desktop,
+	// FID-2026-0917-001), "gpu" forces the GPU path and warns on every
+	// launch, "cpu" is an explicit CPU choice that skips the warning.
 	Render string `json:"render,omitempty"`
 	// AllowMetered lets full payload downloads proceed when Windows reports
 	// a metered (fixed/variable cost) connection instead of pausing them.

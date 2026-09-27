@@ -272,7 +272,7 @@ func runSettingsDialog(path, dataDir string, portable bool) (saved bool) {
 		procSendMessageW.Call(hRenderAuto, bmSetcheck, bstChecked, 0)
 	}
 	y += 24
-	mk("STATIC", "Automatic tries the GPU and remembers when this PC cannot use it. GPU retries every launch.", left, y, clientW-2*left, 20, ssNoprefix, 0)
+	mk("STATIC", "Automatic uses the safe CPU path. GPU forces GPU and warns every launch.", left, y, clientW-2*left, 20, ssNoprefix, 0)
 	y += 28
 	hMetered = mk("BUTTON", "Download updates on metered connections", left, y, 340, 22, bsAutocheckbox|wsTabstop, settingsMeteredID)
 	if current.AllowMetered {
