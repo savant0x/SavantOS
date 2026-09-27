@@ -166,14 +166,15 @@ if ! grep -q "^RuntimeDirectory=savant-core$" "$dbg_unit"; then
     exit 1
 fi
 rm -f "$dbg_unit"
-# Clipboard bridge guard (FID-2026-0922-001 D1): the shipped guest bridge MUST
-# know how to apply host image frames — without --receive-image the launcher's
-# png: frames fail base64 decoding and drop silently.
+# Clipboard bridge guard (FID-2026-0922-001 D1 + deferred item): the shipped
+# guest bridge MUST know both image frame directions — without --receive-image
+# the launcher's png: frames fail base64 decoding and drop silently, and
+# without --push-image guest image copies never reach the host at all.
 dbg_clip=$(mktemp)
 debugfs -R "cat /usr/local/bin/clipboard-bridge" "$img" > "$dbg_clip" 2>/dev/null
-if ! grep -q "receive-image" "$dbg_clip"; then
+if ! grep -q "receive-image" "$dbg_clip" || ! grep -q "push-image" "$dbg_clip"; then
     rm -f "$dbg_clip"
-    echo "assemble: clipboard-bridge lacks --receive-image (host image frames would drop silently)" >&2
+    echo "assemble: clipboard-bridge lacks --receive-image/--push-image (image frames would drop silently)" >&2
     exit 1
 fi
 rm -f "$dbg_clip"

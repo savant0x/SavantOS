@@ -151,11 +151,57 @@ The published payload (`guest-image/out/contract/`) therefore carries the
 fixed `clipboard-bridge` with `--receive-image`; fresh boots get the image
 copy path without any dev-disk experiment.
 
+## Guest → host image push (deferred item, operator-approved 2026-09-27)
+
+The operator approved building the deferred symmetric image capability on
+2026-09-27 ("make guest-to-host image copy symmetric"), which lifts its
+criterion gate.
+
+Design (guest-side only — the host contract was already complete:
+`acceptPush` → `decodeClipFrame` → `clipboardSetItem` writes CF_DIB + the
+registered PNG format, `app/winapi.go:402`):
+
+- A second watcher, `wl-paste --type image/png --watch "$0" --push-image`,
+  runs beside the text watcher (the standard cliphist dual-watcher idiom),
+  self-restarting if the Wayland connection drops.
+- `--push-image` shares the locking, sha loop-prevention, and transport of
+  `--push`, with the `--receive-image` validation (16 MiB cap mirroring
+  `maxClipboardImageBytes`, PNG signature mirroring `clipItem.allowed()`)
+  and the `png:` + base64 wire form mirroring `encodeClipFrame`.
+- **Image priority:** when a selection offers both flavors (browsers pair
+  `image/png` with `text/html`), the text push stands down if
+  `wl-paste --list-types` shows `image/png` — mirroring the host's
+  `clipboardGetItem` PNG preference. Without it the two watchers race and
+  the winner depends on which `socat` lands first.
+- Loop prevention is unchanged: `--receive-image` records the sha before
+  `wl-copy`, so an image echoed back by the new watcher is dropped by the
+  shared `last_content` check.
+- Scope limit (protocol-level): only `image/png` selections are forwarded,
+  matching the host contract (`clipItem.allowed()` rejects non-PNG).
+- The assemble content probe now requires **both** `receive-image` and
+  `push-image` markers in the shipped script.
+
+Live verification (dev VM, 2026-09-27; new script installed via a systemd
+user-unit drop-in redirecting `ExecStart`, service restarted):
+
+- guest copies a real 10,704-byte PNG (`mouse_lh.png`) with
+  `wl-copy --type image/png` → launcher log `clipboard: received png from
+  guest (10704 bytes)`, Windows clipboard holds the decoded image
+  **220×186** (exact fixture dimensions) — end-to-end guest → host image.
+- negative control: a synthetic 8-byte-signature-but-corrupt PNG crossed
+  the wire and was correctly **rejected** at the host conversion step
+  (`clipboard: could not write the Windows clipboard`) — the validation
+  layers behave, no corrupt clipboard write.
+- regression: plain text still crosses host → guest after the change
+  (`Set-Clipboard` → guest `wl-paste` = sentinel).
+- loop prevention: no echo observed after either transit (shared
+  `last_content` sha).
+
+The fix ships with the next image build (probe pins both modes); the
+running dev VM carries it via the dev-disk experiment (drop-in override).
+
 ## Deferred (criterion-gated, not built)
 
-- Guest → host image push: the host decodes `png:` frames, but the guest
-  only watches `--type text`. Symmetric capability, no observed need; build
-  only if an image-copy case is reported.
 - X11-only client copying with no X11 window focused (Xwayland withholds
   the selection). An X11-side poll watcher would close it; build only if a
   real app is observed doing this (none so far — every real app copies with
