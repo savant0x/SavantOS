@@ -46,7 +46,7 @@ proof runs on the committed tree.
 
 | # | Item | Source | Notes |
 |---|------|--------|-------|
-| 1.1 | `/usr` + `/usr/share` mode-0777 normalization in the builder + assemble.sh mode assertion | 0914-003 Loop 3 finding | one-line root cause class: tar/mke2fs inherited permissive modes; assert 0755 in the same gate that guards content |
+| 1.1 | `/usr` + `/usr/share` mode-0777 normalization in the builder + assemble.sh mode assertion | 0914-003 Loop 3 finding | one-line root cause class: tar/mke2fs inherited permissive modes; assert 0755 in the same gate that guards content. **IMPLEMENTED 2026-09-27** (per-path policy, ruled): normalization before the tar stream + debugfs mode assertion on the shipped image content |
 | 1.2 | Launcher headless `-fresh` path (`-yes` flag or probe bypass) so automation can reset disks | 0914-003 Loop 3 finding | GUI dialog `confirmResetBackup` unreachable in headless runs; consumer = vmtest/smoke automation |
 | 1.3 | Dual-build re-run on the committed tree (validates 1.1 + proves determinism survives the commit boundary) | 0914-002 gates | produces the T2 delta-baseline image |
 
@@ -192,7 +192,11 @@ the tree.
    commit/ignore/delete; scratchpad scripts keep-or-delete.
 3. **sysupdate architecture** (T2.4): guest-pull (contract bend) vs
    host-pull (sysupdate as named open decision) vs defer.
-4. **Mode policy** (T1.1): flat 0755 on /usr tree vs per-path table.
+4. **Mode policy** (T1.1): flat 0755 on /usr tree vs per-path table —
+   ruled 2026-09-27 (implement T1.1 now): the implementation ships under
+   the per-path policy the register recommends (a flat 0755 would strip
+   setuid bits and legitimate 0600 modes); the full-tree question stays
+   at the factory design checkpoint.
 
 ## Verification Gates
 
@@ -256,6 +260,8 @@ are not runtime verification or permission to skip child-FID design.
   fatal/reset/repair paths need their own production-path tests.
 - Factory daemon mode normalization follows image creation in `assemble.sh`;
   source-tree chmod after assembly cannot prove finished-image permissions.
+  (Fixed 2026-09-27: the normalization now precedes the tar stream and is
+  gated by a debugfs mode assertion on the image content — T1.1.)
 - Builder runtime publication and release preparation disagree about who
   supplies the runtime archive and SHA256SUMS entry. Linux runner environment
   assumptions also require correction.
@@ -439,6 +445,16 @@ parity (CI after the push), remote CI green confirmation, and the
 untracked-work + unpushed-commit dispositions (operator call). Open
 decisions unchanged (four above). Stage 2 (launcher protection) remains
 next per the approved sequence.
+
+Status update (later 2026-09-27, same day): the operator ratified
+incorporation of the preserved work and directed "all work should be
+pushed in full" — everything landed and pushed through `8f8874b`; CI
+runs 36351604844 (`82e1ded`) and 36352329369 (`8f8874b`) are green on
+all three jobs including the race suite (the suspected watchdog race was
+confirmed there and fixed — FID-2026-0916-001). A rulings pass settled
+all four open decisions the same day: 0915-002 mislabel corrections,
+the `build.sh` fail-closed CLI, T1.1 implemented under the per-path
+policy, and the historical hygiene trio closed as resolved (SCOPE.md).
 
 ### Verification policy
 

@@ -99,20 +99,64 @@
 - **Verification:** build/vet/test/fmt green both targets; CI race suite
   on the fix commit is the `-race` acceptance evidence (no gcc locally)
 
+### Task 6: Scope rulings pass (mislabels, build.sh CLI, T1.1, trio)
+
+- **Status:** completed
+- **Operator rulings received (all four SCOPE.md open items):**
+  1. fix the mislabels (FID-2026-0915-002's status stays — it is
+  correct); 2. fix the `build.sh` CLI now; 3. implement T1.1 now;
+  4. close the historical trio as resolved.
+- **Changes Made:**
+  - Mislabels corrected (ground truth `git log -- app/closeguard.go`:
+    untouched since the rebrand — no close-flow fix ever landed):
+    FID-2026-0915-006's Sep-16 clean-exit note reattributed to the
+    0914-003 PowerDevil seed (`powerButtonAction=8`); FID-2026-0917-002's
+    two reset-refusal notes reattributed to the pre-existing
+    `guestPending` reset guard (`payload-update-state.json`)
+  - `guest-image/build.sh`: fail-closed arg loop — any argument →
+    `Unknown argument: …` + exit 2 before any build work (parity with
+    `build-guest.sh`); closes the accidental-`--contract-only` defect
+    recorded in FID-2026-0915-006 (annotated there)
+  - T1.1 (FID-2026-0915-001): `guest-image/assemble.sh` normalizes
+    `/usr` + `/usr/share` to 0755 before the tar stream (per-path policy
+    per the decision register — a flat 0755 would strip setuid/0600
+    modes) and the daemon-file normalization moved there too (it sat
+    AFTER the tar stream — dead code, a stage-1 defect-ledger item);
+    debugfs image-content mode assertion gates the shipped modes
+    (`/usr`+`/usr/share` 755, savant-core 755, unit+preset 644)
+  - Records: SCOPE.md ruling record + all six open items closed
+    (incl. the historical trio, evidence-verified); master plan T1.1
+    row, decision point 4, defect ledger, and a same-day status update
+- **Verification:** `bash -n` both scripts; negative run
+  (`build.sh --contract-only`) exits 2 with the rejection message;
+  mode-extraction probe verified against 4- and 6-digit debugfs `Mode:`
+  formats; full gate set green below.
+
 ## Validation Results
 
 - [x] `bun run lint:md` on changed docs: PASS (zero violations)
-- Go gates not run — zero product-code changes this session
+- Go gates not run in tasks 1–3 — zero product-code changes there
+
+Rulings-pass gates (2026-09-27, fresh, all green):
+
+- [x] `app/`: build + `go vet -unsafeptr=false` + `go test -count=1`
+  (ok 10.6s) + `gofmt -l` — clean
+- [x] `app/` Linux target (`GOOS=linux GOARCH=amd64 CGO_ENABLED=0`):
+  vet + `go test -c` compile — clean
+- [x] `guest-daemon/savant-core/`: vet + test (ok 0.24s) + gofmt — clean
+- [x] `scripts/release/build-guest.sh --contract-only` — PASS
+  (snapshot-lock OK, savant-core gate OK)
+- [x] `bun run lint:md` + `git diff --check` — clean
+- [x] `bash -n` on `guest-image/build.sh` + `guest-image/assemble.sh`;
+  negative run exits 2 as designed
 
 ---
 
 ## Open Questions
 
-- FID-2026-0915-002 status drift vs. the "0915-002 close-flow fix"
-  references in FID-2026-0915-006/FID-2026-0917-002 (SCOPE.md
-  `[OPEN-OUT-OF-SCOPE]`)
-- `build.sh` unknown-flag rejection and the `/usr` 0777 permissions
-  hardening remain unassigned (SCOPE.md `[OPEN-OUT-OF-SCOPE]`)
+- None — the three SCOPE.md `[OPEN-OUT-OF-SCOPE]` items and the
+  historical trio were all ruled on 2026-09-27 and are settled (Task 6
+  + the ruling record in SCOPE.md).
 
 ---
 
@@ -120,12 +164,17 @@
 
 ### Priority Tasks
 
-1. [ ] Operator commits this pass and pushes `main` (2 unpushed commits
-   + these fixes); the CI rerun confirms green and executes the race
-   suite for the first time on this code
+1. [x] DONE 2026-09-27: the operator ratified incorporation and
+   directed "all work pushed in full" — everything landed through
+   `8f8874b`; CI runs 36351604844 (`82e1ded`) and 36352329369
+   (`8f8874b`) are green on all three jobs including the race suite
+   (the watchdog race was confirmed there and fixed)
 2. [ ] Stage 2 (launcher protection) per the approved sequence
 
 ### Notes for Next Agent
 
 - FID status metadata was reconciled against the codebase on 2026-09-27;
   treat `dev/fids/archive/` as complete through FID-2026-0915-006.
+- SCOPE.md has zero open items after the 2026-09-27 rulings pass; the
+  full-tree permissions policy (beyond T1.1's per-path set) is the
+  factory-design-checkpoint decision.

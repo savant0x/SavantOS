@@ -116,9 +116,11 @@ match; published to `out/contract` after the runtime-zip fallback fix
 unmodified launcher (`-fresh -release http://127.0.0.1:8091 -sums-sha256
 1dcede27…`), CPU render, headless:
 
-- Reset flow behaved exactly per FID-2026-0915-002: first attempt FATALed
-  on the 0915-era `guestPending` marker (refusal by design); the pending
-  update was cleared the sanctioned way (`guest.previous` removed, state
+- Reset flow's first attempt FATALed on the 0915-era `guestPending`
+  marker (refusal by the pre-existing reset guard — recorded at the time
+  as "exactly per FID-2026-0915-002", but 0915-002's fixes were never
+  implemented; mislabel corrected 2026-09-27); the pending update was
+  cleared the sanctioned way (`guest.previous` removed, state
   committed — what `commitGuestPayloadUpdate` does on a ready boot), then
   reset-confirm (headless default) provisioned the new payload.
 - Out of the box, zero manual steps: `provision-key` autostart running
@@ -221,8 +223,10 @@ unmodified launcher (`-fresh -release http://127.0.0.1:8091 -sums-sha256
    **Incident recorded during proof:** the first `-fresh` attempt FATALed
    with "finish the pending update before resetting" — the 2026-09-15
    hard-kill had left `payload-update-state.json` guestPending=true and
-   reset correctly refused (FID-2026-0915-002 close-flow behaving as
-   designed). Recovery: cleared the pending marker (the step
+   reset correctly refused (the pre-existing `guestPending` reset guard —
+   mislabelled at the time as "FID-2026-0915-002 close-flow behaving as
+   designed"; that FID's fixes were never implemented). Recovery:
+   cleared the pending marker (the step
    `commitGuestPayloadUpdate` would have done; `guest.previous` retained),
    then boot succeeded. Open work item remains the D2–D4 stall-visibility
    + close-flow pass in FID-2026-0916-001.

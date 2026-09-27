@@ -189,6 +189,8 @@ Source: `extra.db` fetched from
   --contract-only` was silently ignored by build.sh (no such flag) and
   started a full assembly A; killed, workspace cleaned. Forward fix
   owed: build.sh should reject unknown flags (fail-closed CLI).
+  [Fixed 2026-09-27: `guest-image/build.sh` now rejects any argument
+  (`Unknown argument: …`, exit 2) before build work starts.]
 - **Dual-build with the full experience pass:** in flight at filing
   (`build-2026-0915-exp.log`, container installing the ~4.5 GB set incl.
   chromium + featherpad from the pin); GATE GREEN on this tree is the
@@ -220,8 +222,11 @@ Source: `extra.db` fetched from
   intact). Found because the same test then collided with the
   production VM on the shared QMP port plane (4445 in use → FATAL).
   Production VM was shut down cleanly via QMP `system_powerdown`
-  (first-try clean exit — unplanned positive proof of the 0915-002
-  close-flow fix on this image). Forward fixes owed: (a) the launcher
+  (first-try clean exit — unplanned positive proof of the 0914-003
+  PowerDevil seed `powerButtonAction=8` working on this image; recorded
+  at the time as "the 0915-002 close-flow fix", which was never
+  implemented — FID-2026-0915-002 remains "designed, not implemented".
+  Mislabel corrected 2026-09-27.) Forward fixes owed: (a) the launcher
   should refuse a release update of a data dir it did not provision
   without explicit confirmation (fail-closed against foreign dirs);
   (b) `dev-vm.sh`-style overrides must be validated before any
