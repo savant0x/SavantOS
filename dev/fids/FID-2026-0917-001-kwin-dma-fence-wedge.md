@@ -3,7 +3,7 @@
 **Filename:** `FID-2026-0917-001-kwin-dma-fence-wedge.md`
 **ID:** FID-2026-0917-001
 **Severity:** critical (desktop dies; every Qt app unusable)
-**Status:** investigation-of-record (bisect done; fix candidates queued)
+**Status:** analyzed (bisect done; launcher guard shipped; host fence root cause open)
 **Created:** 2026-09-17
 **Parent:** FID-2026-0912-002 (Phase 2 desktop); relates to
 FID-2026-0916-001 (cursor incidents, now reinterpreted)
@@ -158,14 +158,51 @@ Fallback lever if the pointer still dies on click: `-host-cursor` ON
 CPU MODE (its input-death was only ever proven on GPU mode; untested
 here) — arm F was interrupted before testing that combination.
 
+## Launcher guard (shipped 2026-09-27)
+
+The P0 guard is in the launcher (`app/render_probe.go`, `app/main.go`):
+
+- `auto` (and empty) rendering mode boots **CPU unconditionally**. The
+  old probe memory (remember a CPU result, skip GPU for a day) is
+  deleted: the probe recorded guest-boot success, but the wedge strikes
+  at the first SSD window long after boot, so no boot-time signal can
+  prove the GPU path safe. `render-probe.json` survives only for the
+  forced-GPU runtime-rollback path (`keepUpdatedRuntimeOnCPU`).
+- Explicit GPU (`-render gpu`, Settings "GPU") still boots GPU but warns
+  **every launch**: a `rendering warning:` log line always, plus a modal;
+  under `-headless` the modal becomes the logged line
+  `headless: gpu rendering warning -> true` (D3 discipline).
+- Settings help text and the `render` row document the guarded
+  semantics; `TestStartWithGPUGuardsTheAutoDefault` pins the matrix.
+
+Evidence (2026-09-27, dev launcher against the dev3 install):
+
+- auto launch (13:11:31): `rendering: CPU rendering (guarded default):
+  GPU rendering can freeze the desktop when a window with a titlebar
+  opens (FID-2026-0917-001); choose GPU in Settings or pass -render gpu
+  to force it`.
+- `-render gpu -headless` (13:11:49): `rendering: GPU rendering chosen
+  in settings`, `rendering warning: forced GPU rendering can freeze the
+  desktop when a window with a titlebar opens (FID-2026-0917-001);
+  CPU rendering is the safe default`, `headless: gpu rendering warning
+  -> true`.
+- `-render gpu` interactive (13:17:05): the same two log lines, then the
+  launch blocks at the modal until acknowledged — captured with the
+  Win32 dialog probe (`dev/scratchpad/modal-probe.ps1`):
+  `MODAL-FOUND class=#32770 title="SavantOS"` carrying the OK button and
+  the warning text ("You forced GPU rendering. On this build the GPU
+  path can freeze the whole desktop ... Keep GPU rendering only to test
+  the GPU path.").
+
 ## Open items
 
 - ~~Run G, then E1 (then E2 if needed)~~ DONE — see verdict matrix.
-- **Launcher guard (next implementation):** the render probe / boot path
-  must either default to CPU for this runtime+guest combination or warn
-  loudly on GPU boot that Qt/SSD apps will wedge the compositor. GPU is
-  the launcher's proud default — shipping it in this state is shipping a
-  desktop that dies on the first text-editor click.
+- ~~**Launcher guard (next implementation):** the render probe / boot
+  path must either default to CPU for this runtime+guest combination or
+  warn loudly on GPU boot that Qt/SSD apps will wedge the compositor.
+  GPU is the launcher's proud default — shipping it in this state is
+  shipping a desktop that dies on the first text-editor click.~~ DONE
+  2026-09-27 — see "Launcher guard" above.
 - Root-cause the host fence (which fence, which submission): capture the
   fence ctx/seqno from the guest (`/sys/kernel/debug/dma_buf/bufinfo`,
   virtio-gpu debugfs) at wedge time, and instrument host virgl (Sandbox
