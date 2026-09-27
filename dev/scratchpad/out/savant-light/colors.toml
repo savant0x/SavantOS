@@ -1,0 +1,32 @@
+mode = "light"
+
+# Savant traffic-lights identity, light variant (savant-code palette.ts light)
+accent = "#0891b2"
+selection = "#e4e4ea"
+muted = "#6b7280"
+
+background = "#fafafa"
+dark_background = "#f0f0f2"
+darker_background = "#e8e8ec"
+lighter_background = "#ffffff"
+
+foreground = "#111118"
+dark_foreground = "#52525e"
+light_foreground = "#1c1c26"
+bright_foreground = "#000000"
+
+red = "#dc2626"
+yellow = "#d97706"
+orange = "#d97706"
+green = "#059669"
+cyan = "#0891b2"
+blue = "#0369a1"
+magenta = "#7c3aed"
+brown = "#92664a"
+
+bright_red = "#ef4444"
+bright_yellow = "#f59e0b"
+bright_green = "#10b981"
+bright_cyan = "#06b6d4"
+bright_blue = "#0284c7"
+bright_magenta = "#8b5cf6"
