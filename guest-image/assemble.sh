@@ -52,6 +52,23 @@ savant_gid=$(awk -F: '$1=="savant"{print $3}' "$tree/etc/group")
 }
 chown -Rh "$savant_uid:$savant_gid" "$tree/home/savant"
 
+# --- Mode normalization (T1.1 in FID-2026-0915-001; the finding is
+# FID-2026-0914-003 Loop 3: shipped /usr and /usr/share carried mode
+# 0777). mkosi normalizes bind-carried trees to 0777 (proved live), so
+# modes must be reasserted on the image tree BEFORE the tar stream pins
+# them into the filesystem. Per-path policy (decision register):
+# normalize only the known-bad paths — a flat recursive 0755 would strip
+# setuid bits (sudo/pkexec) and legitimate 0600 modes; the full-tree
+# policy stays with the factory design checkpoint. The daemon's unit
+# must not be executable/world-writable (systemd refuses to treat it as
+# trusted), the binary must be executable. (This block previously sat
+# AFTER the tar stream, too late to affect the shipped image; moved and
+# extended 2026-09-27.)
+chmod 0755 "$tree/usr" "$tree/usr/share"
+chmod 0755 "$tree/usr/bin/savant-core"
+chmod 0644 "$tree/usr/lib/systemd/user/savant-core.service" \
+           "$tree/usr/lib/systemd/user-preset/91-savantos-desktop.preset"
+
 find "$tree" -xdev -printf '%p\0' | while IFS= read -r -d '' p; do
     touch -h -d "@$epoch" "$p" 2>/dev/null || true
 done
@@ -279,14 +296,31 @@ if ! head -c 4 "$sc_tmp" | grep -q $'\x7fELF'; then
 fi
 rm -f "$sc_tmp"
 
-# Mode normalization for the daemon's files (narrow slice of the T1
-# finding — the whole tree currently ships 0777): the unit must not be
-# executable/world-writable (systemd warns and refuses to treat it as
-# trusted), the binary must be executable. Normalized HERE, before the
-# tar stream, so the shipped image is right regardless of worktree modes.
-chmod 0755 "$tree/usr/bin/savant-core"
-chmod 0644 "$tree/usr/lib/systemd/user/savant-core.service" \
-           "$tree/usr/lib/systemd/user-preset/91-savantos-desktop.preset"
+# T1.1 mode assertion (FID-2026-0915-001): the normalization above is
+# only real if the SHIPPED image content carries it. debugfs `stat`
+# prints the Mode as 4 or 6 octal digits depending on e2fsprogs
+# (permission bits only, or st_mode including type bits), so extract the
+# octal run and take the last 3 digits — identical under every format.
+mode_probe() {
+    local path=$1 out have
+    out=$(debugfs -R "stat $path" "$img" 2>/dev/null || true)
+    have=$(printf '%s\n' "$out" | sed -n 's/.*Mode: *\([0-7]*\).*/\1/p')
+    printf '%s' "${have: -3}"
+}
+check_mode() {
+    local path=$1 want=$2 got
+    got=$(mode_probe "$path")
+    if [[ $got != "$want" ]]; then
+        echo "assemble: mode assertion FAILED — $path is mode ${got:-unreadable}, want $want" >&2
+        exit 1
+    fi
+}
+check_mode /usr 755
+check_mode /usr/share 755
+check_mode /usr/bin/savant-core 755
+check_mode /usr/lib/systemd/user/savant-core.service 644
+check_mode /usr/lib/systemd/user-preset/91-savantos-desktop.preset 644
+echo "assemble: mode assertion passed (/usr /usr/share 755; savant-core 755; unit+preset 644)"
 
 # The power-button seed is load-bearing for the launcher's close contract
 # (FID-2026-0914-003): the loop above proves the file ships, this proves
