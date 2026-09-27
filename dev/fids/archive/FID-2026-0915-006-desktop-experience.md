@@ -231,3 +231,21 @@ Source: `extra.db` fetched from
   line for 3+ min); the `dev-vm.sh` console path booted the same
   payload immediately. Same evidence family as FID-2026-0915-002
   (silent exits, no stderr trail).
+
+## Resolution
+
+- **Closed Date:** 2026-09-16
+- **Fix Description:** Experience pass D1–D5 landed `92ae5a1` (wallpaper
+  v3 via the deterministic generator, compact clock date `ddd d MMM`,
+  Chromium + FeatherPad from the pinned snapshot with favorites/taskbar
+  pins) plus `7c28421` (savant-core RuntimeDirectory crash-loop fix).
+  D3 resolved to the recorded gated fallback: Papirus-Dark stays because
+  Colloid is absent from the pinned snapshot.
+- **Tests Added:** assemble-time regression probe for the savant-core
+  unit's `RuntimeDirectory`; snapshot-verification transcript for every
+  new package before listing.
+- **Verification Evidence:** GATE GREEN dual-build on the experience tree
+  (SHA256SUMS digest `abf7c5c1…`) and the 2026-09-16 boot-verify of the
+  experience image (in-guest checks of every D-item + rendered-desktop
+  proof) in "Execution evidence" above.
+- **Archived:** 2026-09-27, `dev/fids/archive/`

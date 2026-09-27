@@ -3,10 +3,10 @@
 **Filename:** `FID-2026-0917-002-embedded-agent-savant-code.md`
 **ID:** FID-2026-0917-002
 **Severity:** high (Phase 3 direction setter)
-**Status:** provisioning implemented + live-proven (bridge → sentinel →
-0600 credentials.json → ack); agent definitions payload item open; full
-headless session blocked on dev-VM memory (documented in open item 3);
-next image build carries the whole chain
+**Status:** fixed — provisioning implemented + live-proven (bridge →
+sentinel → 0600 credentials.json → ack); agent definitions payload item
+open; full headless session blocked on dev-VM memory (documented in open
+item 3); next image build carries the whole chain
 **Created:** 2026-09-17
 **Parent:** FID-2026-0912-001 (pivot), FID-2026-0915-005 (savant-core — now
 a downstream consumer of this design, not a prerequisite)

@@ -3,9 +3,11 @@
 **Filename:** `FID-2026-0912-002-phase2-plasma-desktop.md`
 **ID:** FID-2026-0912-002
 **Severity:** high
-**Status:** converged — landed `bd2e62f` (desktop factory; carries the
-mkosi noto-fonts indent fix and the FID-2026-0914-003 seed), `.gitattributes`
-LF pin in `bd2e62f`
+**Status:** closed (2026-09-15) — landed `bd2e62f` (desktop factory;
+carries the mkosi noto-fonts indent fix and the FID-2026-0914-003 seed),
+`.gitattributes` LF pin in `bd2e62f`; closure evidence delivered via
+FID-2026-0913-001 (boot proof 2026-09-14 + rendered proof 2026-09-15);
+archived 2026-09-27
 **Created:** 2026-09-12
 **YAGNI-Compliance:** Pending
 **Parent:** FID-2026-0912-001 (first-party OS pivot — Phase 1 landed `717bb15`)
@@ -267,17 +269,34 @@ autologin + factory presets, the desktop factory in `finalize.sh`, and the
 assemble.sh content assertion. Remaining closure evidence is absorbed by
 FID-2026-0913-001's verification gates — **boot proof DELIVERED 2026-09-14**
 (first-party image, unmodified launcher, system `running`, sddm `active`,
-readiness ~12 s; see 0913-001's evidence section); the rendered titlebar-dot
-proof is still owed there (portal/spectacle defect characterized).
+readiness ~12 s; see 0913-001's evidence section) and the **rendered
+titlebar-dot proof DELIVERED 2026-09-15** (spectacle capture of the three
+traffic-light dots; see 0913-001's Resolution). Both absorbed proofs are
+delivered — this FID closes.
 
 ## Lessons Learned
 
-(written at closure)
+Verify decoration/theme premises against the exact shipped KWin version
+before designing around them — the Breeze `ButtonsColor` premise was
+refuted on KWin 6.7 and the identity had to be re-scoped to a custom QML
+decoration (FID-2026-0913-001). Config-level claims need read-back
+evidence (`kreadconfig`), and gate probes must be re-audited for vacuous
+passes (the existence-probe bug found in FID-2026-0914-003 Loop 2).
 
 ## Resolution
 
-- **Closed Date:** —
-- **Fix Description:** —
-- **Tests Added:** —
-- **Verification Evidence:** —
-- **Archived:** —
+- **Closed Date:** 2026-09-15 (absorbed proofs delivered via
+  FID-2026-0913-001)
+- **Fix Description:** Phase 2 desktop factory landed `bd2e62f`: the
+  Plasma/SDDM package set in `mkosi.conf`, SDDM Wayland autologin +
+  factory presets + display-manager alias, themed Konsole profile, and
+  the assemble.sh content assertion. The traffic-lights decoration was
+  re-scoped to FID-2026-0913-001 after the Breeze ButtonsColor premise
+  was refuted on KWin 6.7.
+- **Tests Added:** assemble.sh desktop presence probes (kwin_wayland,
+  sddm, plasmashell) — a silently-empty desktop cannot pass the gate.
+- **Verification Evidence:** Loop 4 grep-count audit (konsole profile=1,
+  colorscheme Background=2, DisplayServer=1, Relogin=2, preset=1,
+  alias=1); boot proof 2026-09-14 and rendered titlebar-dot proof
+  2026-09-15, both filed in FID-2026-0913-001's evidence sections.
+- **Archived:** 2026-09-27, `dev/fids/archive/`

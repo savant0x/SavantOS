@@ -3,7 +3,9 @@
 **Filename:** `FID-2026-0915-005-phase3-savant-core-design.md`
 **ID:** FID-2026-0915-005
 **Severity:** high (Phase 3 implementation of record)
-**Status:** converged (design of record; implementation queued)
+**Status:** converged (design of record; m1+m2 landed `b4ded8e` +
+`b82d5b8`, m3+ queued — under operator-declared rebuild per
+FID-2026-0917-002)
 **Created:** 2026-09-15
 **Parent:** FID-2026-0914-001 (Phase 3 — agent control plane), Loop 2
 **Master plan:** FID-2026-0915-001 T4.2 (with T4.3/T4.4 sequencing)

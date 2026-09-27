@@ -352,7 +352,8 @@ contract in this FID was corrected from the launcher's source, not from memory.
 
 ## Resolution
 
-- **Closed Date:** 2026-09-12 (Phase 1)
+- **Closed Date:** — (umbrella FID — closes with its successor phases;
+  the Phase 1 milestone completed 2026-09-12, landed `717bb15`)
 - **Fix Description:** First-party builder landed; Phase 1 scope complete.
 - **Tests Added:** guest-image dual-build determinism gate (build.sh); boot
   proof via boot-proof.sh flow (fresh data dir + local release base).
@@ -360,9 +361,13 @@ contract in this FID was corrected from the launcher's source, not from memory.
   launcher log + guest SSH probe).
 - **Archived:** — (successor FIDs: Phase 2 → FID-2026-0912-002, Phase 3 → FID-2026-0914-001, Phase 4 → FID-2026-0914-002)
 
-## Implementation Evidence (REQUIRED for `closed`)
+## Implementation Evidence (closure evidence map)
 
-> To be filled at closure: commit SHAs, file:line of the builder surfaces,
-> pasted gate output (including the dual-build digest match and the dev-VM
-> boot proof), and step statuses — every step `implemented`, `blocked`, or
-> `deferred` (operator-approved only). No silent deferrals.
+Phase 1's implementation evidence is recorded in "Phase 1 Implementation
+Evidence" above (landed `717bb15`; dual-build digest match, launcher
+boot log, guest SSH probe). This umbrella FID closes when its successor
+phases close; their closure evidence is filed in those FIDs:
+
+- Phase 2 (desktop) → FID-2026-0912-002 — closed 2026-09-15, archived.
+- Phase 3 (agent control plane) → FID-2026-0914-001 — open.
+- Phase 4 (factory & trust) → FID-2026-0914-002 — open.

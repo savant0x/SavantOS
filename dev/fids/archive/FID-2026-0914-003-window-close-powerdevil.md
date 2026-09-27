@@ -3,9 +3,10 @@
 **Filename:** `FID-2026-0914-003-window-close-powerdevil.md`
 **ID:** FID-2026-0914-003
 **Severity:** high
-**Status:** proven — landed `bd2e62f` (seed in finalize.sh, identity-apply.sh
-and skel) and `40f36ff` (assemble.sh value probe); close-flow proof passed
-2026-09-15 on the first image built from this tree
+**Status:** closed (2026-09-15) — landed `bd2e62f` (seed in finalize.sh,
+identity-apply.sh and skel) and `40f36ff` (assemble.sh value probe);
+close-flow proof passed 2026-09-15 on the first image built from this
+tree (Loop 3); archived 2026-09-27
 **Created:** 2026-09-14
 **Parent:** FID-2026-0912-002 (Phase 2 desktop) — its "restart/shutdown
 path" premise item; defect discovered live 2026-09-14
@@ -192,39 +193,6 @@ the artifact the live close-flow proof needs.
 - **STATUS:** analyzed; fix awaits operator pick (A/B), then one-line
   implementation + gates.
 
-## Resolution
-
-- **Closed Date:** — (closes only after the live close-flow proof below)
-- **Fix Description:** Operator chose Option B. Landed 2026-09-14 in the
-  working tree:
-  1. `guest-image/finalize.sh` — `kwriteconfig6 --file
-     /etc/skel/.config/powermanagementprofilesrc --group AC --group
-     HandleButtonEvents --key powerButtonAction 8` (factory seed for new
-     accounts; the payload's later `cp -a /etc/skel/.config /home/savant/`
-     carries it to the factory account at build time).
-  2. `guest-image/skeletons/usr/lib/savantos/identity-apply.sh` — the same
-     key re-asserted on every login (covers accounts predating the skel
-     plant; KConfigWatcher applies it live).
-  3. `guest-image/assemble.sh` — content assertion extended: ships
-     `/etc/skel/.config/powermanagementprofilesrc` (existence) plus a
-     value probe (`powerButtonAction=8` read back through debugfs) so a
-     silently-wrong seed — the exact regression this FID records — is
-     unshippable, not just a missing file.
-- **Tests Added:** assemble.sh existence + value probes (above).
-- **Verification Evidence:** `bash -n` green on all three scripts; LF
-  line endings confirmed (the CRLF lesson); `build-guest.sh
-  --contract-only` exit 0; root cause + fix mechanism proven live in the
-  same boot (inhibitor present: 3 ignored powerdowns; inhibitor released:
-  identical powerdown shut the guest down in seconds).
-- **Owed (gates the FID's own Verification section names):** full dual-
-  build determinism run and the live close-flow proof on the FIRST image
-  built from this tree — fresh boot → QMP `system_powerdown` (the exact
-  event that failed) → guest powers off, QEMU exits, and
-  `systemd-inhibit --list` shows no `handle-power-key` blocker. Note the
-  working tree is uncommitted; the proof must boot a build of this tree,
-  not the Sep 13 disk.
-- **Archived:** —
-
 ### Loop 3 (2026-09-15, close-flow proof on the first built image) — PROVEN
 
 - **Image:** full dual-build run of this tree (gate green, all six digests
@@ -256,3 +224,34 @@ the artifact the live close-flow proof needs.
   (the reset never started; no staging dir). Worked around by hand
   (retention rename + relaunch without `-fresh`); a `-yes`/headless flag
   or a probe-bypass is the launcher-side follow-up.
+
+## Resolution
+
+- **Closed Date:** 2026-09-15 (Loop 3 close-flow proof)
+- **Fix Description:** Operator chose Option B. Landed 2026-09-14 in the
+  working tree:
+  1. `guest-image/finalize.sh` — `kwriteconfig6 --file
+     /etc/skel/.config/powermanagementprofilesrc --group AC --group
+     HandleButtonEvents --key powerButtonAction 8` (factory seed for new
+     accounts; the payload's later `cp -a /etc/skel/.config /home/savant/`
+     carries it to the factory account at build time).
+  2. `guest-image/skeletons/usr/lib/savantos/identity-apply.sh` — the same
+     key re-asserted on every login (covers accounts predating the skel
+     plant; KConfigWatcher applies it live).
+  3. `guest-image/assemble.sh` — content assertion extended: ships
+     `/etc/skel/.config/powermanagementprofilesrc` (existence) plus a
+     value probe (`powerButtonAction=8` read back through debugfs) so a
+     silently-wrong seed — the exact regression this FID records — is
+     unshippable, not just a missing file.
+- **Tests Added:** assemble.sh existence + value probes (above).
+- **Verification Evidence:** `bash -n` green on all three scripts; LF
+  line endings confirmed (the CRLF lesson); `build-guest.sh
+  --contract-only` exit 0; root cause + fix mechanism proven live in the
+  same boot (inhibitor present: 3 ignored powerdowns; inhibitor released:
+  identical powerdown shut the guest down in seconds).
+- **Owed (gates the FID's own Verification section names) → DELIVERED
+  (Loop 3 above):** the full dual-build determinism run and the live
+  close-flow proof on the FIRST image built from this tree both ran
+  2026-09-15 — fresh boot → QMP `system_powerdown` (the exact event that
+  failed) → guest powered off, QEMU exited in ~5 s.
+- **Archived:** 2026-09-27, `dev/fids/archive/`

@@ -3,6 +3,22 @@
 ## Unreleased
 
 ### Added
+- **Guest→host image clipboard (FID-2026-0922-001):** images copied in
+  the guest now cross to the Windows clipboard — a `wl-paste --watch`
+  push watcher beside the text watcher (PNG-only, 16 MiB cap, image
+  flavor wins over text when both are offered), completing symmetric
+  image support on the shared loop-prevention state.
+- **Savant Code ships as native guest software (FID-2026-0917-002):**
+  the Savant Code CLI is vendor-locked at v0.0.31
+  (`guest-image/savant-code.lock.json`, digest-verified at build) with a
+  `/usr/bin/savant` wrapper, desktop entry, and factory pins. API keys
+  provision over the clipboard bridge into a 0600
+  `~/.savant-code/credentials.json` (`-provision-key PROVIDER:KEY`),
+  proven end to end on a fresh factory boot (~3 s sentinel→ack). Build
+  pipeline hardening landed with it: disk-artifact rotation (exactly one
+  retained payload, fail-closed on low space), an engine-death watchdog,
+  and a runtime-archive fallback so a green verdict can never end in a
+  missing payload.
 - **Kate + Cursor preinstall verified on-image (FID-2026-0916-002):**
   fresh provision of the build-2026-0916 payload boots with Cursor at the
   vendor-locked digest (launch proof: full Electron tree + screenshot) and
@@ -19,10 +35,64 @@
   the held phase after 90 s of silence (hidden-dialog hint at 5 min,
   never auto-kills); `-headless` runs dialogs as logged non-interactive
   defaults so automation can no longer dangle invisibly.
+- **Desktop experience pass (FID-2026-0915-006):** wallpaper v3 from
+  the deterministic generator, a compact clock date (`ddd d MMM`), and
+  Chromium + FeatherPad preinstalled from the pinned snapshot with
+  favorites/taskbar pins. The icon upgrade was gated off honestly —
+  Colloid is absent from the pin — and Papirus-Dark stays by recorded
+  fallback.
+- **Savant Core daemon, milestones 1+2 (FID-2026-0915-005):**
+  `guest-daemon/savant-core` lands as a confined, watchdogged systemd
+  user daemon (fail-closed by construction) serving the
+  KILL/PAUSE/RESUME/STATUS/QUIT law verbs over a 0600 control socket,
+  with factory wiring asserting unit, binary, and preset in the image.
+  Under operator-declared rebuild; FID-2026-0917-002 takes no
+  dependency on it.
 - **Metered-link download pause (FID-2026-0914-002 step 3a):** full
   payload downloads pause while Windows reports a metered connection,
   resume when it clears; allow via the settings checkbox or
   `-allow-metered`. Metadata and cached files are never paused.
+- **Desktop identity — QML traffic-lights decoration
+  (FID-2026-0913-001):** the Savant identity ships as a custom QML
+  KDecoration (`savant-traffic-lights`, dots top-right) with the Savant
+  color scheme and a single Windows-class panel; hover marks are
+  centered QML primitives (measured within 0.5 px of dot center).
+- **Plasma 6 desktop factory (FID-2026-0912-002):** KDE Plasma 6
+  (Wayland) ships as the factory desktop — SDDM autologin to the Wayland
+  session, factory presets and display-manager alias, themed Konsole
+  profile, and assemble-time content assertions so a silently-empty
+  desktop cannot pass the gate.
+- **First-party guest builder (FID-2026-0912-001):** the guest image is
+  built in-tree by `guest-image/` — mkosi rootless directory build on
+  the pinned Arch snapshot, deterministic `mke2fs` assembly (sorted tar
+  stream, fixed epoch/UUID), and a dual-build digest gate that makes a
+  nondeterministic image unshippable. The six-file payload contract,
+  grow-at-boot, and the `savantos-ready` lifecycle unit are emitted for
+  the unmodified launcher.
+- Savant desktop identity: the Savant and Savant Light themes (traffic-lights
+  palette, glowing-dots wallpapers) as factory default, plus a Windows-style
+  bottom taskbar (waybar: launcher mark, window list, clock, tray) launched
+  with the session, with existing-user migration via the compat-revision
+  catch-up flow (FID-2026-0911-005, patches 0046–0048).
+- Developer live-loop environment (`scripts/dev/dev-vm.sh`): sparse-seeded
+  disposable data dir, shared folder, and SSH wiring for iterating on the
+  guest and launcher without rebuilding the factory image
+  (FID-2026-0911-002).
+- Guest patch-authoring helper (`scripts/dev/guest-patch.sh`): captures
+  live guest files into the next numbered `guest-build/` mailbox patch
+  (factory-overlay mapping, provenance header, exec-bit/CRLF hardening,
+  `git am` round-trip proof) (FID-2026-0911-004).
+
+### Changed
+- **CPU rendering is now the guarded default (FID-2026-0917-001):** the
+  GPU path can wedge the compositor when a window with a titlebar opens
+  (Kate or any Qt app), freezing the desktop until a session restart.
+  "Automatic" rendering boots CPU unconditionally — the render probe's
+  day-long GPU memory is removed because it only recorded boot success,
+  while the wedge strikes later. Choosing GPU in Settings or passing
+  `-render gpu` still boots GPU but warns on every launch (log plus
+  modal). The probe record remains for the forced-GPU runtime-rollback
+  path.
 
 ### Removed
 - **Omarchy kill list executed (FID-2026-0914-002, operator sign-off
@@ -40,6 +110,31 @@
   retarget sequences after the next committed-tree boot proof, not with
   the deletions.
 
+### Fixed
+- **Clipboard image frames and bridge observability
+  (FID-2026-0922-001):** host→guest PNG frames were silently dropped by
+  the guest pull loop (`base64 -d` over the `png:`-prefixed line);
+  `--receive-image` now decodes them (signature check, 16 MiB cap) and
+  the launcher logs every item that crosses, so a "copy doesn't work"
+  report has a trace to read. Proven on a fresh factory boot of the
+  2026-09-22 payload.
+- **Guest pointer stays visible (FID-2026-0917-001,
+  FID-2026-0916-001):** the guest cursor plane never reaches the SDL-GL
+  window on click, so the pointer vanished over a live desktop;
+  `KWIN_FORCE_SW_CURSOR=1` ships as a kwin drop-in (software cursor
+  drawn in-frame, host input intact), and `-host-cursor` now warns that
+  it kills host→guest pointer input.
+- **savant-core startup crash-loop (FID-2026-0915-006):** the unit's
+  `ReadWritePaths=%t/savant-core` required a pre-existing directory —
+  `RuntimeDirectory=savant-core` fixes the 226/NAMESPACE crash-loop,
+  with an assemble-time regression probe.
+- **Window close powers the guest off (FID-2026-0914-003):** PowerDevil's
+  `handle-power-key` inhibitor swallowed the ACPI power key behind the
+  host close gesture; the factory seeds `powerButtonAction=8` (Shutdown),
+  re-asserts it on login, and an assemble value probe makes a wrong seed
+  unshippable. Proven on the first built image: one QMP `system_powerdown`
+  exits QEMU in seconds.
+
 ### Governance
 - ECHO Protocol 0.2.1: new Working Style clause — **no silent deferrals**;
   any element of an approved plan that will not be implemented requires
@@ -49,21 +144,6 @@
   directive; direct pushes to `main` are the normal flow, CI runs the full
   check suite on every push, and the force-push/deletion ban remains.
   Release playbook, SignPath submission, and policy stub updated to match.
-
-### Features
-- Savant desktop identity: the Savant and Savant Light themes (traffic-lights
-  palette, glowing-dots wallpapers) as factory default, plus a Windows-style
-  bottom taskbar (waybar: launcher mark, window list, clock, tray) launched
-  with the session, with existing-user migration via the compat-revision
-  catch-up flow (FID-2026-0911-005, patches 0046–0048).
-- Developer live-loop environment (`scripts/dev/dev-vm.sh`): sparse-seeded
-  disposable data dir, shared folder, and SSH wiring for iterating on the
-  guest and launcher without rebuilding the factory image
-  (FID-2026-0911-002).
-- Guest patch-authoring helper (`scripts/dev/guest-patch.sh`): captures
-  live guest files into the next numbered `guest-build/` mailbox patch
-  (factory-overlay mapping, provenance header, exec-bit/CRLF hardening,
-  `git am` round-trip proof) (FID-2026-0911-004).
 
 ### Documentation
 - First-party OS pivot filed (FID-2026-0912-001): the guest is rebuilt as a
@@ -87,6 +167,10 @@
 - SignPath submission: MFA recorded as verified via the GitHub API
   (FID-2026-0911-001).
 - FID-2026-0911-001 closed and archived.
+- FID record reconciliation (2026-09-27): FID-2026-0912-002 (high),
+  FID-2026-0914-003 (high), and FID-2026-0915-006 (medium) closed and
+  archived with completed resolution records; active FID status
+  metadata normalized to the allowed value set.
 
 ## v0.0.1 - 2026-09-11
 
