@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+- **Headless disk-reset for automation (T1.2, FID-2026-0916-001):**
+  `dev-vm.sh boot -fresh -headless` resets a real target's writable disk with
+  no dialogs — the `-fresh` confirmation takes its non-interactive default
+  headless (proceed without the optional full backup, decision logged, cancel
+  honored) and the old disk is retained in `vm/before-reset-*/` for recovery.
+  The headless branch is unit-locked (a regression back to the dialog fails
+  fast in `go test` instead of hanging), and the consumer is documented in
+  `scripts/dev/README.md`. Live proof on a real target is operator-gated.
 - **Dev tooling test suites in CI:** `scripts/dev/test-dev-vm-init.sh`,
   `test-accept-preflight.sh`, and `test-boot-qmp-refusal.sh` (92
   assertions, Windows-only by construction and none of which launch a VM)

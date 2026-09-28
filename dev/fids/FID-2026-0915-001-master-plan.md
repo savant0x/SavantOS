@@ -47,7 +47,7 @@ proof runs on the committed tree.
 | # | Item | Source | Notes |
 |---|------|--------|-------|
 | 1.1 | `/usr` + `/usr/share` mode-0777 normalization in the builder + assemble.sh mode assertion | 0914-003 Loop 3 finding | one-line root cause class: tar/mke2fs inherited permissive modes; assert 0755 in the same gate that guards content. **IMPLEMENTED 2026-09-27** (per-path policy, ruled): normalization before the tar stream + debugfs mode assertion on the shipped image content |
-| 1.2 | Launcher headless `-fresh` path (`-yes` flag or probe bypass) so automation can reset disks | 0914-003 Loop 3 finding | GUI dialog `confirmResetBackup` unreachable in headless runs; consumer = vmtest/smoke automation |
+| 1.2 | Launcher headless `-fresh` path (`-yes` flag or probe bypass) so automation can reset disks | 0914-003 Loop 3 finding | GUI dialog `confirmResetBackup` unreachable in headless runs; consumer = vmtest/smoke automation. **IMPLEMENTED 2026-09-28**: no `-yes` flag added — `-headless` is the explicit confirmation; `confirmResetBackup` proceeds without the full-backup dialog, logs the decision, honors a pending cancel (unit-locked in `recovery_windows_test.go`); consumer documented as `dev-vm.sh boot -fresh -headless`; live proof on the real target is operator-gated |
 | 1.3 | Dual-build re-run on the committed tree (validates 1.1 + proves determinism survives the commit boundary) | 0914-002 gates | produces the T2 delta-baseline image |
 
 **Exit:** shipped images cannot be world-writable; automation can reset a

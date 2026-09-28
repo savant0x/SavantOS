@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,60 @@ import (
 	"syscall"
 	"testing"
 )
+
+// T1.2 regression lock (FID-2026-0916-001 D3 / FID-2026-0914-003 finding):
+// -fresh on a directory with an existing disk reaches confirmResetBackup, and
+// its headless branch must decide WITHOUT a dialog — a real MessageBoxW in the
+// test process would hang until the run timeout, which is the failure mode
+// these tests exist to catch. If the branch ever regresses to calling msgBox,
+// TestHeadlessResetConfirmProceeds fails fast with an empty-earlyLog
+// diagnostic instead of blocking.
+func setHeadlessForTest(t *testing.T, on bool) {
+	t.Helper()
+	prev := headlessMode.Load()
+	headlessMode.Store(on)
+	t.Cleanup(func() { headlessMode.Store(prev) })
+}
+
+func TestHeadlessResetConfirmProceeds(t *testing.T) {
+	setHeadlessForTest(t, true)
+	configureSetupCancellation(false)
+	t.Cleanup(func() { setupCancelPending.Store(false) })
+
+	earlyLog = nil
+	proceed, err := confirmResetBackup(t.TempDir())
+	if err != nil {
+		t.Fatalf("headless confirm returned error: %v", err)
+	}
+	if !proceed {
+		t.Fatal("headless confirm did not proceed without the backup dialog")
+	}
+	found := false
+	for _, line := range earlyLog {
+		if strings.Contains(line, "headless: reset confirm -> proceed without full backup") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("decision line missing from earlyLog: %v", earlyLog)
+	}
+}
+
+func TestHeadlessResetConfirmHonorsCancellation(t *testing.T) {
+	setHeadlessForTest(t, true)
+	configureSetupCancellation(false)
+	t.Cleanup(func() { setupCancelPending.Store(false) })
+
+	requestSetupCancel()
+	earlyLog = nil
+	proceed, err := confirmResetBackup(t.TempDir())
+	if !errors.Is(err, errSetupCancelled) {
+		t.Fatalf("cancelled confirm: err = %v, want errSetupCancelled", err)
+	}
+	if proceed {
+		t.Fatal("cancelled headless confirm must not report proceed")
+	}
+}
 
 func TestRestoredShortcutsTargetOnlyRestoredFolder(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "Restored guest with spaces")

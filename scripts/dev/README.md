@@ -45,6 +45,33 @@ answering on the SSH port, since reseeding under a live VM corrupts the disk
 it is using. This is also the cheapest way to get a known-clean target for
 repeat runs, which is what the Stage 2 close/relaunch acceptance cycles need.
 
+## Resetting a dev disk in place (no dialogs)
+
+`--reseed` replaces the whole data dir from a seed. When you instead want to
+keep the data dir (receipts, runtime, settings, share) and reset only the
+guest disk, the launcher has a native path — T1.2 (FID-2026-0916-001), the
+headless reset:
+
+```bash
+scripts/dev/dev-vm.sh boot -fresh -headless
+```
+
+`-fresh` rebuilds the writable disk from the factory payload; the old disk is
+**retained** (renamed into `vm/before-reset-*/disk.raw`) for recovery, and
+delete it yourself once the new guest has proven out. `-headless` is what
+makes it automatable: the reset confirmation (`confirmResetBackup`) takes its
+non-interactive default — proceed without the optional full backup, decision
+logged to `vm/shell.log` — instead of opening the backup-dialog chain. A
+pending setup cancel is still honored. The first boot after a reset
+re-provisions the guest (first-run setup), so expect the usual boot time plus
+provisioning.
+
+Automation notes (the process rules below apply in full): run the launcher
+with its stdio redirected, kill by Windows PID only, and remember the dev
+`boot` foreground console disappears under `-headless` — tail
+`$SAVANTOS_DEV_DIR/vm/shell.log` instead. This path is how vmtest/smoke
+automation resets a real target between runs without any GUI present.
+
 ## The live loops
 
 **Guest loop (no image rebuild, ever):** the shared folder is the bridge —

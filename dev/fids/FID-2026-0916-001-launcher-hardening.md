@@ -6,7 +6,9 @@
 0915-002 silent-exit evidence family gets its forward fix)
 **Status:** fixed (D1–D4 implemented; G3, G4, and the stage-2 exit evidence
 complete as of 2026-09-28 — G6 remains a conditional obligation; sample-staging
-campaigns ruled out by the operator the same day)
+campaigns ruled out by the operator the same day. T1.2 — the headless `-fresh`
+reset consumer — implemented and unit-locked the same day; live proof on the
+real target is operator-gated)
 **Created:** 2026-09-16
 **Parent:** FID-2026-0915-002 (launcher defect family); master plan
 FID-2026-0915-001 as additive work under T3/T4 hardening.
@@ -461,6 +463,35 @@ runtime tests are not represented as remote CI/race parity.
   except the conditional G6 (its disposition recorded above). The remaining
   plan work belongs to stages 3–8 (factory/release, desktop proof, probes,
   deltas, agent, integrated release) and is where real-work effort goes next.
+
+### T1.2 — headless `-fresh` reset path for automation (2026-09-28)
+
+The 0914-003 Loop-3 finding (`-fresh` with an existing disk blocking on the
+unreachable `confirmResetBackup` dialog) was overtaken by the D3 pass
+(`3308102`, 2026-09-16): the confirm already takes its non-interactive
+default headless — proceed without the optional full backup, decision logged
+via the phase tracker, a pending setup cancel still honored — and everything
+downstream (`prepareDisk` → `resetStandardDisk`: staged factory copy,
+old disk renamed into `vm/before-reset-*/` for retention, atomic publish
+with rollback) is dialog-free. What was missing was proof and a consumer,
+per the stage-2 acceptance wording "genuine headless branch tests":
+
+- **Unit lock** (`app/recovery_windows_test.go`):
+  `TestHeadlessResetConfirmProceeds` (headless ⇒ no dialog, proceed=true,
+  decision line in the log sink) and `TestHeadlessResetConfirmHonorsCancellation`
+  (cancel ⇒ `errSetupCancelled`, proceed=false). A regression to the dialog
+  path fails fast in `go test` instead of hanging the test process on a real
+  `MessageBoxW` — the timeout-hang IS the detection. Windows-constrained file;
+  runs in CI's `windows-launcher` job and vets under `GOOS=windows` in the
+  ubuntu job.
+- **Consumer documented** (`scripts/dev/README.md`):
+  `scripts/dev/dev-vm.sh boot -fresh -headless` — `boot`'s passthrough
+  already forwards both flags; `-headless` supplies the confirmation, so no
+  new `-yes` flag (YAGNI: two flags through one mechanism beats a third flag).
+- **Live proof pending, operator-gated:** the acceptance row's "genuine
+  headless branch" live run (reset + retained disk visible) needs one
+  approved boot of the real target — record it here when the operator calls
+  it. Following the 2026-09-28 direction, no VM was launched for this item.
 
 ### Watchdog data race — confirmed on CI and fixed (2026-09-27)
 
