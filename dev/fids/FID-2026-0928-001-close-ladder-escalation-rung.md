@@ -165,8 +165,12 @@ implementation (2026-09-28).
 - FID-2026-0915-002: annotated to record that rung 2 was polkit-denied
   until this rule.
 - Not yet satisfied, and why: the live escalation proof and the
-  acceptance re-run below need an image rebuild and a re-provisioned
-  disposable target — the shipped rule only reaches future images.
+  acceptance re-run below need a re-provisioned disposable target. The
+  image half is now DONE — the T1.3 dual-build (2026-09-28, determinism
+  gate green, `rootfs.ext4 a2dbea53…895d5`) produced a baseline payload
+  in `guest-image/out/contract` that embeds this rule; the accept target
+  still runs the old payload until it is re-provisioned from that
+  baseline under an approved boot.
 
 ## Verification
 

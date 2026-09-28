@@ -134,7 +134,14 @@ operator-signed-off change with a CHANGELOG record.
 > Declared now; run when implementation begins.
 
 - gate: contract (Docker: mkosi build ×2 → digests equal; six-file contract
-  emitter verified against SHA256SUMS)
+  emitter verified against SHA256SUMS) — **runbook:
+  `guest-image/RUNBOOK.md`** (distilled 2026-09-28 from the T1.3 runs:
+  prerequisites, procedure, green-run shape, all observed failure modes
+  including the publish-tail busy-handle and its manual fallback, post-run
+  checklist, and the scope boundary against the remaining stage-3 rows).
+  Latest gate execution: 2026-09-28, GATE GREEN twice (run 2 reproduced
+  run 1's digests byte-identically; `rootfs.ext4 a2dbea53…895d5`),
+  baseline published (sums `5525ba54…755e`) — see master plan T1.3.
 - gate: release (prepare → pin → publish → smoke test on a fresh data dir)
 - gate: build/vet/test/fmt per protocol.config.yaml
 - gate: docs (markdownlint on changed *.md)

@@ -3,6 +3,18 @@
 ## Unreleased
 
 ### Added
+- **T1.3 dual-build determinism re-run green, baseline published (FID-2026-0915-001):**
+  two independent assemblies on the current tree hash identically across all
+  six contract files, and run 2 reproduced run 1's digests byte-for-byte
+  (`rootfs.ext4 a2dbea53…`) — determinism survives the commit boundary and
+  carries the polkit rule. The stage-3 delta baseline is published in
+  `guest-image/out/contract` with `release-base.json` (sums `5525ba54…`).
+  The run exposed the recurring publish-tail trap (a transient handle on
+  `out/contract` fails `rm -rf` and previously the EXIT trap destroyed the
+  proven copies — second occurrence after 2026-09-19): `build.sh` now
+  releases the trap once the gate has spoken, retries the removal with
+  backoff, and on residual failure preserves `build-a/contract` with
+  hand-publish instructions — exercised live by run 2.
 - **Headless disk-reset for automation (T1.2, FID-2026-0916-001):**
   `dev-vm.sh boot -fresh -headless` resets a real target's writable disk with
   no dialogs — the `-fresh` confirmation takes its non-interactive default
@@ -216,6 +228,15 @@
   Release playbook, SignPath submission, and policy stub updated to match.
 
 ### Documentation
+- **Dual-build runbook added (`guest-image/RUNBOOK.md`, FID-2026-0914-002):**
+  the T1.3 contract gate's full procedure distilled from the two 2026-09-28
+  runs — prerequisites and the cheap `--contract-only` pre-flight, the
+  detached-launch pattern, green-run log shape, every observed failure mode
+  (Docker engine down, the publish-tail busy handle and its manual-publish
+  fallback, vendor-digest mismatch, CRLF gate, NONDETERMINISM stop-rule,
+  disk-space FATAL), the post-run checklist with cross-run digest
+  verification, and the scope boundary against the remaining stage-3 rows.
+  Linked from the FID's contract-gate declaration.
 - **Stage-2 exit evidence complete (FID-2026-0916-001):** the override
   guard's live acceptance passes on the real launcher — damaged/partial
   installs refuse with exit 1 before any network I/O, runtime-only and

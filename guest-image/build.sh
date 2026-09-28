@@ -310,10 +310,36 @@ for f in rootfs.ext4 rootfs.ext4.zst vmlinuz-linux initramfs-linux.img build-spe
     echo "  $f  $a"
 done
 
+# The gate has spoken: both contract copies are proven identical. From here
+# the EXIT trap would only destroy evidence — a publish-tail failure (a
+# transient Windows handle on out/contract cost a full re-run on 2026-09-19
+# and again on 2026-09-28) must leave build-a in place for a manual publish.
+trap - EXIT
 
-
-# Publish build A as the payload; drop the gate copy.
-rm -rf "$out/contract"
+# Publish build A as the payload; drop the gate copy. Windows can hold a
+# transient handle on the previous payload directory (search indexer,
+# Explorer, a lagging file-share broker) — rm -rf on it fails with "Device
+# or resource busy" and an rm -rf here killed an otherwise green build
+# twice. Retry with backoff, and fail with the artifacts intact if the
+# handle still will not release.
+rm_ok=0
+for attempt in 1 2 3 4 5 6; do
+    if rm -rf "$out/contract" 2>/dev/null && [[ ! -e $out/contract ]]; then
+        rm_ok=1
+        break
+    fi
+    echo "[build] out/contract busy (attempt $attempt/6); retrying in 10 s" >&2
+    sleep 10
+done
+if [[ $rm_ok -ne 1 ]]; then
+    echo "[build] FATAL: could not fully remove $out/contract - a process still holds it." >&2
+    echo "[build]        The gate PASSED and the payload is intact in build-a/contract." >&2
+    echo "[build]        Publish by hand once the handle releases, either as" >&2
+    echo "[build]          rm -rf out/contract && cp -r build-a/contract out/contract" >&2
+    echo "[build]        or, if only an empty husk remains, into it:" >&2
+    echo "[build]          cp -r build-a/contract/. out/contract/" >&2
+    exit 1
+fi
 cp -r build-a/contract "$out/contract"
 rm -rf build-a build-b
 
