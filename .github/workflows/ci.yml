@@ -68,6 +68,20 @@ jobs:
         working-directory: app
         run: go test ./...
 
+      # These suites are Windows-only by construction: they parse
+      # tasklist/netstat, use cygpath, and bind a loopback port to prove the
+      # QMP refusal fires. None of them launches a VM. They live beside the
+      # script they cover (scripts/dev/) and resolve the repo as ../.. .
+      - name: Test dev tooling (shell suites)
+        shell: bash
+        run: |
+          bash -n scripts/dev/dev-vm.sh scripts/dev/accept-close-cycles.sh
+          for suite in scripts/dev/test-*.sh; do
+            echo "::group::$suite"
+            bash "$suite"
+            echo "::endgroup::"
+          done
+
   guest-contract:
     name: Guest contract
     runs-on: ubuntu-latest

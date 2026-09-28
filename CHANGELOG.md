@@ -3,6 +3,30 @@
 ## Unreleased
 
 ### Added
+- **Dev tooling test suites in CI:** `scripts/dev/test-dev-vm-init.sh`,
+  `test-accept-preflight.sh`, and `test-boot-qmp-refusal.sh` (92
+  assertions, Windows-only by construction and none of which launch a VM)
+  run in the existing `windows-launcher` job, so the re-seed path, the
+  acceptance driver's refusal paths, and the QMP boot refusal cannot rot
+  silently. The suites live beside the scripts they cover.
+- **Close/relaunch acceptance driver (`scripts/dev/accept-close-cycles.sh`,
+  FID-2026-0915-002):** drives ten close cycles plus a forced-kill
+  predecessor and records which rung of the close ladder fired each time.
+  Refuses to start without an explicit disposable-target authorization, or
+  if any QEMU is already running (the close trigger selects its window by
+  process name, so a stray second VM would mean closing the wrong one).
+  Kills only by PID — never by image name, which would destroy an
+  operator's own interactive dev VM — and installs a teardown trap, because
+  nothing reaps orphaned processes: a terminal-launched child survives
+  indefinitely (measured: 20 minutes across four launch methods, every
+  probe exiting naturally with no SIGTERM). `--preflight-only` validates a
+  target without launching a VM. **Acceptance run 2026-09-28: GATE GREEN** —
+  10/10 close cycles, 11 sessions, 0 failures, `graceful=10`, against the
+  operator-authorized disposable target `C:\Users\spenc\savantos-accept`.
+  (The driver's own first run reported a false hang: `tasklist`'s
+  `IMAGENAME` filter matches nothing without the `.exe` suffix, which made
+  the stray-VM preflight vacuous and the forced-kill a no-op — fixed, and
+  the process probe now fails closed on an unreadable list.)
 - **Guest→host image clipboard (FID-2026-0922-001):** images copied in
   the guest now cross to the Windows clipboard — a `wl-paste --watch`
   push watcher beside the text watcher (PNG-only, 16 MiB cap, image
@@ -111,6 +135,34 @@
   the deletions.
 
 ### Fixed
+- **Dev `boot` fails closed on a busy QMP port (`scripts/dev/dev-vm.sh`):**
+  a taken port 4450 only produced a warning, then launched anyway — so a
+  second dev VM would fight the first over the control plane and leave a
+  confusing dead guest. `boot` now refuses with exit 2 before it builds or
+  launches anything, naming the holder's process and PID, and distinguishes
+  "another SavantOS instance is still running" from "an unrelated process
+  holds the port". `--force-qmp` overrides with a warning.
+- **The close ladder now records which rung closed the guest
+  (FID-2026-0915-002):** `runCloseGuard` started the ladder as a bare
+  goroutine, so when the guest powered off, `supervise` returned, `main`
+  logged `---- exiting ----` and returned — killing the ladder mid-poll
+  before it could log its verdict. Across 11 real close sessions the rung
+  line appeared **zero** times while "power button sent" appeared 11 times:
+  exactly the ambiguity the ladder exists to remove, since a dropped power
+  event would still have looked like a clean close. `startCloseLadder` now
+  registers the ladder in flight and signals a verdict; `main` awaits it
+  before the exit line, bounded by the ladder's own two verify windows plus
+  a margin, and logs rather than hangs if a ladder cannot finish.
+- **Dev data dir can be re-seeded (`scripts/dev/dev-vm.sh`):** a second
+  `init --seed-from` against an existing data dir died on `sparsetool`'s
+  "destination exists" preflight, leaving a half-initialized dir that no
+  later run could recover. `init` now refuses with an actionable message
+  (exit 2) and `--reseed` replaces the dir by renaming the old one to
+  `<dir>.bak-<timestamp>` — never deleting it, so a bad reseed is
+  recoverable. `--reseed` also refuses while a guest is still answering on
+  the SSH port, and an existing-but-empty dir is cleared with `rmdir`
+  (fail-closed: it cannot remove content). Repeat clean targets are what the
+  Stage 2 close/relaunch acceptance cycles need.
 - **Clipboard image frames and bridge observability
   (FID-2026-0922-001):** host→guest PNG frames were silently dropped by
   the guest pull loop (`base64 -d` over the `png:`-prefixed line);
@@ -146,6 +198,34 @@
   Release playbook, SignPath submission, and policy stub updated to match.
 
 ### Documentation
+- G4 headless smoke satisfied (FID-2026-0916-001): a `-headless` boot of
+  the provisioned dev target reached QEMU and userspace-ready 15 s after
+  launch with every pre-boot phase logged, the share-skip decision logged,
+  and no dialog block. The gate wording is corrected: on a provisioned
+  directory the provision decision comes from the persisted
+  `provision-mode` file and is never re-asked, so the fresh-install
+  variant remains unexercised.
+- New FID-2026-0928-001: the close ladder's privileged escalation rung
+  cannot succeed. `systemctl poweroff -i` runs unprivileged over a
+  `BatchMode=yes` ssh session against a guest with no polkit rules, so
+  polkit demands interactive auth; NOPASSWD wheel does not apply because
+  the action is polkit-mediated. A dropped power event therefore escalates
+  straight to the forced stop. Awaiting an operator ruling — every
+  candidate fix is a privilege-boundary change.
+- Harness process-lifetime rules documented (`scripts/dev/README.md`):
+  no reaper exists, redirect long-running children, kill by Windows PID
+  rather than `$!` or image name, and make empty-returning probes fail
+  closed.
+- Falsified tooling claim retracted (FID-2026-0922-001): the note recording
+  that this harness sweeps terminal-spawned processes within ~2 minutes does
+  not hold. Measured on 2026-09-28 across four launch methods — plain
+  background, `nohup`, a PowerShell `Start-Process` detached tree, and a
+  child of a command killed by the tool timeout — every probe ran 20
+  minutes and exited naturally with no SIGTERM; `ping -t` survived 6+
+  minutes. The real mechanism behind the symptom is a long-lived child
+  holding the calling terminal's stdout pipe, which makes the *call* time
+  out and take the tree with it. A desktop-app restart is not excluded and
+  remains the likeliest explanation for the one run in question.
 - First-party OS pivot filed (FID-2026-0912-001): the guest is rebuilt as a
   first-party mkosi + systemd-repart builder (Arch base, snapshot-pinned) with
   a KDE Plasma 6 Wayland desktop, native traffic-lights theming, and the

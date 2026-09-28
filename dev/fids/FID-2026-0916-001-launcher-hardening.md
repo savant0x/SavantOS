@@ -4,7 +4,7 @@
 **ID:** FID-2026-0916-001
 **Severity:** high (data-integrity guard for the production install + the
 0915-002 silent-exit evidence family gets its forward fix)
-**Status:** fixed (D1–D4 implemented; live acceptance gates G3-boot/G4/G6 pending an approved disposable target)
+**Status:** fixed (D1–D4 implemented; G3 and G4 complete as of 2026-09-28 — G6 and the stage-2 exit evidence remain open)
 **Created:** 2026-09-16
 **Parent:** FID-2026-0915-002 (launcher defect family); master plan
 FID-2026-0915-001 as additive work under T3/T4 hardening.
@@ -383,11 +383,46 @@ runtime tests are not represented as remote CI/race parity.
   ```
 
 - **G3:** anchor write proven live (init output: `wrote dev-anchor.json
-  (override-guard anchor)`); the `dev-vm.sh boot` half stays a live
-  gate.
-- **Open, blocked on an approved disposable VM target:** G3 boot half,
-  G4 headless smoke, G6 stall-family closure, and the stage-2 exit
-  evidence (live damaged/partial-install and runtime-only runs).
+  (override-guard anchor)`). The `dev-vm.sh boot` half was proven on
+  2026-09-28 by the FID-2026-0915-002 close/relaunch acceptance: 11
+  sessions booted through `dev-vm.sh boot` against the authorized
+  disposable target `C:\Users\spenc\savantos-accept`, every one reaching
+  `guest userspace announced ready` and exiting with a logged reason
+  (`dev/scratchpad/accept-close-cycles.log`, 10/10 close cycles,
+  11 sessions, 0 failures). Gate G3 satisfied.
+- **G4 — headless smoke, 2026-09-28.** `-headless` boot of the
+  provisioned dev target `C:\Users\spenc\savantos-accept` (launcher
+  digest `5d1465dd086a3878`): reached `phase: qemu` and `guest userspace
+  announced ready` **15 s** after launch, with every pre-boot phase
+  logged and no dialog block. D3 decisions observed:
+
+  ```text
+  10:07:48 headless mode: dialogs take non-interactive defaults
+  10:07:48 headless: shared-folder setup (default: skip) -> false
+  10:07:48 phase: settings … share-validation … provision-mode … guest-ensure
+  10:07:48 phase: qemu
+  10:08:03 guest userspace announced ready
+  ```
+
+  No `FATAL`, and no `headless: refusing … - no non-interactive default`
+  (the `modalFatal` path for dialogs with no safe default), which is the
+  D3 failure mode this gate exists to catch. Gate G4 satisfied.
+- **G4 wording corrected.** The gate as written asks for
+  "share-skip + provision-default decisions logged". Only the first is
+  reachable on a provisioned directory: `chooseProvisionMode` returns
+  from the persisted `provision-mode` file (or from `-instant`) before
+  the dialog, so there is no decision to log — it was already made and
+  persisted. The dialog is only reached on a first install, where
+  `headless: first-boot mode (default: full personal setup) -> false`
+  would be logged. The fresh-install variant of this gate is therefore
+  unexercised; re-provisioning a target for it was not worth a 1.7 GB
+  payload fetch. Corrected wording: *share-skip logged, provision
+  decision either logged or resolved from persisted state, and no dialog
+  blocks.*
+- **Still open:** G6 stall-family closure, and the stage-2 exit evidence
+  (live damaged/partial-install and runtime-only runs). The 12 sessions
+  so far produced no stall reproduction, so G6 has nothing to close yet
+  rather than being satisfied.
 
 ### Watchdog data race — confirmed on CI and fixed (2026-09-27)
 

@@ -185,17 +185,39 @@ published 2026-09-22 payload — no dev disk, no drop-ins, stock bridge:
   identical DIB conversion; a distinct image still crosses via that
   path.
 
-Measurement note (launcher process lifetime, not a bridge defect): the
-first proof run's launcher was terminated externally minutes after its
-spawning command completed — reproduced exactly with unrelated marker
-processes (a spawn from a completing command is swept within ~2 min,
-one from a timed-out command after a few more), so its apparent
-"silent stall" was a dead process, not a wedged bridge (every probe of
-that run is void). The second run's launcher served every cell above
-before the same sweep landed: no panic trace (stderr captured to a
-file), no FATAL log, no WER application-error event — clean external
-termination. When a launcher is found dead with QEMU orphaned, rule
-out external tooling cleanup before suspecting the clipboard path.
+Process-lifetime note (corrected 2026-09-28; not a bridge defect): the
+first proof run's launcher was found dead, so its apparent "silent
+stall" was a dead process rather than a wedged bridge, and every probe
+of that run is void. The second run's launcher served every cell above
+before it died: no panic trace (stderr captured to a file), no FATAL
+log, no WER application-error event — a clean external termination, not
+a fault in the clipboard path.
+
+**Retracted claim.** The original note here asserted that this was
+reproduced with marker processes — "a spawn from a completing command
+is swept within ~2 min, one from a timed-out command after a few
+more" — and advised ruling out tooling cleanup. That measurement does
+not hold. Probed directly on 2026-09-28 with four launch methods — a
+plain background child, `nohup`, a PowerShell `Start-Process`
+detached tree, and a background child whose parent command was *killed
+by the tool timeout* — every probe ran its full 20 minutes and exited
+**naturally**, with no SIGTERM and no SIGINT; two `ping -t` processes
+survived 6+ minutes and were killed by hand. There is no periodic reaper
+of terminal-spawned children on this host.
+
+**What actually produces the symptom.** A long-lived child that
+inherits the calling terminal's stdout pipe keeps the call from
+completing — the call hangs until it times out, and the timeout teardown
+then does take the tree down. That is what a "sweep" looks like from the
+inside, and it is why the surviving probes are exactly the ones that
+redirected their own output. Redirect a background launcher's stdout and
+stderr to files, or the call will time out and take it with it.
+
+**Not excluded.** A restart of the desktop app tears down its own
+process tree, and that session did have one. A single such event fits
+the evidence as well as anything else, so the second run's launcher
+death remains unattributed — but it is one event, not a periodic
+mechanism. Do not carry the "~2 min" figure forward.
 
 ## Guest → host image push (deferred item, operator-approved 2026-09-27)
 

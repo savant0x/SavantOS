@@ -14,6 +14,10 @@ __pycache__/
 /SavantOS*.exe.sha256
 /app/SavantOS*.exe
 /app/SavantOS*.exe.sha256
+# sparsetool is its own Go module, so `go build ./...` run inside it drops
+# the binary in that module's directory rather than the app tree.
+scripts/vmtest/sparsetool/sparsetool
+scripts/vmtest/sparsetool/sparsetool.exe
 /artifacts/
 
 # Node toolchain — docs gate (markdownlint via bun); bun.lock IS tracked
