@@ -3,7 +3,8 @@
 **Filename:** `FID-2026-0915-002-close-drop-and-launcher-exit.md`
 **ID:** FID-2026-0915-002
 **Severity:** medium-high
-**Status:** fixed (both fixes implemented 2026-09-27; the 10-cycle acceptance below awaits an approved disposable target)
+**Status:** verified — both fixes implemented 2026-09-27; the 10-cycle close
+and relaunch acceptance passed 2026-09-28 (see Acceptance evidence below)
 **Created:** 2026-09-15
 **Parent:** FID-2026-0914-003 (window close / PowerDevil) — this is a
 regression-shaped intermittent residue of the same mechanism
@@ -145,3 +146,72 @@ image change):
   unit suite green. **Blocked (needs an approved disposable VM
   target):** this FID's Verification gates — 10 close cycles with zero
   hangs, and 10 relaunch cycles including a forced-kill predecessor.
+
+## Acceptance evidence — 2026-09-28
+
+The Verification gates above are met. Evidence:
+`dev/scratchpad/accept-close-cycles.log` (run) and
+`dev/scratchpad/accept-close-cycles-20260927.log` (the first run).
+
+**Result:** `SUMMARY closes=10/10 sessions=11 failures=0`,
+`ladder: graceful=10 escalated=0 forced=0`, `VERDICT: GATE GREEN` against
+`C:\Users\spenc\savantos-accept` (disposable, operator-authorized), launcher
+digest `5d1465dd086a3878` at HEAD `9da3650`. Every session logged an exit
+reason; no hang; the session-6 forced-kill predecessor (QEMU killed by PID)
+had its relaunch complete normally.
+
+### Record drift found and corrected (Ground-Truth rule)
+
+The first run of this gate happened on 2026-09-27 at 20:23 and was already
+GATE GREEN (10 cycles, 11 sessions, 0 failures). `SCOPE.md`,
+this FID's status line, and FID-2026-0916-001 all still described the
+acceptance as blocked/pending. The record was wrong, not the code: the
+evidence existed and nobody had reconciled it. Per the Ground-Truth rule
+the record now carries the verified result.
+
+### Defect found while assembling the evidence: the ladder verdict was lost
+
+`close_ladder.go` promises that "every step is logged so a dropped power
+event can never again look like a clean close". That promise was not met in
+any of the 11 sessions run on 2026-09-27: the rung line ("guest is shutting
+down ...", "forcing QEMU to stop") appeared **0 times** while "close ladder:
+power button sent" appeared 11 times.
+
+Cause: `runCloseGuard` started the ladder as a bare `go runCloseLadder(...)`.
+The main goroutine sits in `supervise()`, which returns the moment QEMU
+exits; main then logs `---- exiting ----` and returns, killing the ladder
+goroutine mid-poll before it could log which rung fired. `logf` is
+unbuffered, so this was a lost line, not a flush artifact. The consequence is
+exactly the ambiguity the ladder exists to remove — a dropped power event
+would still have looked like a clean close, because the one line that proves
+the ladder confirmed anything was the line that vanished.
+
+Fix (launcher-only): `startCloseLadder` registers the ladder as in flight and
+signals a verdict channel; `main` calls `awaitCloseLadderVerdict` before
+`---- exiting ----`, bounded by `ladderWorstCase()` (the ladder's own two
+verify windows plus a 10 s margin, so the wait can never be shorter than the
+work). A ladder that cannot finish is logged and the process still exits — an
+exit with a missing line beats an exit that never happens. Unit coverage:
+idle returns immediately, an in-flight ladder is waited for, the wait is
+bounded and says so, and `ladderWorstCase` exceeds the ladder it waits for.
+
+Live proof: after the fix the rung line precedes `---- exiting ----` in
+every close session, and the target's own `vm/shell.log` carries 17 rung
+lines where it previously carried none.
+
+### Defect found in the acceptance driver itself
+
+The driver's first full run reported a false RED: "session 6: launcher still
+running 240s after close (HANG)". The launcher was healthy; the driver had
+failed to kill QEMU. `tasklist //FI "IMAGENAME eq qemu-system-x86_64w"`
+matches nothing when the image name is given without its `.exe` suffix, so
+the PID list was always empty — which made the stray-VM preflight
+vacuously true and the forced-kill a no-op. The QEMU was still running and
+still exchanging clipboard traffic three minutes after the "kill".
+
+Fixed by parsing `tasklist //NH` output directly (matching the image name
+with or without `.exe`) and by adding a `process_list_readable` guard: if
+the process list cannot be read, the driver refuses to run rather than
+reporting a clean host. Regression coverage drives all three states through
+the driver with a shimmed `tasklist`: a stray QEMU (refuses, names the PID),
+a clean host (passes), and an unreadable list (refuses).

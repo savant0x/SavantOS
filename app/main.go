@@ -794,6 +794,11 @@ func main() {
 		return
 	}
 	compactAfterShutdown(cfg)
+	// A confirmed close ran the ladder on its own goroutine (closeguard.go).
+	// Wait for its verdict before this process ends, or the rung line is lost
+	// to the exit and the log cannot show which step actually closed the
+	// guest (FID-2026-0915-002). Bounded by the ladder's own worst case.
+	awaitCloseLadderVerdict(ladderWorstCase(), logf)
 	logf("---- exiting ----")
 }
 

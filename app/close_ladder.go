@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"sync/atomic"
+	"time"
+)
 
 // The close contract must not depend on PowerDevil: its power-button handler
 // silently dropped a confirmed close once (FID-2026-0915-002), leaving a
@@ -69,6 +72,56 @@ func runCloseLadder(ops closeLadderOps, t closeLadderTimings) {
 	}
 	ops.logf("close ladder: shutdown not honored after escalation - forcing QEMU to stop (confirmed close contract)")
 	ops.forceStop()
+}
+
+// A confirmed close runs the ladder on its own goroutine, so the guard's
+// confirmation loop stays free for a second close request. The exit path then
+// has to wait for that verdict: supervise returns the moment the guest powers
+// off, main logs the exit and returns, and the ladder goroutine is killed
+// mid-poll - which is why the rung line ("guest is shutting down", "forcing
+// QEMU to stop") never reached the log in a real session. Without it a
+// dropped power event still looks like a clean close, which is exactly what
+// this ladder exists to make impossible.
+var (
+	closeLadderInFlight atomic.Bool
+	closeLadderVerdict  = make(chan struct{}, 1)
+)
+
+// ladderWorstCase is the ladder's own bound - the graceful verify window plus
+// the escalated one - with a margin for the poll in flight. Derived from the
+// same timings the ladder runs on, so the exit wait can never be shorter than
+// the work it is waiting for.
+func ladderWorstCase() time.Duration {
+	t := defaultCloseLadderTimings
+	return t.verifyWindow + t.escalateWindow + 10*time.Second
+}
+
+// startCloseLadder runs the ladder on its own goroutine and marks it in
+// flight so the exit path can wait for the verdict.
+func startCloseLadder(ops closeLadderOps, t closeLadderTimings) {
+	closeLadderInFlight.Store(true)
+	go func() {
+		runCloseLadder(ops, t)
+		// Verdict first, then clear: a waiter that observes in-flight as
+		// false is guaranteed the rung line is already in the log.
+		closeLadderVerdict <- struct{}{}
+		closeLadderInFlight.Store(false)
+	}()
+}
+
+// awaitCloseLadderVerdict blocks until an in-flight ladder has logged its
+// rung, or the window elapses. It never hangs the exit: a ladder that cannot
+// finish is logged and the process leaves anyway, because an exit with a
+// missing line is strictly better than an exit that never happens.
+func awaitCloseLadderVerdict(window time.Duration, logLine func(string, ...any)) {
+	if !closeLadderInFlight.Load() {
+		return // no confirmed close is running; nothing to wait for
+	}
+	select {
+	case <-closeLadderVerdict:
+	case <-time.After(window):
+		logLine("close ladder: no verdict within %s before exit (the ladder was still running)", window)
+	}
 }
 
 // waitForGuestDown polls until the guest has started going down. The window

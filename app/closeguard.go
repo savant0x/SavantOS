@@ -86,7 +86,10 @@ func runCloseGuard(forwards []portForward) {
 		if r == idYes {
 			logf("close confirmed - graceful guest shutdown")
 			if !closeStarted.Swap(true) {
-				go runCloseLadder(closeLadderOps{
+				// startCloseLadder, not `go runCloseLadder`: the exit path
+				// waits on this ladder's verdict, so it must be registered
+				// as in flight before the goroutine can finish.
+				startCloseLadder(closeLadderOps{
 					powerdown:    qmpPowerdown,
 					stillRunning: closeGuestStillRunning,
 					escalate:     sshPoweroffEscalation(forwards),
