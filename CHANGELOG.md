@@ -207,6 +207,17 @@
   Release playbook, SignPath submission, and policy stub updated to match.
 
 ### Documentation
+- **Stage-2 exit evidence complete (FID-2026-0916-001):** the override
+  guard's live acceptance passes on the real launcher — damaged/partial
+  installs refuse with exit 1 before any network I/O, runtime-only and
+  anchored directories proceed past the guard, and the pointer-shaped
+  incident form re-refuses. The G6 stall-reproduction campaign was aborted
+  by the operator after its windowed arms put VM windows on the desktop
+  without approval: sample-staging campaigns are ruled out — VM work uses
+  the real installs/targets only, with explicit approval. G6 remains a
+  conditional obligation awaiting a live reproduction during real work or
+  an explicit ruling; the partial run's warm-up anomaly (alive ~5 minutes,
+  no log produced) is recorded in the FID for that evidence.
 - G4 headless smoke satisfied (FID-2026-0916-001): a `-headless` boot of
   the provisioned dev target reached QEMU and userspace-ready 15 s after
   launch with every pre-boot phase logged, the share-skip decision logged,

@@ -4,7 +4,9 @@
 **ID:** FID-2026-0916-001
 **Severity:** high (data-integrity guard for the production install + the
 0915-002 silent-exit evidence family gets its forward fix)
-**Status:** fixed (D1–D4 implemented; G3 and G4 complete as of 2026-09-28 — G6 and the stage-2 exit evidence remain open)
+**Status:** fixed (D1–D4 implemented; G3, G4, and the stage-2 exit evidence
+complete as of 2026-09-28 — G6 remains a conditional obligation; sample-staging
+campaigns ruled out by the operator the same day)
 **Created:** 2026-09-16
 **Parent:** FID-2026-0915-002 (launcher defect family); master plan
 FID-2026-0915-001 as additive work under T3/T4 hardening.
@@ -419,10 +421,46 @@ runtime tests are not represented as remote CI/race parity.
   payload fetch. Corrected wording: *share-skip logged, provision
   decision either logged or resolved from persisted state, and no dialog
   blocks.*
-- **Still open:** G6 stall-family closure, and the stage-2 exit evidence
-  (live damaged/partial-install and runtime-only runs). The 12 sessions
-  so far produced no stall reproduction, so G6 has nothing to close yet
-  rather than being satisfied.
+- **Stage-2 exit evidence — damaged/partial and runtime-only, LIVE (2026-09-28,
+  GATE GREEN).** Real launcher (`SavantOS-dev.exe` from the working tree), real
+  resolution path, isolated `LOCALAPPDATA` staging; driver
+  `dev/scratchpad/stage2-exit-evidence.sh`, full log
+  `dev/scratchpad/stage2-exit-evidence.log`. Five rows:
+
+  | Row | Staged state | Result |
+  |-----|--------------|--------|
+  | A1 | partial install (guest content, no receipt), caller-named dir, no anchor | **REFUSED exit 1**, no `phase: update-check` in the log — refusal preceded any network I/O |
+  | A2 | verbatim install receipt + damaged rootfs | **REFUSED exit 1**, same pre-network proof |
+  | P1 | runtime-only directory (no `guest/`) | guard **passed**: reached `phase: update-check`, no refusal (then failed at the intentionally dead payload URL, as designed) |
+  | P2 | anchored dir with install metadata | guard **passed**; D1c provenance logged (`install: guest release …, channel production`); reached `phase: update-check` |
+  | C1 | incident shape re-proof: pointer-resolved, no `-dir`, overrides | **REFUSED exit 1** |
+
+  Two driver defects found and fixed during the run (both in the driver, not
+  the launcher): a pointer file written with literal backslash paths is
+  invalid JSON and the launcher correctly refused the malformed pointer
+  (`cygpath -m` used since); and launching via `$(func)` command substitution
+  orphaned the child so `wait` returned 127 instead of the real exit code
+  (global PID variable since). Strays after the run: none.
+- **G6 status after the aborted partial campaign (2026-09-28).** A bounded
+  reproduction campaign (`dev/scratchpad/g6-stall-campaign.sh`) ran warm-up
+  plus four arms inside the recorded incident family (windowed,
+  pointer-resolved, update-check enabled — the exact E4 A/B family no prior
+  session had exercised, since all twelve sessions used `dev-vm.sh boot`'s
+  `-no-update`). **Aborted by the operator mid-campaign**: the windowed arms
+  put VM windows on the operator's desktop without explicit approval, which
+  the campaign design should have gated. Partial result: no stall reproduced
+  (warm-up headless run sat alive ~5 min and exited with **no log produced**
+  — an anomaly of exactly the kind G6 hunts, but carrying no phase evidence;
+  arm A booted normally in ~60 s). **Operator direction, binding for this
+  gate:** no more sample-staging campaigns — VM work uses the real
+  install/targets only, with explicit approval. G6 stays an open conditional
+  obligation awaiting either a live reproduction during real work or an
+  explicit operator decision to close it. The warm-up no-log anomaly is
+  recorded for that future evidence.
+- **Net position:** every stage-2 acceptance row for this FID is now complete
+  except the conditional G6 (its disposition recorded above). The remaining
+  plan work belongs to stages 3–8 (factory/release, desktop proof, probes,
+  deltas, agent, integrated release) and is where real-work effort goes next.
 
 ### Watchdog data race — confirmed on CI and fixed (2026-09-27)
 
