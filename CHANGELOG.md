@@ -228,6 +228,20 @@
   Release playbook, SignPath submission, and policy stub updated to match.
 
 ### Documentation
+- **T2.1 casync delta design of record (FID-2026-0914-002):** the casync-only
+  delta path is now designed against the published T1.3 baseline, with two
+  format facts probe-verified on the pinned Arch snapshot (blob images take
+  a `.caibx` block index — `.caidx` is directory-trees only — and the
+  default store is a packed `.castr`, which is the shape that fits flat
+  release assets). The launcher gains a Go read-only caibx/castr extractor
+  (no C dependency, no Windows casync build needed) integrated at the
+  `ensureGuest` rootfs branch: the current rootfs becomes an untrusted seed,
+  the existing full-image digest check stays the unchanged acceptance gate,
+  releases without delta artifacts take the zst path unchanged, and sysupdate
+  remains the named open operator decision. Named exit criteria: casync
+  output determinism, T2.2 range re-verification on the real payload, and a
+  measured (< 100 MB target, honestly recorded either way) end-to-end
+  update between a baseline/release pair.
 - **Dual-build runbook added (`guest-image/RUNBOOK.md`, FID-2026-0914-002):**
   the T1.3 contract gate's full procedure distilled from the two 2026-09-28
   runs — prerequisites and the cheap `--contract-only` pre-flight, the

@@ -57,7 +57,7 @@ disk; fresh baseline image for delta work.
 
 | # | Item | Source | Notes |
 |---|------|--------|-------|
-| 2.1 | casync-only delta design build-out over the F1–F7 contract: chunk store + seed (current rootfs on the data disk) + streamed index; host still authenticates full-image SHA256SUMS as the ONLY trust root (delta = optimization, never a second trust anchor) | 0914-002 Loop 2/3 (D2 ruling: design of record) | zstd-split documented fallback |
+| 2.1 | casync-only delta design build-out over the F1–F7 contract: chunk store + seed (current rootfs on the data disk) + streamed index; host still authenticates full-image SHA256SUMS as the ONLY trust root (delta = optimization, never a second trust anchor) | 0914-002 Loop 2/3 (D2 ruling: design of record) | zstd-split documented fallback. **DESIGNED 2026-09-28** (FID-2026-0914-002, T2.1 section): builder emits `rootfs.ext4.caibx` + packed `.castr` (format facts probe-verified on the pinned snapshot); launcher gains a Go read-only caibx/castr extractor integrated at the `ensureGuest` rootfs branch with the existing full-image digest as the unchanged acceptance gate; additive both directions with zst fallback; sysupdate stays the named open decision |
 | 2.2 | Large-asset range re-verification on `rootfs.ext4.zst` before any consumer ships | 0914-002 Loop 3 ADVERSARIAL | extends the confirmed small-asset result |
 | 2.3 | Release cycle dry run: prepare → pin → publish → smoke on a fresh data dir (first Plasma-based signed release) | 0914-002 exit criterion | needs T1.3 baseline |
 | 2.4 | **Operator decision (named, not silent):** sysupdate guest-pull vs host-contract | 0914-002 Loop 2 RED (d) | F1–F7 collision documented; no code until ruled |
