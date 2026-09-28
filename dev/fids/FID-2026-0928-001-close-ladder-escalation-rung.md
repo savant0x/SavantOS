@@ -3,7 +3,10 @@
 **Filename:** `FID-2026-0928-001-close-ladder-escalation-rung.md`
 **ID:** FID-2026-0928-001
 **Severity:** high
-**Status:** analyzed
+**Status:** fixed — F1 implemented 2026-09-28 (factory polkit rule, `yes`,
+power-off only, per the ruling); the live escalation proof and the
+escalation-exercising acceptance re-run are pending an image rebuild, since
+a shipped rule only reaches future images
 **Created:** 2026-09-28 10:40
 **YAGNI-Compliance:** Verified
 **Parent:** FID-2026-0915-002 (the bounded close ladder this refines)
@@ -102,18 +105,28 @@ with `p.Kill()` rather than shut down, so in-guest filesystem and
 application state take the abrupt path. The design's stated property,
 "graceful first, escalated second, forced last", is two-thirds inert.
 
-## Proposed fix (design of record, pending ruling)
+## Proposed fix (design of record)
 
-Every real fix is a privilege-boundary change and therefore needs
-separate operator approval; none is adopted here.
+Every real fix is a privilege-boundary change and therefore needed
+separate operator approval. **Ruling received 2026-09-28: F1, with
+`yes` (never asks) and power-off only — no reboot coverage (YAGNI).**
 
-- **F1 — polkit rule in the factory image.** Install
+- **F1 — polkit rule in the factory image. — ADOPTED, as ruled.** Install
   `/etc/polkit-1/rules.d/50-savantos-power.rules` granting the `savant`
   user `org.freedesktop.login1.power-off` and `.power-reboot` with
   `auth_admin_keep` (or `yes`). Smallest change, keeps the decision
   inside polkit, and survives a polkit-agent-less session. Cost: a
   standing privilege grant for one user over two actions, which must be
   justified as "the launcher must be able to shut its own guest down".
+  Two refinements at implementation: the value is `yes` (the ruling;
+  `auth_admin_keep` still asks once and the escalation has no agent to
+  answer), and the rule grants the whole **power-off family** — the bare
+  action plus `.power-off-multiple-sessions` (the ssh session is a
+  second logind session beside the autologin tty1) and
+  `.power-off-ignore-inhibit` (`-i` is `--ignore-inhibitors`) — because
+  one remote close consults all three and granting only the bare action
+  would reproduce the denial in the exact incident scenario. Reboot
+  coverage omitted per the ruling.
 - **F2 — root-owned helper.** Ship `/usr/local/bin/savantos-poweroff`
   (root-owned, non-writable) that execs the systemctl call, and have the
   escalation invoke that over ssh. No polkit policy change; the grant is
@@ -133,7 +146,27 @@ polkit policy in the image at all.
 
 Whichever is chosen, `close_ladder.go`'s doc comment and
 FID-2026-0915-002's "privileged shutdown requested" claim must be
-rewritten to match reality.
+rewritten to match reality. — Both amendments landed with the
+implementation (2026-09-28).
+
+## Implementation evidence — 2026-09-28
+
+- `guest-image/skeletons/etc/polkit-1/rules.d/50-savantos-power.rules`
+  (new): the ruled grant — the three power-off actions above for
+  `subject.user == "savant"` returning `polkit.Result.yes`, with the
+  mechanism comment inline (sudoers ≠ polkit; why each of the three
+  actions is consulted; reboot excluded per the ruling).
+- `guest-image/finalize.sh`: the restart/shutdown comment block no
+  longer claims "logind defaults allow wheel to poweroff/reboot
+  interactively" is sufficient — it now states the sudoers grant does
+  not authorize the action and names the rule that does.
+- `app/close_ladder.go` + `app/closeguard.go`: doc comments now state
+  the escalation is authorized by the factory polkit rule.
+- FID-2026-0915-002: annotated to record that rung 2 was polkit-denied
+  until this rule.
+- Not yet satisfied, and why: the live escalation proof and the
+  acceptance re-run below need an image rebuild and a re-provisioned
+  disposable target — the shipped rule only reaches future images.
 
 ## Verification
 
@@ -165,21 +198,27 @@ rewritten to match reality.
   `runCloseGuard` and passed as `escalate` into `runCloseLadder`, which
   calls it exactly once. It is wired; it is the *command* that is wrong,
   not the plumbing. This distinguishes the defect from a dead-code bug.
-- Convergence declared: analyzed. Implementation requires an operator
+- Convergence declared: analyzed. Implementation required an operator
   ruling because every candidate is a privilege-boundary change, which
   the level-3 authorization in `SCOPE.md` explicitly excludes.
 
-### Open questions for the ruling
+### The ruling (2026-09-28)
 
-1. F1, F2, or F3?
-2. If F1: `yes` or `auth_admin_keep` for the two login1 power actions?
-   `auth_admin_keep` caches per session and still asks once; `yes` never
-   asks. The launcher has no way to answer a prompt, so `yes` is the
-   only value that works unattended.
-3. Should the grant cover `power-reboot` as well, or only `power-off`?
-   The launcher never reboots the guest by this path today (the guest
-   announces reboot intent on the lifecycle port instead), so YAGNI says
-   `power-off` only — but that leaves a future reboot escalation broken.
+1. F1, F2, or F3? — **F1, the polkit rule.**
+2. `yes` or `auth_admin_keep`? — **`yes`.** The launcher has no way to
+   answer a prompt, so `auth_admin_keep`'s one-time ask is unusable.
+3. Reboot coverage? — **Power-off only.** The launcher never reboots
+   the guest by this path (the guest announces reboot intent on the
+   lifecycle port instead); YAGNI.
+
+### Loop 2 — GREEN in the builder (2026-09-28)
+
+- Rule implemented exactly as ruled (plus the action-family refinement
+  recorded in the implementation evidence), builder comment corrected,
+  launcher doc comments aligned, FID-2026-0915-002 annotated.
+- Outstanding before convergence: the live guest proof (escalation
+  rung succeeds end to end) — blocked on an image rebuild and a
+  re-provisioned target; the shipped rule only reaches future images.
 
 ## Lessons Learned
 

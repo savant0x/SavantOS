@@ -10,10 +10,11 @@ import (
 // healthy guest running while the launcher waited forever. This ladder is the
 // launcher-authoritative fallback chain from that FID's design of record:
 // graceful ACPI powerdown first, a bounded verify, then the guest-side
-// privileged shutdown (systemctl poweroff -i over the ssh plane), and finally
-// the forced stop the confirmed close already authorized (the waitExit-class
-// QEMU kill). Every step is logged so a dropped power event can never again
-// look like a clean close.
+// privileged shutdown (systemctl poweroff -i over the ssh plane, authorized
+// by the factory polkit rule 50-savantos-power.rules - FID-2026-0928-001),
+// and finally the forced stop the confirmed close already authorized (the
+// waitExit-class QEMU kill). Every step is logged so a dropped power event
+// can never again look like a clean close.
 
 type closeLadderOps struct {
 	// powerdown sends QMP system_powerdown (the graceful first attempt).
@@ -21,7 +22,9 @@ type closeLadderOps struct {
 	// stillRunning reports whether the guest has NOT started going down.
 	stillRunning func() bool
 	// escalate requests the guest-side shutdown through the privileged
-	// plane. nil when the session has none (no forward to the guest sshd).
+	// plane: ssh systemctl poweroff -i, authorized in the guest by the
+	// factory polkit rule (50-savantos-power.rules). nil when the session
+	// has none (no forward to the guest sshd).
 	escalate func() error
 	// forceStop kills the QEMU process; the supervisor reaps it as usual.
 	forceStop func()

@@ -1,0 +1,24 @@
+// Factory authorization for the launcher's close-ladder escalation rung
+// (FID-2026-0928-001). The guest's power-button handler can silently drop
+// the ACPI power event, so the host launcher is authoritative: it shuts the
+// guest down over ssh as this user with `systemctl poweroff -i`, which
+// logind authorizes through polkit, not sudoers — the wheel NOPASSWD grant
+// does not apply. Three actions are granted because one remote close
+// consults all three: the bare action, -multiple-sessions (the ssh session
+// is a second logind session beside the autologin tty1), and
+// -ignore-inhibit (`-i` is --ignore-inhibitors; the PowerDevil block
+// inhibitor on handle-power-key is exactly what dropped the original
+// close). Reboot stays factory-default: the launcher never reboots through
+// this path (FID-2026-0928-001 ruling: power-off only, YAGNI).
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.login1.power-off" ||
+        action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+        action.id == "org.freedesktop.login1.power-off-ignore-inhibit") {
+        if (subject.user == "savant") {
+            // "yes", not "auth_admin_keep": the escalation runs over a
+            // non-interactive ssh session with no polkit agent to answer
+            // any prompt.
+            return polkit.Result.yes;
+        }
+    }
+});

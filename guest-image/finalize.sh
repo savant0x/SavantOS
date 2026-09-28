@@ -207,9 +207,14 @@ cp -a "$desktop"/. /etc/skel/Desktop/
 # build.sh (wallpapers/savant/contents/images/).
 
 # --- restart/shutdown plumbing: polkit agent autostarts with the session
-# (shipped XDG autostart), powerdevil ships its own plasmoid. Nothing to
-# factory-set beyond the wheel policy already granted in Phase 1; logind
-# defaults allow wheel to poweroff/reboot interactively.
+# (shipped XDG autostart), powerdevil ships its own plasmoid. The wheel
+# sudoers grant from Phase 1 does NOT authorize `systemctl poweroff` (the
+# action is polkit-mediated, not sudo-mediated) and logind's defaults only
+# allow it interactively — which the launcher's non-interactive escalation
+# can never satisfy. The factory rule that does grant it ships as a static
+# skeleton (etc/polkit-1/rules.d/50-savantos-power.rules): power-off action
+# family for the savant user with result `yes`, so the close ladder's
+# escalation rung (FID-2026-0928-001) succeeds without a polkit agent.
 
 # --- user services for audio: pipewire/wireplumber are default-enabled in
 # Arch's shipped user preset; verify rather than hope (R4).

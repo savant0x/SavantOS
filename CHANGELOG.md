@@ -2,7 +2,6 @@
 
 ## Unreleased
 
-### Added
 - **Dev tooling test suites in CI:** `scripts/dev/test-dev-vm-init.sh`,
   `test-accept-preflight.sh`, and `test-boot-qmp-refusal.sh` (92
   assertions, Windows-only by construction and none of which launch a VM)
@@ -135,6 +134,16 @@
   the deletions.
 
 ### Fixed
+- **The close ladder's escalation rung now actually works (FID-2026-0928-001):**
+  rung 2 (`ssh systemctl poweroff -i`) was polkit-denied — the factory image
+  shipped no polkit rules, logind's default demands interactive auth, and
+  the wheel NOPASSWD sudoers grant does not apply to a polkit-mediated
+  action — so a dropped power event always ended in the forced QEMU stop.
+  The factory image now ships `50-savantos-power.rules`, granting the
+  `savant` user the power-off action family (bare, `-multiple-sessions`,
+  `-ignore-inhibit`) with `yes`, per the operator ruling; reboot stays
+  factory-default. Live escalation proof and the acceptance re-run are
+  pending an image rebuild.
 - **Dev `boot` fails closed on a busy QMP port (`scripts/dev/dev-vm.sh`):**
   a taken port 4450 only produced a warning, then launched anyway — so a
   second dev VM would fight the first over the control plane and leave a
@@ -210,8 +219,8 @@
   `BatchMode=yes` ssh session against a guest with no polkit rules, so
   polkit demands interactive auth; NOPASSWD wheel does not apply because
   the action is polkit-mediated. A dropped power event therefore escalates
-  straight to the forced stop. Awaiting an operator ruling — every
-  candidate fix is a privilege-boundary change.
+  straight to the forced stop. Ruled 2026-09-28 (F1 polkit rule, `yes`,
+  power-off only) and fixed in the builder — see Fixed above.
 - Harness process-lifetime rules documented (`scripts/dev/README.md`):
   no reaper exists, redirect long-running children, kill by Windows PID
   rather than `$!` or image name, and make empty-returning probes fail

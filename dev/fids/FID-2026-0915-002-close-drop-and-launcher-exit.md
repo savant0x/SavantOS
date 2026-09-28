@@ -124,7 +124,10 @@ image change):
   down"), then the guest-side privileged shutdown over the session's
   ssh plane (`systemctl poweroff -i` — `-i` is `--ignore-inhibitors`,
   verified against systemd's docs; the PowerDevil block inhibitor is
-  exactly what dropped the original event) with a second powerdown, a
+  exactly what dropped the original event — authorized by the factory
+  polkit rule 50-savantos-power.rules shipped for FID-2026-0928-001;
+  until that rule landed the rung was polkit-denied and fell through
+  to the forced stop) with a second powerdown, a
   20 s verify, and finally the forced stop this confirmed close already
   authorizes (the waitExit-class QEMU kill, reaped by the supervisor).
   Every step logs to `vm/shell.log`, so a dropped power event can never

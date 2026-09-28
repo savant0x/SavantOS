@@ -162,7 +162,10 @@ func forceStopQemu() {
 // session's ssh plane, or nil when there is none (no forward to the guest's
 // sshd). `systemctl poweroff -i` ignores inhibitor locks: PowerDevil's
 // handle-power-key block inhibitor is exactly what dropped the original
-// close. The guest account is the factory's (build-spec guest.username).
+// close. The guest account is the factory's (build-spec guest.username); the
+// factory polkit rule (50-savantos-power.rules, FID-2026-0928-001) grants it
+// the power-off action family, since logind authorizes this call through
+// polkit rather than sudoers.
 func sshPoweroffEscalation(forwards []portForward) func() error {
 	port := sshHostPort(forwards)
 	if port == 0 {
