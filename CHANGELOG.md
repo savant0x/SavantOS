@@ -3,6 +3,21 @@
 ## Unreleased
 
 ### Added
+- **T2.1 delta emission implemented and proven against the published baseline
+  (FID-2026-0914-002):** the builder now emits `rootfs.ext4.caibx` + the
+  sharded `rootfs.castr/` store per assembly (explicit `--store`; casync's
+  default store lands next to the index, not in the cwd — the fact that
+  killed the first delta build), the caibx joins the dual-build digest gate
+  (seven files, byte-identical across assemblies: `rootfs.ext4.caibx
+  1b97d068…`), and `delta-finalize.py` prunes seed-served chunks and copies
+  the prev index pre-publish, fail-closed to a non-delta payload. The first
+  delta-capable release ships the bare caibx (store removed, no prev index)
+  — the published baseline is exactly that shape, sums `93add1f6…`. The
+  launch-side reader was exercised live against the shipped payload: the
+  image reconstructed from a seed with an empty store digest-matches the
+  published `rootfs.ext4` (`ea574cb3…`). The publish-tail handle failure hit
+  a third time; the hardened tail preserved `build-a/contract` and the
+  hand-publish completed the run.
 - **T1.3 dual-build determinism re-run green, baseline published (FID-2026-0915-001):**
   two independent assemblies on the current tree hash identically across all
   six contract files, and run 2 reproduced run 1's digests byte-for-byte

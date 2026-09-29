@@ -480,11 +480,32 @@ facts are cited from a live probe on the pinned snapshot (2026-09-28,
   trees; `casync make v2.caibx v2.bin` succeeds where the `.caidx` form is
   refused ("Input is a regular file … attempted to make a directory
   archive"). A 200 MB probe image produced a 39 KB index.
+- **CORRECTED DURING IMPLEMENTATION (2026-09-28): the store is a sharded
+  chunk DIRECTORY, never a packed file.** The first probe's "packed
+  `.castr`" claim was a misreading: casync names its default store
+  `default.castr` and it is a directory of `<4-hex>/<64-hex>.cacnk`
+  chunk files — an explicit `--store=store.castr` also produces a
+  directory. Consequences adopted: a store cannot ship as one flat
+  release asset; chunk fetches are whole-file HTTP GETs (one per needed
+  chunk), NOT Range reads (which also makes T2.2's range question
+  orthogonal to the delta path); and the release artifact set is the
+  `.caibx` index (authenticated via SHA256SUMS) plus a **delta payload of
+  only the chunks new since the previous release**, shipped as a
+  single-file archive — casync's own `.caibx.d/` store directory is not
+  asset-shaped. The per-chunk integrity model is unchanged: chunk IDs are
+  SHA-512/256 of the uncompressed chunk, verified by the reader, so a
+  seed or store corruption costs fetches, never correctness.
+- **Blob images take a `.caibx` block index.** `.caidx` is for directory
+  trees; `casync make v2.caibx v2.bin` succeeds where the `.caidx` form is
+  refused ("Input is a regular file … attempted to make a directory
+  archive"). A 200 MB probe image produced a 39 KB index.
 - **The default store is a packed `.castr` blob**; chunk *directories*
   (`*.d/`) are the explicit variant. This decides the store shape: release
   assets are flat files, so a chunk directory cannot ship as an asset set,
   while one packed `.castr` can — and casync serves it over plain HTTP
-  with Range GETs per chunk (the property rung 1 verified).
+  with Range GETs per chunk (the property rung 1 verified). *
+  (Superseded by the correction above; retained so the record shows what
+  was measured, what was misread, and when.)*
 
 ### Invariants (each one load-bearing)
 
@@ -524,28 +545,38 @@ facts are cited from a live probe on the pinned snapshot (2026-09-28,
   exit criterion — if unstable, they are emitted post-gate and
   authenticated by SHA256SUMS alone).
 - **Launcher-side reader, not the casync binary.** casync has no
-  maintained Windows build and the launcher must not gain a C dependency:
-  the design is a minimal **Go caibx+castr read-only extractor** (block
-  index parse, chunk fetch by HTTP Range into the store, decompress-
-  place-at-offset, sparse-aware write). Format compatibility is pinned by
-  CI unit tests against tiny casync-generated fixtures (generate once,
-  commit the fixtures, assert byte-exact reconstruction + digest). This is
-  the delta consumer; the D1-style "no dead code" rule is satisfied
-  because the consumer ships with the builder emission and the E2E proof,
-  not alone.
-- **Integration point (exact):** `ensureGuest`'s rootfs branch
-  (`app/fetch.go:117-165`). Update case today: cached rootfs fails digest →
-  `removeCachedFile` → download zst → `decompress`. Delta case: cached
-  rootfs fails digest → **rename to a seed name (never remove yet)** → if
-  the release advertises `.caibx`/`.castr`, fetch the index, run the Go
-  extractor with the seed, verify the full-image digest, rename into
-  place, drop seed+partials; on ANY delta failure (missing artifacts,
-  Range refusal, checksum mismatch), fall back to the existing zst path —
-  the delta is an optimization, never a requirement. First-install case:
-  no seed exists, so the zst path serves (unchanged).
-- **Range discipline:** chunk fetches are Range GETs into the `.castr`;
-  T2.2's large-asset range re-verification extends rung 1 to the real
-  payload before any consumer ships.
+  maintained Windows build and the launcher must not gain a C dependency
+  (desync-the-library was evaluated and rejected: its go.mod pulls the
+  otel/grpc graph). **IMPLEMENTED** as a hand-rolled platform-neutral
+  reader (`app/casync_reader.go`): caibx parse (`[size][magic]` elements,
+  `CaFormatIndex`/`CaFormatTable`/tail-marker per desync v1.1.4's
+  const.go/format.go — the format spec cited from its source, not
+  memory), SHA-512/256 chunk digest verification (stdlib `crypto/sha512`),
+  zstd chunk decode (existing klauspost dependency), sharded-directory
+  and HTTP store backends, sparse-aware reconstruction with the seed's
+  ID→offset map from the previous release's index. Format compatibility
+  is pinned by committed casync-generated fixtures
+  (`app/testdata/casync`, generated in the pinned-snapshot container):
+  round-trip parse + per-chunk digest verification against image bytes,
+  reconstruction from store-only / store+seed / HTTP store, corrupt-seed
+  immunity, missing-chunk failure with partial cleanup, malformed-index
+  rejection. Platform boundary held: no windows-only helper is called;
+  Linux-target vet + test compile green.
+- **Integration point (exact): IMPLEMENTED** in `ensureGuest`'s rootfs
+  branch (`app/fetch.go`): cached rootfs fails digest →
+  `deltaReconstruct` (non-portable, non-empty image only): rename the
+  current image to `.seed` (never removed up front) → advertisement is
+  authoritative (both `.caibx` indices present in SHA256SUMS; nothing is
+  probed) → fetch+verify the two indices via the platform-neutral
+  download path (metered gate honored) → reconstruct against the seed →
+  the UNCHANGED full-image `verifyFileSHA256` gate → receipt + done. On
+  ANY failure: seed/partials cleaned, rootfs removed if partial, and the
+  existing zst path runs unchanged. First installs have no seed and take
+  the zst path; portable installs are excluded.
+- **Chunk transport (corrected):** chunk fetches are whole-file GETs
+  against the release's delta chunk archive/layout; there are no Range
+  reads in the delta path (T2.2's range re-verification remains owed for
+  the zst resume path, which predates deltas).
 - **Metrics in the log:** the reconstruction logs chunks fetched vs
   seed-supplied and bytes transferred, so the acceptance run MEASURES the
   win instead of asserting it.
@@ -566,6 +597,88 @@ facts are cited from a live probe on the pinned snapshot (2026-09-28,
   acceptance.
 - gate: fallback proof — a release without the delta artifacts (or a
   crippled store) completes via the zst path unchanged.
+
+### Implementation corrections (2026-09-28, builder emission)
+
+Measured while wiring the builder side; each fact is a probe result, not
+an assumption.
+
+- **Default store location (probe, casync 2.r269 in-container):** casync
+  writes the default store NEXT TO THE INDEX FILE, not in the process
+  cwd. The first delta build died at `mv default.castr` because the store
+  had landed beside the index in `build-a/contract/` while the mv looked
+  in `/work`. Fix: assemble.sh passes `--store="$out/rootfs.castr"`
+  explicitly (rm'd empty beforehand, so a reused store can never merge
+  old chunks into a new index's store), the mv is gone, and build.sh's
+  `/work/default.castr` hygiene line was removed — measured, there is
+  nothing in the cwd to clean.
+- **Chunk files are 0444:** casync marks store chunks read-only
+  (immutable-by-design). Harmless in-container (root unlinks regardless),
+  but delta-finalize.py runs HOST-side in the publish tail, and Windows
+  Python refuses to unlink read-only files (WinError 5, measured). The
+  script now removes via chmod-then-unlink fallback (no-op on Linux).
+- **Publish-tail ordering:** delta finalization runs on
+  `build-a/contract` BEFORE the payload copy. First delta-capable release
+  deletes the entire ~6 GiB store; doing that pre-copy avoids dragging
+  ~100k chunk files through the virtiofs mount only to delete them
+  host-side after the copy. Nothing re-runs the finalizer on
+  `out/contract` — in first-release mode its rc=3 fallback would strip
+  the already-shipped caibx.
+- **Finalizer validated against REAL casync bytes** (host-side Windows
+  Python, the production environment): 5-scenario battery — first-release
+  mode (store removed, bare caibx ships), 100% overlap (0 chunks kept,
+  prev index copied), missing store (rc=3 fail-closed), parser-vs-store
+  ID agreement (51/51), synthetic partial overlap (26 pruned / 25 kept,
+  exactly as constructed). The battery caught two real bugs on its first
+  run: a NameError on the prune path (copyfile after an import removal)
+  and the read-only unlink above — both fixed same day.
+- **Extra determinism point:** identical input indexed through two
+  different `--store` paths produced byte-identical caibx digests —
+  store location does not leak into the index.
+- **Errexit probe (record so nobody "fixes" it):** the
+  `[[ -f $f ]] && sha256sum "$f"` loop appending conditional SHA256SUMS
+  entries is `set -e`-safe — a failing non-final command of an `&&` list
+  is exempt from errexit (verified live). Converting it to if/fi blocks
+  would be churn, not correctness.
+- **Trap recurrence:** the single-quoted container script in build.sh
+  claimed a third victim — the comment "rm's the store" inside it killed
+  `bash -n` exactly like the documented 2026-09-28 case. Comments inside
+  that string carry the same apostrophe ban as code.
+
+### Builder emission verdict (2026-09-28, delta build 2)
+
+The gate ran green end-to-end; every declared criterion has now been
+exercised on real output:
+
+- **Emission + determinism:** both assemblies emitted identical delta
+  indexes — `delta index emitted (3313864 bytes; 76679 chunks)` twice, gate
+  line `rootfs.ext4.caibx 1b97d068…` with zero NONDETERMINISM lines. Seven
+  files gated, not six.
+- **First delta-capable release shape (asserted against the published
+  payload):** caibx present (3313864 bytes), no `rootfs.castr/`, no
+  `rootfs.ext4.prev.caibx`, caibx entry present in SHA256SUMS (8 entries,
+  all `sha256sum -c` verify), `release-base.json` sumsSha256 recomputed
+  after the tail (`93add1f6…`).
+- **Live reader probe (new, opt-in `TestLiveReconstructShippedPayload`):**
+  the shipped reader parses the published index (82844 chunk references /
+  76679 unique chunks — casync dedupes, so the reference count exceeds the
+  file count) and reconstructs the 6 GiB image from a seed with an EMPTY
+  store — every chunk resolved through the reader's ID matching — in 44 s;
+  the result digest-matches the published rootfs (`ea574cb3…`, the same
+  value the dual-build gate printed).
+- **Publish tail (third occurrence of the handle failure):** the hardened
+  tail fired as designed — 6×10 s retries, FATAL with `build-a/contract`
+  intact and hand-publish instructions. The manual publish replicated the
+  tail's order (delta-finalize first-release on build-a → store dropped
+  pre-copy → copy → SHA256SUMS + runtime zip → release-base.json). Two
+  hand-publish lessons recorded: re-verify copy targets after any
+  busy-directory failure, and the delta-entries SHA256SUMS block is easy
+  to forget outside the script — the first emitted sums lacked the caibx
+  entry until the shape assertion caught it (the launcher's advertisement
+  honesty depends on that block).
+- **Not yet exercised:** release N+1 against seed N (partial store fetch),
+  which needs a second payload — the E2E row stays open with its
+  measurement obligation (target < 100 MB).
 
 ## Resolution
 
