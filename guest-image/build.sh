@@ -180,10 +180,15 @@ run_build() {
         -v "guest-image-cache:/mkosi-cache:rw" \
         -e RELEASE_NAME="$release_name" -e VERSION="$version" \
         -w /work "$image" /bin/bash -ceu '
-        pacman -Sy --noconfirm --needed mkosi e2fsprogs zstd python-pefile python-pillow go
+        pacman -Sy --noconfirm --needed mkosi e2fsprogs zstd python-pefile python-pillow go casync
         useradd -m builder 2>/dev/null || true
         export HOME=/home/builder
         rm -rf /mkosi-ws/'"$tag"' /work/build-'"$tag"'
+        # (The old /work/default.castr hygiene line is gone: measured
+        # in-container 2026-09-28, casync writes its default store next to
+        # the index file, never in the cwd — and assemble.sh now passes
+        # --store explicitly and removes the store itself, so there is
+        # nothing here to clean.)
         # Phase 3 (FID-2026-0915-005): savant-core is cross-compiled on the
         # HOST (before the container starts) into skeletons/usr/bin, so it
         # rides SkeletonTrees into the image like every other factory file.
@@ -300,7 +305,7 @@ if [[ -n $crlf_hits ]]; then
 fi
 
 echo "[build] dual-build digest comparison"
-for f in rootfs.ext4 rootfs.ext4.zst vmlinuz-linux initramfs-linux.img build-spec.json guest-manifest.json; do
+for f in rootfs.ext4 rootfs.ext4.zst rootfs.ext4.caibx vmlinuz-linux initramfs-linux.img build-spec.json guest-manifest.json; do
     a=$(sha256sum "build-a/contract/$f" | cut -d' ' -f1)
     b=$(sha256sum "build-b/contract/$f" | cut -d' ' -f1)
     if [[ $a != "$b" ]]; then
@@ -315,7 +320,6 @@ done
 # transient Windows handle on out/contract cost a full re-run on 2026-09-19
 # and again on 2026-09-28) must leave build-a in place for a manual publish.
 trap - EXIT
-
 # Publish build A as the payload; drop the gate copy. Windows can hold a
 # transient handle on the previous payload directory (search indexer,
 # Explorer, a lagging file-share broker) — rm -rf on it fails with "Device
@@ -340,6 +344,40 @@ if [[ $rm_ok -ne 1 ]]; then
     echo "[build]          cp -r build-a/contract/. out/contract/" >&2
     exit 1
 fi
+
+# --- Delta finalization FIRST, on the pristine build-a copy (T2.1,
+# FID-2026-0914-002). The previous release's caibx (when a payload exists
+# to diff against) decides what the client can take from its own current
+# image: prune those chunks from the shipped store and copy the prev index
+# in, so the launcher's delta path has exactly what it needs and nothing
+# more. First delta-capable release (no previous payload): the whole
+# ~6 GiB store is REMOVED — and deleting that on build-a, before the
+# payload copy, avoids dragging ~100k chunk files through the virtiofs
+# mount only to delete them host-side after the copy.
+prev_payload=""
+prev_list=$(find "$out" -maxdepth 1 -type d -name 'contract-*' 2>/dev/null | sort -r | head -n1)
+[[ -n $prev_list ]] && prev_payload="$prev_list"
+prev_caibx="NONE"
+if [[ -n $prev_payload && -f $prev_payload/rootfs.ext4.caibx ]]; then
+    prev_caibx="$prev_payload/rootfs.ext4.caibx"
+    echo "[build] delta chain: previous index at $(basename "$prev_payload")"
+else
+    echo "[build] delta chain: no previous index — first delta-capable release"
+fi
+if python3 "$here/delta-finalize.py" "$here/build-a/contract" "$prev_caibx"; then
+    echo "[build] delta finalization complete"
+else
+    rc=$?
+    if (( rc == 3 )); then
+        echo "[build] delta finalization failed (rc=3) — shipping a NON-DELTA payload" >&2
+        rm -rf "$here/build-a/contract/rootfs.castr" "$here/build-a/contract/rootfs.ext4.caibx" \
+            "$here/build-a/contract/rootfs.ext4.prev.caibx"
+    else
+        echo "[build] FATAL: delta-finalize.py rc=$rc" >&2
+        exit 1
+    fi
+fi
+
 cp -r build-a/contract "$out/contract"
 rm -rf build-a build-b
 
@@ -382,6 +420,23 @@ fi
         winq-emu-alpha10-portable.zip > SHA256SUMS
 )
 
+# (Delta finalization itself ran earlier, on build-a/contract, BEFORE the
+# payload copy — see above. Nothing here re-runs it: in first-release mode
+# its rc=3 fallback would strip the already-shipped caibx.)
+# The delta artifacts join the authenticated payload: SHA256SUMS entries for
+# the store files and the two indices. The launcher's delta advertisement
+# reads SHA256SUMS — an unauthenticated artifact is dead weight; these lines
+# make the advertisement honest. The sums digest is recomputed AFTER these
+# entries, then release-base.json is emitted with the final value.
+(
+    cd "$out/contract"
+    if [[ -d rootfs.castr ]]; then
+        find rootfs.castr -type f -print0 | sort -z | xargs -0 sha256sum >> SHA256SUMS
+    fi
+    for f in rootfs.ext4.caibx rootfs.ext4.prev.caibx; do
+        [[ -f $f ]] && sha256sum "$f" >> SHA256SUMS
+    done
+)
 sums_digest=$(sha256sum "$out/contract/SHA256SUMS" | cut -d' ' -f1)
 cat > "$out/release-base.json" <<JSON
 {

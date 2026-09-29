@@ -346,6 +346,38 @@ mv "$img" "$out/rootfs.ext4"
 # identical flags in both builds.
 zstd -q -f -k -T1 --no-progress -6 "$out/rootfs.ext4" -o "$out/rootfs.ext4.zst"
 
+# --- delta artifacts (T2.1, FID-2026-0914-002): the casync block index of
+# rootfs.ext4 plus its full sharded chunk store. The index joins the
+# dual-build digest comparison in build.sh (casync output measured
+# deterministic: same input + flags -> byte-identical caibx across runs,
+# probe 2026-09-28). The store ships in the payload as rootfs.castr/
+# (chunk files <4-hex>/<64-hex>.cacnk); build.sh's publish tail prunes
+# seed-served chunks and decides the delta advertisement.
+# Store location measured in-container (2026-09-28): casync writes the
+# default store NEXT TO THE INDEX, not in the cwd - the first delta build
+# died at `mv default.castr` because the store had landed beside the index
+# in build-a/contract/. Pass --store explicitly so the layout never
+# depends on casync defaults; the target must be absent or empty first, or
+# a reused store would silently merge old chunks into this index's store.
+if command -v casync >/dev/null 2>&1; then
+    rm -rf "$out/rootfs.castr"
+    casync make --compression=zstd --store="$out/rootfs.castr" \
+        "$out/rootfs.ext4.caibx" "$out/rootfs.ext4" >/dev/null
+    chunks=$(find "$out/rootfs.castr" -type f 2>/dev/null | wc -l)
+    [[ $chunks -gt 0 ]] || {
+        echo "assemble: casync produced no chunks in $out/rootfs.castr" >&2
+        exit 1
+    }
+    [[ -s $out/rootfs.ext4.caibx ]] || {
+        echo "assemble: casync produced an empty index" >&2
+        exit 1
+    }
+    echo "assemble: delta index emitted ($(stat -c %s "$out/rootfs.ext4.caibx") bytes; $chunks chunks)"
+else
+    echo "assemble: casync missing - delta artifacts NOT emitted" >&2
+    exit 1
+fi
+
 # --- build-spec.json (F2): the launcher requires runtime.kernelCommandLine
 # and runtime.storage.expandedSizeMiB; the rest documents the build.
 cat > "$out/build-spec.json" <<SPEC
