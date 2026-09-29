@@ -250,6 +250,54 @@ func TestDownloadVerifiedRetainsPartialAcrossRuns(t *testing.T) {
 	}
 }
 
+// TestDownloadVerifiedResumesAResumedDownload drives the full T2.2 lifecycle:
+// the first transfer is interrupted mid-body (200), the resume gets 206 and is
+// interrupted AGAIN mid-body, and the third request resumes from the NEWER
+// offset with a correct Range header. Proves the append path not only
+// resumes but keeps advancing the offset across successive failures, and
+// that a .part which already contains resumed bytes stays append-only (never
+// truncated) on later attempts.
+func TestDownloadVerifiedResumesAResumedDownload(t *testing.T) {
+	payload := []byte(strings.Repeat("double resume ", 96))
+	cut1 := len(payload) / 4
+	cut2 := len(payload) / 2
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch requests.Add(1) {
+		case 1:
+			w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
+			w.WriteHeader(http.StatusOK)
+			w.Write(payload[:cut1]) // interrupted at cut1
+		case 2:
+			want := fmt.Sprintf("bytes=%d-", cut1)
+			if got := r.Header.Get("Range"); got != want {
+				t.Errorf("first resume Range = %q, want %q", got, want)
+				return
+			}
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", cut1, len(payload)-1, len(payload)))
+			w.Header().Set("Content-Length", strconv.Itoa(len(payload)-cut1))
+			w.WriteHeader(http.StatusPartialContent)
+			w.Write(payload[cut1:cut2]) // interrupted AGAIN, at cut2
+		case 3:
+			want := fmt.Sprintf("bytes=%d-", cut2)
+			if got := r.Header.Get("Range"); got != want {
+				t.Errorf("second resume Range = %q, want %q", got, want)
+				return
+			}
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", cut2, len(payload)-1, len(payload)))
+			w.WriteHeader(http.StatusPartialContent)
+			w.Write(payload[cut2:])
+		default:
+			t.Errorf("unexpected request #%d", requests.Load())
+		}
+	}))
+	defer server.Close()
+	runTestDownload(t, server.Client(), server.URL, payload, nil)
+	if got := requests.Load(); got != 3 {
+		t.Fatalf("requests = %d, want 3", got)
+	}
+}
+
 func TestDownloadVerifiedTimesOutIdleBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "1")
