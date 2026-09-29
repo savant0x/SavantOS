@@ -3,7 +3,10 @@
 How to run `guest-image/build.sh` correctly and what to do when it fights
 back. Distilled from the 2026-09-28 T1.3 runs (two green gates, one publish
 failure) and the FID's declared gate: *Docker: mkosi build ×2 → digests
-equal; six-file contract emitter verified against SHA256SUMS.*
+equal; six-file contract emitter verified against SHA256SUMS.* Since the
+late-2026-09-28 builder change the build also emits the T2.1 casync delta
+artifacts (FID-2026-0914-002) and finalizes the payload's delta store
+before publish — this runbook covers both.
 
 ## When to run this
 
@@ -14,9 +17,11 @@ equal; six-file contract emitter verified against SHA256SUMS.*
   payload.
 - To re-prove determinism after a builder-toolchain change.
 
-**Definition of done:** two independent assemblies with all six contract
-files hashing identically, the payload published under `out/contract`, and
-`release-base.json` re-emitted. A single assembly is NOT the gate.
+**Definition of done:** two independent assemblies with all seven gated
+contract files (the six originals plus `rootfs.ext4.caibx`) hashing
+identically, the payload published under `out/contract` with its delta
+store finalized, and `release-base.json` re-emitted. A single assembly is
+NOT the gate.
 
 ## Prerequisites (all measured on the reference host)
 
@@ -66,12 +71,13 @@ snapshot-lock: OK (Arch snapshot 20260811)
 assemble: kernel=vmlinuz-linux-zen initramfs=initramfs-linux-zen.img
 assemble: cursor vendor digest verified … / savant-code vendor digest verified …
 assemble: mode assertion passed (/usr /usr/share 755; savant-core 755; unit+preset 644)
-assemble: six contract files in /work/build-a/contract
+assemble: delta index emitted (<bytes> bytes; <chunks> chunks)  # T2.1: caibx + rootfs.castr/
+assemble: six contract files in /work/build-a/contract  # echo wording is historical — 8+ files ship now
 [build] assembly B (determinism gate)
 … same sequence, /work/build-b …
 [build] CRLF gate: no KConfig/unit/theme file may carry CR …
 [build] dual-build digest comparison
-  rootfs.ext4            <64-hex>     # and the other five files
+  rootfs.ext4            <64-hex>     # and the other six files — rootfs.ext4.caibx is gated (T2.1)
 [build] GATE GREEN — payload in …/out/contract
 [build] SHA256SUMS digest for -sums-sha256: <64-hex>
 ```
@@ -79,6 +85,47 @@ assemble: six contract files in /work/build-a/contract
 Cosmetic noise, not failures: pacman provider prompts ("Enter a number
 (default=1)") are non-interactive defaults; the `libgpg-error` `.INSTALL
 arithmetic` line is hook-script noise under `bash -ceu`.
+
+## Delta artifacts and the publish tail (T2.1, FID-2026-0914-002)
+
+What the builder now emits and when the store gets touched:
+
+- **assemble.sh** emits `rootfs.ext4.caibx` (casync block index of the
+  image) and `rootfs.castr/` (its sharded chunk store,
+  `<4-hex>/<64-hex>.cacnk` chunk files) after the zstd twin. The store
+  path is passed via `--store` explicitly — measured 2026-09-28: casync
+  writes its DEFAULT store next to the index file, not in the cwd, which
+  is exactly what the first delta build's `mv default.castr` tripped on.
+  Both outputs are fail-closed asserted (chunk count > 0, index non-empty).
+  casync installs in-container via build.sh's pacman list; nothing
+  host-side is needed.
+- **The caibx joins the dual-build digest gate** (seven files now).
+  casync output was measured deterministic (same input + flags →
+  byte-identical index, even across different store paths), so it gates
+  like every other artifact.
+- **Delta finalization runs on `build-a/contract` BEFORE the payload
+  copy.** Given the previous release's caibx (newest `out/contract-*`
+  sibling), the finalizer prunes every seed-served chunk from the store
+  and copies the prev index in as `rootfs.ext4.prev.caibx`. Doing this
+  pre-copy means first-release mode deletes the whole ~6 GiB store before
+  the ~100k-file virtiofs copy, not after.
+- **What a FIRST delta-capable release ships** (no previous payload —
+  the T1.3 baseline is one): the bare `rootfs.ext4.caibx` only — the
+  store is REMOVED (unusable without a seed) and no prev index exists, so
+  nothing advertises the delta path. It becomes the next release's chain
+  link. From release N+1 on, the payload carries the pruned store +
+  `rootfs.ext4.prev.caibx` and SHA256SUMS entries for both.
+- **Fail-closed, not fail-dead:** a finalizer layout surprise (rc=3)
+  strips the delta artifacts and ships a working NON-delta payload — the
+  launcher's zst path is untouched. rc≠3 aborts the build (gate green,
+  `build-a/` preserved).
+- **Never re-run `delta-finalize.py` on the published `out/contract`.**
+  In first-release mode its rc=3 fallback deletes the already-shipped
+  caibx; a second prune pass double-counts. `build-a/contract` is already
+  final when the publish-tail FATAL fires — copy it verbatim.
+- Chunk files are written 0444 (immutable by design); the finalizer's
+  remove path chmods on PermissionError — required host-side on Windows
+  (WinError 5, measured), no-op on Linux.
 
 ## Failure modes (each observed at least once)
 
@@ -109,6 +156,18 @@ arithmetic` line is hook-script noise under `bash -ceu`.
   both digests in the owning FID; the file name is the investigation.
 - **Disk space FATAL** — clean stale payloads/data dirs; the rotation
   guard normally handles `out/contract-*` siblings itself.
+- **`mv: cannot stat 'default.castr'`** (2026-09-28, first delta build) —
+  pre-fix symptom only: casync's default store lands next to the index,
+  not in the cwd, so the old cwd-relative `mv` found nothing. Current
+  assemble.sh passes `--store` explicitly; seeing this means a stale
+  script is running — stop and sync.
+- **`assemble: casync produced no chunks` / "casync missing"** — the
+  emitter fails closed rather than shipping an unindexable payload; check
+  the container's pacman step.
+- **`delta finalization failed (rc=3) — shipping a NON-DELTA payload`** —
+  not a lost build: the payload publishes without delta artifacts and the
+  zst path serves every client. Record the finalizer's stderr in
+  FID-2026-0914-002; the layout surprise is the investigation.
 
 ## Post-run checklist
 
@@ -118,8 +177,13 @@ arithmetic` line is hook-script noise under `bash -ceu`.
    (2026-09-28: run 2 == run 1 on all six). Drift means the tree or the
    toolchain changed — investigate before publishing.
 3. Published payload: `out/contract/` has the six files + the runtime zip
-   + `SHA256SUMS`; published `rootfs.ext4` digest == gate digest.
+   + `SHA256SUMS`; published `rootfs.ext4` digest == gate digest. Delta
+   shape per the first-release rule: `rootfs.ext4.caibx` present, NO
+   `rootfs.castr/`, no `rootfs.ext4.prev.caibx` — until a previous index
+   exists to prune against.
 4. `release-base.json`: `sumsSha256` == `sha256sum out/contract/SHA256SUMS`.
+   The sums include the delta entries (caibx, prev index, store files when
+   present), so the digest is only final after the publish tail completes.
 5. `build-a/`/`build-b/` gone (trap or manual); stale
    `guest-image-ws-*` volumes pruned (`docker volume ls`).
 6. Records: master plan T1.3 row, FID-2026-0914-002 gate note, CHANGELOG,
@@ -143,3 +207,9 @@ Serve `out/contract` over loopback HTTP and pass
 unmodified launcher (`guest-image/boot-proof.sh` automates the shape).
 Per the 2026-09-28 ruling, any VM launch — including a fresh-provision
 re-provision of a dev/accept target from this baseline — is operator-gated.
+
+The delta path activates from the SECOND delta-capable release: a payload
+carrying `rootfs.ext4.prev.caibx` + a pruned `rootfs.castr/` lets an
+already-installed launcher reconstruct the new image from its current one
+plus the advertised chunks. The first delta-capable release ships the bare
+caibx, so every install of THIS baseline takes the zst path by design.
