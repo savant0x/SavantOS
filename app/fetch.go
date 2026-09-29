@@ -129,6 +129,25 @@ func ensureGuestFiles(cfg *config, release, sumsSHA256, channel string) error {
 		return fmt.Errorf("verifying rootfs.ext4: %w", err)
 	}
 	if !rootfsOK {
+		// T2.1 delta path (FID-2026-0914-002): try reconstructing the new
+		// image from the previous one plus the release's chunk store. Only
+		// on a standard (non-portable) install with a non-empty cached
+		// image; it verifies against the SAME full-image digest before
+		// returning true. False means fall through to the zst path below,
+		// unchanged, for every condition whatsoever.
+		if !cfg.portable {
+			if st, statErr := os.Lstat(rootfs); statErr == nil && st.Size() > 0 {
+				if deltaReconstruct(client, cfg, release, sums, ui) {
+					if err := writeInstallReceipt(cfg.guestDir, release, sumsSHA256, installedGuestArtifacts, sums,
+						installProvenance{ProvisionedBy: currentVersion, Channel: channel}); err != nil {
+						return fmt.Errorf("recording verified install state: %w", err)
+					}
+					ui.setStatus("Ready - starting SavantOS...")
+					ui.setProgress(1, 1)
+					return sleepDuringSetup(700 * time.Millisecond)
+				}
+			}
+		}
 		if err := removeCachedFile(rootfs); err != nil {
 			return fmt.Errorf("removing incomplete rootfs.ext4: %w", err)
 		}
