@@ -39,7 +39,7 @@ nested=$(printf '%s' "$date_from_lock" | sed 's|^\(....\)\(..\)\(..\)$|\1/\2/\3|
 [[ $mirror_from_lock == "https://archive.archlinux.org/repos/$nested/" ]] ||
     fail "mirror $mirror_from_lock does not match snapshotDate $date_from_lock (expected .../repos/$nested/)"
 
-conf_date=$(sed -n 's|.*repos/\([0-9]\{4\}/[0-9]\{2\}/[0-9]\{2\}\)/.*|\1|p' "$2" | head -1)
+conf_date=$(sed -n 's|.*repos/\([0-9]\{4\}/[0-9]\{2\}/[0-9]\{2\}\)/.*|\1|p' "$2" | awk 'NR==1{print; exit}')
 [[ $conf_date == "$nested" ]] ||
     fail "mkosi.conf pins snapshot ${conf_date:-<none>} but the lock pins $nested"
 
@@ -52,7 +52,7 @@ sandbox_conf="$sandbox_dir/sandbox/pacman.conf"
 if [[ -f $sandbox_conf ]]; then
     grep -q "repos/$nested/" "$sandbox_conf" ||
         fail "$sandbox_conf does not pin snapshot $nested"
-    other=$(grep -oE 'repos/[0-9]{4}/[0-9]{2}/[0-9]{2}/' "$sandbox_conf" | sort -u | grep -v "$nested" | head -1)
+    other=$(grep -oE 'repos/[0-9]{4}/[0-9]{2}/[0-9]{2}/' "$sandbox_conf" | sort -u | grep -v "$nested" | awk 'NR==1{print; exit}')
     [[ -z $other ]] || fail "$sandbox_conf pins a second snapshot: $other"
 else
     fail "missing $sandbox_conf (the sandbox pacman.conf carries the repos)"
