@@ -3,13 +3,23 @@
 **Filename:** `FID-2026-0914-002-factory-and-trust.md`
 **ID:** FID-2026-0914-002
 **Severity:** high
-**Status:** fixed — the implementation of record is in the working tree
-(uncommitted at 2026-10-03, so `closed` is blocked on the operator's commit
-per G2). Earlier landings: keyring unit + assemble gates `40f36ff`, release
-re-point `9e48202`, sandbox pin `34f6fa8`, first-boot keyring proof
-2026-09-15, T2.1 delta chain `4fdec4d`/`25710ec`. In-tree at 2026-10-03:
-steps 3b/3c capability probes and the stage-3 one-owner runtime
-acquisition. Step 6 (Omarchy kill list) stays gated on operator sign-off.
+**Status:** fixed — implementation committed, but closure is NOT yet
+claimable. Two remainders, both operator-authority operations:
+(1) the declared `gate: release (prepare → pin → publish → smoke test on a
+fresh data dir)` has not run, so the exit criterion ("full release cycle
+producing the first Plasma-based signed release") is undischarged; (2) the
+live N+1 delta run is owed — the 2026-10-03 measurement parsed the two
+indices, while the gate requires a launcher update run that takes the delta
+path and boots the reconstructed image. Committed implementation of record:
+`501c379` (steps 3b/3c capability probes), `65abd6a` (stage-3 one-owner
+runtime acquisition), `eee056f` (delta fallback coverage), `d2b2b61`
+(records). Earlier landings: keyring unit + assemble gates `40f36ff`,
+release re-point `9e48202`, sandbox pin `34f6fa8`, first-boot keyring proof
+2026-09-15, T2.1 delta chain `4fdec4d`/`25710ec`. **Step 6 (Omarchy kill
+list) IS EXECUTED** — operator sign-off 2026-09-15; `guest-build/` is
+deleted (zero tracked files) and the runtime lock lives at
+`scripts/release/runtime.lock.json`. *Corrected 2026-10-05: an earlier
+revision of this line wrongly recorded step 6 as still gated on sign-off.*
 **Created:** 2026-09-14 00:56
 **YAGNI-Compliance:** Pending
 **Parent:** FID-2026-0912-001 (first-party OS pivot — Phase 1 converged; Phase 2 landed under FID-2026-0912-002/FID-2026-0913-001)
