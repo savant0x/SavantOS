@@ -391,33 +391,75 @@ rm -rf build-a build-b
 
 # The runtime path (app/setup.go ensureRuntime) authenticates the runtime
 # archive against the SAME SHA256SUMS, so a local release base must carry it.
-# Source: the published v0.0.1 asset (digest e8d0be…, matching the runtime
-# receipt of every installed launcher). Copied in when present, with a clear
-# failure otherwise.
-runtime_zip_src="${RUNTIME_ZIP:-$USERPROFILE/Downloads/winq-emu-alpha10-portable.zip}"
-# Fallback: the user's Downloads copy is disposable; the repo-adjacent
-# archive (out/runtime-archive/) is the durable home. (2026-0919: a disk
-# rotation moved the Downloads copy and the publish tail FATALed after a
-# fully green dual verdict — 2h of build wasted. Never again.)
-if [[ ! -f $runtime_zip_src && -f $here/out/runtime-archive/winq-emu-alpha10-portable.zip ]]; then
-    runtime_zip_src="$here/out/runtime-archive/winq-emu-alpha10-portable.zip"
-fi
-if [[ -f $runtime_zip_src ]]; then
-    cp -f "$runtime_zip_src" "$out/contract/"
+# One owner (stage 3, FID-2026-0914-002): the BUILDER stages the archive, and
+# scripts/release/runtime.lock.json is the single pin for where it comes from
+# (digest e8d0be…, matching the runtime receipt of every installed launcher).
+# Every staged copy is verified against the lock's sha256 before use; when no
+# local copy exists, the archive is fetched from the lock's url into the
+# durable home (out/runtime-archive/), mirroring fetch_cursor's vendor-lock
+# discipline — on the release runner (no Downloads, no durable home) that
+# fetch IS the path. RUNTIME_ZIP and the Downloads copy remain fast-path
+# conveniences.
+runtime_lock="$repo_root/scripts/release/runtime.lock.json"
+runtime_name=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['runtime']['filename'])" "$runtime_lock") \
+    || { echo "[build] FATAL: cannot read the runtime lock's filename ($runtime_lock)" >&2; exit 1; }
+runtime_want=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['runtime']['sha256'])" "$runtime_lock") \
+    || { echo "[build] FATAL: cannot read the runtime lock's sha256 ($runtime_lock)" >&2; exit 1; }
+[[ -n $runtime_name && -n $runtime_want ]] || { echo "[build] FATAL: runtime.lock.json is missing runtime fields" >&2; exit 1; }
+if [[ -n ${RUNTIME_ZIP:-} ]]; then
+    runtime_zip_src=$RUNTIME_ZIP
+elif [[ -n ${USERPROFILE:-} && -f "$USERPROFILE/Downloads/$runtime_name" ]]; then
+    runtime_zip_src="$USERPROFILE/Downloads/$runtime_name"
 else
-    # Fail-closed (2026-0916 build): a warning here produced a payload whose
-    # SHA256SUMS step died minutes later with an opaque sha256sum error. The
-    # launcher's runtime path cannot authenticate without the archive.
-    echo "[build] FATAL: runtime archive not found at $runtime_zip_src" >&2
-    echo "[build]        set RUNTIME_ZIP=<path> and rerun." >&2
+    # The durable home. (2026-0919: a disk rotation moved the Downloads copy
+    # and the publish tail FATALed after a fully green dual verdict — 2h of
+    # build wasted. Never again.)
+    runtime_zip_src="$here/out/runtime-archive/$runtime_name"
+fi
+# Third fallback: no local copy anywhere — fetch from the lock's pinned url
+# and verify BEFORE the archive lands in the durable home. Fail-closed on any
+# mismatch or fetch failure (2026-0916 build): a warning here once produced a
+# payload whose SHA256SUMS step died minutes later with an opaque sha256sum
+# error; the launcher's runtime path cannot authenticate without the archive.
+if [[ ! -f $runtime_zip_src ]]; then
+    runtime_url=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['runtime']['url'])" "$runtime_lock") \
+        || { echo "[build] FATAL: cannot read the runtime lock's url ($runtime_lock)" >&2; exit 1; }
+    [[ -n $runtime_url ]] || { echo "[build] FATAL: runtime.lock.json is missing the runtime url" >&2; exit 1; }
+    echo "[build] runtime archive not found locally - fetching from the runtime lock (vendor-pinned digest)..."
+    mkdir -p "$here/out/runtime-archive"
+    curl -fsSL --retry 3 --retry-delay 5 -o "$here/out/runtime-archive/$runtime_name.part" "$runtime_url" \
+        || { echo "[build] FATAL: runtime archive download failed" >&2; rm -f "$here/out/runtime-archive/$runtime_name.part"; exit 1; }
+    runtime_have=$(sha256sum "$here/out/runtime-archive/$runtime_name.part" | cut -d' ' -f1)
+    if [[ $runtime_have != "$runtime_want" ]]; then
+        echo "[build] FATAL: fetched runtime archive digest mismatch" >&2
+        echo "  want (runtime.lock.json): $runtime_want" >&2
+        echo "  have: $runtime_have" >&2
+        rm -f "$here/out/runtime-archive/$runtime_name.part"
+        exit 1
+    fi
+    mv "$here/out/runtime-archive/$runtime_name.part" "$here/out/runtime-archive/$runtime_name"
+    runtime_zip_src="$here/out/runtime-archive/$runtime_name"
+fi
+# The lock is the trust anchor for ANY staged copy, not just a fetched one: a
+# drifted local fast-path copy must fail HERE, not later as a self-consistent
+# payload whose runtime entry authenticates wrong bytes (the same check
+# prepare-assets.sh now asserts against the published sums).
+runtime_have=$(sha256sum "$runtime_zip_src" | cut -d' ' -f1)
+if [[ $runtime_have != "$runtime_want" ]]; then
+    echo "[build] FATAL: runtime archive digest mismatch ($runtime_zip_src)" >&2
+    echo "  want (runtime.lock.json): $runtime_want" >&2
+    echo "  have: $runtime_have" >&2
+    echo "  (set RUNTIME_ZIP=<pinned copy> or delete the drifted file and rerun)" >&2
     exit 1
 fi
+cp -f "$runtime_zip_src" "$out/contract/$runtime_name"
+echo "[build] runtime archive staged: ${runtime_have:0:16}"
 
 (
     cd "$out/contract"
     sha256sum guest-manifest.json build-spec.json vmlinuz-linux \
         initramfs-linux.img rootfs.ext4 rootfs.ext4.zst \
-        winq-emu-alpha10-portable.zip > SHA256SUMS
+        "$runtime_name" > SHA256SUMS
 )
 
 # (Delta finalization itself ran earlier, on build-a/contract, BEFORE the

@@ -6,6 +6,13 @@ repo_root=$(cd "$(dirname "$0")/../.." && pwd)
 artifacts=${1:-}
 [[ -n $artifacts && -d $artifacts ]] || { echo "Usage: $0 ARTIFACT_DIR" >&2; exit 2; }
 
+# One owner for runtime acquisition (FID-2026-0914-002): the BUILDER stages
+# the runtime archive into the payload and its SHA256SUMS entry — the
+# launcher authenticates the runtime against the release's SHA256SUMS, so a
+# second staging path here would be a second truth (and the old guard fired
+# exactly on that collision). This script asserts the pinned archive actually
+# shipped and stages the SOURCE archive, whose attribution obligation no
+# payload carries.
 runtime_lock=${SAVANTOS_RUNTIME_LOCK:-"$repo_root/scripts/release/runtime.lock.json"}
 readarray -t runtime_archives < <(python3 - "$runtime_lock" <<'PY' | tr -d '\r'
 import json
@@ -33,6 +40,16 @@ for archive in "${runtime_archives[@]}"; do
   }
   [[ -z ${seen_names[$name]:-} ]] || { echo "Duplicate runtime archive: $name" >&2; exit 1; }
   seen_names[$name]=1
+  if [[ $role == runtime ]]; then
+    # The builder staged this archive and its sums entry; assert the pinned
+    # digest is what actually shipped, so a drifted local fast-path copy
+    # fails here rather than on a user's machine.
+    grep -qE "^${digest}[[:space:]]+${name}$" "$artifacts/SHA256SUMS" || {
+      echo "payload SHA256SUMS lacks the pinned runtime archive entry ($digest  $name) — rebuild with the current builder" >&2
+      exit 1
+    }
+    continue
+  fi
   if grep -qE "[[:space:]]${name}$" "$artifacts/SHA256SUMS"; then
     echo "$name is already present in SHA256SUMS" >&2
     exit 1
