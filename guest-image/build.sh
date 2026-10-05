@@ -247,11 +247,23 @@ trap 'rm -rf "$here/build-a" "$here/build-b"' EXIT
 # payload (guest.previous) as recovery — that lifetime belongs to the
 # launcher's own rotation, not to the build; everything else under a data
 # dir root named like a prior payload (created by manual publishes) goes.
-# (find -maxdepth 1 -print0 | sort -rz: newest payload dir first.)
-while IFS= read -r -d '' stale; do
-    echo "[build] rotation guard: removing stale payload $(basename "$stale")"
-    rm -rf -- "$stale"
-done < <(find "$out" -maxdepth 1 -type d -name 'contract-*' -print0 | sort -rz | tail -n +2)
+# Glob-based like the delta-prev scan below (no `find`/`tail` — this host
+# has neither, and find.exe here is the Windows binary, which silently
+# no-op'd this entire guard under pipefail). Contract dirs embed
+# timestamps, so reverse-lexical is newest-first; awk drops the first
+# entry, the newest sibling we retain. `contract-*/` matches directories
+# only and cannot match out/contract.prev (the park name uses a dot, not
+# a dash).
+shopt -s nullglob
+stale_payloads=("$out"/contract-*/)
+shopt -u nullglob
+if ((${#stale_payloads[@]} > 1)); then
+    printf '%s\n' "${stale_payloads[@]}" | sort -r | awk 'NR>1' | \
+        while IFS= read -r stale; do
+            echo "[build] rotation guard: removing stale payload $(basename "$stale")"
+            rm -rf -- "$stale"
+        done
+fi
 
 # Stale named workspaces from runs whose container died before the
 # volume rm (crash, host reboot): every ws volume except the one the next
