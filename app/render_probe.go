@@ -30,8 +30,13 @@ type renderProbe struct {
 	// RuntimeID identifies the QEMU runtime the result was observed with.
 	RuntimeID string `json:"runtimeID"`
 	// DisplayDriver identifies the Windows display drivers at the time.
-	DisplayDriver string    `json:"displayDriver"`
-	RecordedAt    time.Time `json:"recordedAt"`
+	DisplayDriver string `json:"displayDriver"`
+	// Vulkan and AVX2 are the host capability facts captured at the same
+	// moment (FID-2026-0914-002 steps 3b/3c). Additive since their landing:
+	// older records simply omit them, so the schema stays 1.
+	Vulkan     string    `json:"vulkan,omitempty"`
+	AVX2       string    `json:"avx2,omitempty"`
+	RecordedAt time.Time `json:"recordedAt"`
 }
 
 func loadRenderProbe(dir string) (*renderProbe, error) {

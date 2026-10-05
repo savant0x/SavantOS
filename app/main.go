@@ -59,6 +59,11 @@ type config struct {
 	renderMode    string
 	runtimeID     string
 	displayDriver string
+	// Host capability facts (FID-2026-0914-002 steps 3b/3c), captured once
+	// per launch beside the render decision inputs and carried by the
+	// render-probe record and the diagnostics facts.
+	vulkanSupport string
+	avx2Support   string
 }
 
 // pickGuestMem sizes the guest RAM to this machine; see resources.go.
@@ -657,6 +662,10 @@ func main() {
 		cfg.supportsSharing = true
 		cfg.runtimeID = runtimeIdentity(gpuRoot)
 		cfg.displayDriver = displayDriverIdentity()
+		capabilities := probeVulkanSupport()
+		cfg.vulkanSupport = capabilities.describe()
+		cfg.avx2Support = probeAVX2Support()
+		logf("host capabilities: vulkan %s; avx2 %s", cfg.vulkanSupport, cfg.avx2Support)
 		phaseEnter(phaseRenderDecision)
 		var reason string
 		cfg.useGpu, reason = startWithGPU(cfg.renderMode)
@@ -1121,7 +1130,8 @@ func recordRenderResult(cfg *config) {
 	if cfg.useGpu {
 		result = renderGPU
 	}
-	probe := renderProbe{Result: result, RuntimeID: cfg.runtimeID, DisplayDriver: cfg.displayDriver, RecordedAt: time.Now()}
+	probe := renderProbe{Result: result, RuntimeID: cfg.runtimeID, DisplayDriver: cfg.displayDriver,
+		Vulkan: cfg.vulkanSupport, AVX2: cfg.avx2Support, RecordedAt: time.Now()}
 	if err := saveRenderProbe(cfg.dir, probe); err != nil {
 		logf("could not record the rendering result: %v", err)
 	}

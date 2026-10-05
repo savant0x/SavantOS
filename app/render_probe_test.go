@@ -14,13 +14,25 @@ func TestRenderProbeRoundTrip(t *testing.T) {
 		t.Fatalf("missing probe should be nil, got %v %v", p, err)
 	}
 	now := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
-	want := renderProbe{Result: renderCPU, RuntimeID: "sha256:abc", DisplayDriver: "Intel=31.0.1", RecordedAt: now}
+	want := renderProbe{Result: renderCPU, RuntimeID: "sha256:abc", DisplayDriver: "Intel=31.0.1",
+		Vulkan: "1.3.280 via 1 driver(s)", AVX2: "yes", RecordedAt: now}
 	if err := saveRenderProbe(dir, want); err != nil {
 		t.Fatal(err)
 	}
 	got, err := loadRenderProbe(dir)
 	if err != nil || got == nil || got.Schema != 1 || got.Result != renderCPU || got.RuntimeID != want.RuntimeID || !got.RecordedAt.Equal(now) {
 		t.Fatalf("round trip mismatch: %+v %v", got, err)
+	}
+	if got.Vulkan != want.Vulkan || got.AVX2 != want.AVX2 {
+		t.Fatalf("capability facts lost in round trip: %+v", got)
+	}
+	// Records written before the capability probes existed (no vulkan/avx2
+	// fields) must keep loading: the schema is additive.
+	if err := os.WriteFile(filepath.Join(dir, renderProbeFilename), []byte(`{"schema":1,"result":"cpu","runtimeID":"x"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if old, err := loadRenderProbe(dir); err != nil || old == nil || old.Vulkan != "" || old.AVX2 != "" {
+		t.Fatalf("pre-capability record must load with empty facts: %+v %v", old, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, renderProbeFilename), []byte(`{"schema":1,"result":"maybe"}`), 0o644); err != nil {
 		t.Fatal(err)
