@@ -330,7 +330,12 @@ ran.
    publish-tail implementation, `c518e8f` records, `de8ee41` scratchpad
    drivers), the 14 stale scratchpad scripts deleted, and the
    rotation-guard `find` at build.sh:254 glob-ified (`49bca9b`) with
-   gates re-run green (suite 42/42, contract-only 0).
+   gates re-run green (suite 42/42, contract-only 0). Post-push CI then
+   exposed a real red inherited from the six-commit push (the stale
+   `test_prepare_assets.py` still pinned the retired fetch-it-here
+   runtime contract; `65abd6a` moved acquisition to the builder): fixed
+   at cause with a strengthened contract test + a new fail-closed case
+   (`9d982a7`), and CI is green on HEAD.
 2. [ ] Rule on the new `[OPEN-OUT-OF-SCOPE]` `single_agent` config key.
 3. [ ] Operator schedules the FID-2026-1005-001 real-build swap proof
    (the FID's last closure obligation; ~2h build, headroom present).
