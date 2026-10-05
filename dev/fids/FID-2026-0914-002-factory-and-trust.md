@@ -3,9 +3,13 @@
 **Filename:** `FID-2026-0914-002-factory-and-trust.md`
 **ID:** FID-2026-0914-002
 **Severity:** high
-**Status:** converged — keyring unit + assemble gates landed `40f36ff`,
-release re-point `9e48202`, sandbox pin `34f6fa8`; first-boot keyring proof
-passed 2026-09-15
+**Status:** fixed — the implementation of record is in the working tree
+(uncommitted at 2026-10-03, so `closed` is blocked on the operator's commit
+per G2). Earlier landings: keyring unit + assemble gates `40f36ff`, release
+re-point `9e48202`, sandbox pin `34f6fa8`, first-boot keyring proof
+2026-09-15, T2.1 delta chain `4fdec4d`/`25710ec`. In-tree at 2026-10-03:
+steps 3b/3c capability probes and the stage-3 one-owner runtime
+acquisition. Step 6 (Omarchy kill list) stays gated on operator sign-off.
 **Created:** 2026-09-14 00:56
 **YAGNI-Compliance:** Pending
 **Parent:** FID-2026-0912-001 (first-party OS pivot — Phase 1 converged; Phase 2 landed under FID-2026-0912-002/FID-2026-0913-001)
@@ -679,6 +683,226 @@ exercised on real output:
 - **Not yet exercised:** release N+1 against seed N (partial store fetch),
   which needs a second payload — the E2E row stays open with its
   measurement obligation (target < 100 MB).
+
+### E2E N+1 progress — measured transfer, chain incident, coverage (2026-10-03)
+
+- **Chain incident (record first).** The 2026-09-29 N+1 build's publish
+  tail hit the known busy-handle FATAL (6×10 s). `out/contract` — the
+  PUBLISHED N payload — was rm'd down to a husk before the handle blocked:
+  the previous release was destroyed while its replacement never published.
+  Survivors, verified by digest this session: the N index (now
+  `out/baseline-published-N-caibx/rootfs.ext4.caibx`, `1b97d068…` — the
+  renamed T2.1-baseline copy) and the complete N+1 payload (moved
+  `build-a/contract` → `out/n1-payload-20260929/`; rootfs `094df621…`,
+  caibx `11792f4f…`; assembly B re-hashed byte-identical as a fresh
+  determinism witness). The hardened tail preserved the new payload as
+  designed — but nothing guards the PREVIOUS payload during the publish
+  rm. That asymmetry is a named follow-up for the publish tail (see
+  SCOPE.md); the rotation guard's contract-.* pruning is unrelated here.
+- **Measured transfer (the gate's number).** Parsed the published N index
+  against the N+1 index (82844 refs / 76679 unique chunks each): 76676
+  chunk IDs shared, **3 new chunks, 87,522 compressed bytes = 0.1 MiB
+  client transfer** — the < 100 MB target met by three orders of
+  magnitude. The 3 chunks sit at image offsets 721–723 MiB and contain
+  the embedded savant-core ELF (Go buildinfo strings read from the chunk
+  bytes): the builds differ by the VCS stamp of the commit that landed
+  between them (`1b93430`). That is the builder's non-determinism floor —
+  every release changes it by construction, and the delta carries it for
+  87 KB. Cross-run digest drift (a2dbea53 → ea574cb3 → 094df621) is now
+  fully explained by the stamp, not by tooling drift.
+- **Fallback + interruption coverage (stage 6).** `deltaReconstruct` had
+  zero direct tests. Five added against the committed fixtures, both
+  targets green: `TestDeltaReconstructEndToEnd` (the full
+  fetch-verify-reconstruct-verify-cleanup chain through an httptest
+  release), `TestDeltaReconstructFallsBackWithoutDeltaArtifacts`
+  (no-advertisement fallback touches nothing),
+  `TestDeltaReconstructCleansUpWhenIndexUnreachable`,
+  `TestDeltaReconstructCleansUpOnMissingChunks` (no scaffolding survives
+  for the zst fallback), and `TestReconstructReplacesStalePartial` (a
+  leftover `.dpart` from an interrupted run is consumed, never merged).
+- **Rebuild in flight — first attempt died, diagnosed, relaunched.** The
+  restore build (`out/t13-dual-build-20261003.log`) failed at the rootfs
+  zstd write (`zstd: error 70 : Write error : Input/output error`), after
+  the mode assertion. Ground truth on the failure: the zstd output targets
+  `/work/build-<tag>/contract` — the Docker Desktop file-sharing host
+  bind, the same layer the RUNBOOK documents for virtiofs write failures
+  — while the 6 GiB image read from that same bind had already succeeded
+  and the Docker VM disk measured 947G free (checked after), so this was
+  a transient file-sharing failure, not a builder defect or disk
+  exhaustion. At relaunch time the engine itself proved wedged
+  (`docker info` hung while the docker-desktop WSL distro reported
+  Running); Docker Desktop was restarted, the engine answered in ~20 s
+  (28.4.0), `docker system df` showed no pressure, and the dead run's
+  stale `guest-image-ws-a` volume is pruned by build.sh's own rotation
+  guard. The relaunch (`out/t13-dual-build-20261003b.log`) additionally
+  required the recorded head-shim workaround: this host's missing
+  `/usr/bin/head` kills `check-snapshot-lock.sh` fail-closed (exit 1) —
+  the shim is a temp-dir PATH prepend, no repo change (the SCOPE.md open
+  item stands).
+- **The rebuild's reproducibility prediction is corrected.** The earlier
+  prediction ("savant-core embeds the same commit stamp as the N+1
+  build, so rootfs.ext4 = 094df621… byte-identical") is falsified by
+  ground truth: `go version -m` on the first attempt's binary shows
+  `vcs.revision=1b93430…` but `vcs.modified=true` — the dirty working
+  tree (app/, scripts/, dev/ edits) stamps into the buildinfo, which is
+  exactly why that attempt's savant-core digest (`739698ad…`) already
+  differed from the N+1 build's (`2e567e59…`). The savant-core CODE is
+  still exactly the committed 1b93430 tree (guest-daemon/ carries no
+  uncommitted changes), so the rebuild remains a valid, content-honest
+  release base; its rootfs digest will differ, and the drift is the
+  vcs.modified stamp — the same drift class as the 09-28→09-29
+  revision-stamp change. Falsifiable prediction for the operator's
+  post-commit run: a clean-tree build at 1b93430 should reproduce
+  `2e567e59…` / `094df621…`. The N+1 release chain (finalize against the
+  true published-N index) runs against the survivor payload regardless
+  of the rebuild's verdict.
+
+### Stage 3 — one owner for runtime acquisition and manifest assembly (2026-10-03)
+
+The addendum's stage-3 defect ("builder runtime publication and release
+preparation disagree about who supplies the runtime archive and SHA256SUMS
+entry") was re-read against the current tree and the disagreement has become
+a CONFIRMED double breakage for the next release tag, with line evidence:
+
+1. `scripts/release/build-guest.sh` full mode runs `guest-image/build.sh`,
+   whose publish tail (2026-09-28) embeds `winq-emu-alpha10-portable.zip`
+   into the payload and its SHA256SUMS entry (build.sh:397-421,
+   fail-closed on a missing local archive at `RUNTIME_ZIP` /
+   `~/Downloads/` / `guest-image/out/runtime-archive/`). On the ubuntu
+   release runner NONE of those exist — `out/runtime-archive/` is not in
+   git — so **the prepare job dies inside the build**, before
+   prepare-assets ever runs.
+2. Even with an archive supplied, `scripts/release/prepare-assets.sh:36`
+   refuses a name already present in SHA256SUMS — and the payload's sums
+   now always carries the runtime entry. **The prepare job dies at the
+   double entry.**
+
+**Design of record (one owner = the builder):** the payload owns the
+runtime archive and its sums entry — the launcher's `ensureRuntime`
+authenticates the archive against the release's SHA256SUMS, so a second
+staging path is a second truth. Concretely:
+
+- `guest-image/build.sh` gains a third runtime-archive fallback, mirroring
+  `fetch_cursor`'s vendor-lock discipline: when neither `RUNTIME_ZIP` nor
+  the durable home has the archive, fetch it from
+  `scripts/release/runtime.lock.json` (`url`) and verify against the
+  lock's `sha256` before use — fail-closed on any mismatch. The lock
+  becomes the single pin for where the runtime comes from; the local
+  paths remain fast-path conveniences.
+- `scripts/release/prepare-assets.sh` drops the `runtime` role from its
+  staging loop and instead ASSERTS the payload's SHA256SUMS already
+  contains the runtime archive entry (fail-closed with an actionable
+  message when built by an older builder). The `source` role (the WINQ-EMU
+  source zip, an attribution obligation) keeps flowing through
+  prepare-assets — the payload does not carry it.
+- `release.yml` needs NO change: the publish list already uploads the
+  payload's `winq-emu-alpha10-portable.zip` verbatim (line 120) and the
+  source zip arrives via prepare-assets.
+
+**IMPLEMENTED 2026-10-03** (after the dead rebuild released `build.sh` —
+a running bash script is never edited mid-execution):
+
+- `guest-image/build.sh`: the runtime block now reads `filename`/`sha256`
+  from `scripts/release/runtime.lock.json` (the single pin), resolves
+  RUNTIME_ZIP → Downloads → durable home with `set -u`-safe expansions
+  (the old `${RUNTIME_ZIP:-$USERPROFILE/…}` died on an unset USERPROFILE
+  under `set -u` — a latent ubuntu-runner break, fixed in the same
+  block), fetches from the lock's url into the durable home when no
+  local copy exists (fetch → digest-verify → then land; `.part` removed
+  on any failure), verifies EVERY staged copy against the lock before
+  staging (a drifted fast-path copy now fails at the trust anchor — the
+  build-time twin of prepare-assets' published-sums assertion), and
+  copies under the lock's filename into the payload. The SHA256SUMS
+  emission uses the lock's filename.
+- `scripts/release/prepare-assets.sh`: implemented earlier this session
+  (the runtime role asserts the pinned sums entry and stages only the
+  source archive; `scripts/dev/test-prepare-assets.sh` covers it).
+- `release.yml`: untouched, as designed.
+
+**Verification evidence (tool output, 2026-10-03):** `bash -n` clean on
+both scripts; `build.sh --contract-only` → "Unknown argument", exit 2
+(fail-closed CLI intact); `build-guest.sh --contract-only` →
+`snapshot-lock: OK (Arch snapshot 20260811)` + daemon gates, exit 0 (run
+with the temp-dir head shim — the missing-`/usr/bin/head` host issue is
+unchanged); `scripts/dev/test-prepare-assets.sh` 10/10 (syntax, offline
+positive + source staged + runtime entry untouched, missing-entry
+refusal, drifted-digest refusal, duplicate guard); release.yml YAML-parses
+clean. The lock-fetch fallback's first LIVE proof is the next tag run
+whose durable home is absent; the lock's sha256 pin bounds the risk.
+
+## Implementation Evidence (steps 3b + 3c — capability probes, 2026-10-03)
+
+D1 approved immediate implementation of both probes in order 3a → 3b → 3c;
+3a landed 2026-09-16 (above). This section is the intent record for 3b/3c
+(written before code, per Law 8); gate evidence is appended below.
+
+### Measured facts (live probes on this host, 2026-10-03)
+
+- **Vulkan ICD manifests** register under `HKLM\SOFTWARE\Khronos\Vulkan\Drivers`
+  (one registry value per manifest; the value name is the JSON path). The
+  manifest carries the driver's supported API version as
+  `ICD.api_version` (e.g. `"1.3.280"`) — parseable without loading anything.
+- This host measures the honest NEGATIVE case: the Khronos key is absent
+  while the loader DLLs exist (`System32\vulkan-1.dll`,
+  `SysWOW64\vulkan-1.dll` both present). The probe must therefore report
+  loader-without-drivers as a first-class outcome, not an error.
+- **AVX2**: `IsProcessorFeaturePresent` (kernel32) verified live —
+  PF_AVX2_INSTRUCTIONS_AVAILABLE (40) = True here (also AVX 39 and
+  AVX512F 41 True; PF_XSAVE 24 False — recorded as measured; the OS's
+  answer is the contract, this probe asserts nothing beyond it).
+
+### Design corrections vs. the Loop-2 sketches (recorded, not silent)
+
+1. **3b needs no adapter enumeration.** Loop 2 named "DXGI/D3DKMT-style
+   adapter enumeration"; the probe record already captures adapter
+   identity through `displayDriverIdentity` (render-probe record,
+   `DisplayDriver`). Enumerating adapters again would duplicate that
+   (Law 13); the Khronos ICD manifests ARE the Vulkan-driver enumeration
+   and they carry the version the probe exists to assert.
+2. **3c uses `IsProcessorFeaturePresent`, not `GetLogicalProcessorInformationEx`.**
+   GLPIE returns cache/NUMA/core topology, not CPUID feature bits; the
+   documented Windows surface for exactly this question is IFPI's
+   `PF_AVX2_INSTRUCTIONS_AVAILABLE`. (Same correction class as 3a's
+   Iphlpapi-vs-research-rows finding.)
+3. **No new guest compositing flag.** The Loop-2 note mentioned a guest
+   compositing consumer; the guest already keys compositing behavior off
+   `savantos.render` (the Phase-2 contract), and a new kernel-cmdline word
+   with no guest consumer would fail Law 4. The compositing flag stays
+   keyed to `savantos.render`; the probes feed the record + diagnostics +
+   provenance log only.
+
+### Shape
+
+- `app/capability.go` (platform-neutral, CI-testable): `vulkanProbe`
+  {Loader bool; ICDs []vulkanICD; Error string}, `vulkanICD`
+  {Manifest, APIVersion string}; `parseVulkanICDAPIVersion` (bounded
+  64 KiB read at the call site, tolerant of unknown JSON fields, "" on
+  anything absent/malformed); `vulkanSupports13` (total, false on
+  unparseable); `describe` rendering one stable fact string per state.
+- `app/capability_windows.go`: `probeVulkanSupport` (registry walk mirroring
+  `displayDriverIdentity`'s syscall pattern; FILE_NOT_FOUND = no drivers,
+  not an error; fail-open everywhere), `probeAVX2Support` ("yes"/"no",
+  "unknown (api unavailable)" only when the export is missing).
+- Consumers (Law 4, all three wired): (1) one provenance log line beside
+  the rendering decision; (2) `renderProbe` gains optional `vulkan` /
+  `avx2` fields (schema stays 1 — additive, old records load unchanged);
+  (3) `hostFacts()` carries `host.vulkan` / `host.avx2` into the
+  diagnostics bundle.
+- Gates: `go build`, `go vet -unsafeptr=false`, `go test`, `gofmt -l` on
+  both targets (windows + linux test-compile), markdownlint on touched
+  docs.
+
+**Gate evidence (2026-10-03, this host, Go 1.27.0 windows/amd64):** build +
+`vet -unsafeptr=false` + `test -count=1` (`ok ... 10.795s`) + `gofmt -l`
+clean; linux-target vet + test-compile clean. New tests:
+`TestParseVulkanICDAPIVersion`, `TestVulkanSupports13`,
+`TestVulkanProbeDescribe` (pure matrices, run on CI's ubuntu target too),
+`TestProbeAVX2SupportLive` + `TestProbeVulkanSupportLive` (live-API
+contract on Windows), `TestRenderProbeRoundTrip` extended with the
+additive fields and a pre-capability record. Call-graph reachability:
+`probeVulkanSupport()` at `main.go:665` and `diagnostics_windows.go:33`;
+`probeAVX2Support()` at `main.go:667` and `diagnostics_windows.go:34` —
+both production consumers, pasted from grep.
 
 ## Resolution
 

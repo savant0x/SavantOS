@@ -29,7 +29,7 @@ NOT the gate.
 |---|---|---|
 | Docker engine running | `docker info` answers | Docker Desktop does not auto-start; launch `Docker Desktop.exe`, engine answers in ~1 min |
 | ≥ 35 GiB transient disk | `df -Pm` on the build drive | `build.sh` fails closed below 35000 MiB (2 workspaces + 2 contracts + payload ≈ 35 G peak) |
-| Runtime archive | `out/runtime-archive/winq-emu-alpha10-portable.zip` (durable home) or `$USERPROFILE/Downloads/`, or `RUNTIME_ZIP=<path>` | fail-closed since the 2026-09-16 build: SHA256SUMS cannot authenticate the runtime path without it |
+| Runtime archive | `out/runtime-archive/winq-emu-alpha10-portable.zip` (durable home), `$USERPROFILE/Downloads/`, or `RUNTIME_ZIP=<path>`; when none exists the build fetches from `scripts/release/runtime.lock.json` and digest-verifies before use | the lock is the single pin (stage-3 one-owner change); every staged copy — fast-path or fetched — is verified against the lock before it enters the payload |
 | Vendor caches | `out/cursor.AppImage`, `out/savant-code.tar.gz` present | saves ~360 MB of fetch; digests are re-verified against the locks either way |
 | Host tools | `bash`, `docker`, `go`, `python3`, `sha256sum` | savant-core cross-compiles host-side; lock reads + the CRLF byte scan use python3 |
 | Clean factory tree | `git status` shows no uncommitted `guest-image/` skeleton/finalize changes | the build embeds the tree as-is; never publish a baseline from a dirty tree |
@@ -147,7 +147,12 @@ What the builder now emits and when the store gets touched:
   would (see Post-run checklist). Verify the published `rootfs.ext4`
   digest equals the gate digest before calling it published.
 - **Docker engine down** — start Docker Desktop, poll `docker info`.
-- **Runtime archive missing** — FATAL names the paths; set `RUNTIME_ZIP`.
+- **Runtime archive missing** — since the stage-3 one-owner change the
+  build fetches it from the runtime lock's pinned url and digest-verifies
+  before use; only a failed fetch or a digest mismatch FATALs (check
+  network/proxy, or set `RUNTIME_ZIP=<pinned copy>`). A local copy whose
+  digest has drifted also FATALs, naming want/have — replace or delete
+  it; the lock digest is the truth, never the local file.
 - **Vendor digest mismatch** — the cache or the vendor changed; re-fetch;
   if the vendor re-released, update the lock and the cache in one commit.
 - **CRLF gate failure** — a text file in `skeletons/` carries CR bytes
@@ -194,11 +199,13 @@ What the builder now emits and when the store gets touched:
 
 A green dual-build discharges T1.3 (determinism + baseline) only. Stage-3
 rows it does not touch: reliable content-negative tests in `assemble.sh`
-(absence assertions), one-owner reconciliation of runtime acquisition and
-manifest assembly across `build.sh` and `scripts/release/prepare-assets.sh`
-(this runbook's flow owns the local baseline; the release flow's ownership
-is still a named addendum defect), and isolated harness ownership. Those
-are separate stage-3 items with their own evidence obligations.
+(absence assertions), and isolated harness ownership. The one-owner
+reconciliation of runtime acquisition and manifest assembly across
+`build.sh` and `scripts/release/prepare-assets.sh` is RESOLVED
+(2026-10-03): the builder owns the runtime archive and its sums entry,
+and prepare-assets asserts the pin and stages only the source archive.
+The remaining rows are separate stage-3 items with their own evidence
+obligations.
 
 ## Consuming the baseline (operator-gated)
 

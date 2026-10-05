@@ -3,6 +3,28 @@
 ## Unreleased
 
 ### Added
+- **Host capability probes — Vulkan 1.3 and AVX2 (FID-2026-0914-002, steps
+  3b/3c):** the launcher now records what the Windows graphics and CPU stack
+  actually supports. 3b walks the Khronos installable-client-driver manifests
+  under `HKLM\SOFTWARE\Khronos\Vulkan\Drivers` and asserts each declared
+  `ICD.api_version` against 1.3 — declared versions only, with no adapter
+  re-enumeration, because `displayDriverIdentity` is already the one adapter
+  truth; 3c asks the OS directly via
+  `IsProcessorFeaturePresent(PF_AVX2_INSTRUCTIONS_AVAILABLE)`. Both facts ride
+  the provenance log line, the render-probe record (additive fields, schema
+  stays 1) and the diagnostics bundle. Detection only — nothing here gates a
+  launch, and every probe fails open. Measured live on this host, which is the
+  honest negative Vulkan case (loader DLLs present, no registered drivers).
+  Driver manifests are hard-bounded at 64 KiB before allocation, so a corrupt
+  or hostile registry value costs a bounded read, never a partial parse.
+- **The delta path has direct fallback and interruption coverage
+  (FID-2026-0914-002, stage 6):** `deltaReconstruct` had no direct tests. Five
+  now pin the contract against the committed casync fixtures: the full
+  fetch-verify-reconstruct-verify-cleanup chain through an httptest release,
+  the no-advertisement fallback that touches nothing, cleanup when the index
+  is unreachable, cleanup on missing chunks (so no scaffolding survives for
+  the zstd fallback to trip over), and consumption of a stale `.dpart` left by
+  an interrupted run — consumed, never merged.
 - **T2.1 delta emission implemented and proven against the published baseline
   (FID-2026-0914-002):** the builder now emits `rootfs.ext4.caibx` + the
   sharded `rootfs.castr/` store per assembly (explicit `--store`; casync's
@@ -143,6 +165,36 @@
   `git am` round-trip proof) (FID-2026-0911-004).
 
 ### Changed
+- **The builder is now the one owner of runtime acquisition
+  (FID-2026-0914-002, stage 3):** two independent breakages would have killed
+  the next release tag — the ubuntu release runner has no local runtime
+  archive (`out/runtime-archive/` is not in git), so the prepare job died
+  inside the build, and even with an archive supplied `prepare-assets.sh`
+  refused the runtime name already present in the payload's SHA256SUMS.
+  `scripts/release/runtime.lock.json` is now the single pin: `build.sh`
+  resolves `RUNTIME_ZIP` → `~/Downloads` → the durable home, and when none
+  exists fetches from the lock's url and digest-verifies BEFORE the archive
+  lands there. Every staged copy — fast-path or fetched — is verified against
+  the lock before it enters the payload, so a drifted local copy fails at the
+  trust anchor instead of shipping self-consistent wrong bytes.
+  `prepare-assets.sh` now asserts the pinned entry shipped and stages only the
+  source archive, whose attribution obligation no payload carries. The block's
+  `set -u`-unsafe `$USERPROFILE` expansion was fixed in the same change.
+  Covered by `scripts/dev/test-prepare-assets.sh` (10 assertions, synthetic
+  `file://` URLs only — nothing is fetched from the internet).
+- **Consecutive-release delta transfer is now measured (FID-2026-0914-002):**
+  the E2E N+1 gate is met. Parsing the published N index against the N+1 index
+  (82,844 references / 76,679 unique chunks each) leaves 3 new chunks, so a
+  consecutive-release update moves **87,522 compressed bytes (~0.1 MiB)**
+  instead of the 2.27 GiB zstd image — three orders of magnitude under the
+  < 100 MB target. Those three chunks carry the embedded savant-core ELF and
+  differ by the VCS stamp of the commit that landed between the builds: that
+  is the builder's non-determinism floor, and the delta absorbs it. Cross-run
+  digest drift (`a2dbea53` → `ea574cb3` → `094df621`) is now fully explained
+  by the stamp rather than by tooling drift. Separately recorded as an OPEN
+  gap: the 2026-09-29 build's publish tail destroyed the previously published
+  payload — the hardened tail preserves the new payload, but nothing guards
+  the old one during the publish removal.
 - **CPU rendering is now the guarded default (FID-2026-0917-001):** the
   GPU path can wedge the compositor when a window with a titlebar opens
   (Kate or any Qt app), freezing the desktop until a session restart.
