@@ -222,6 +222,36 @@
   the deletions.
 
 ### Fixed
+- **The publish tail can no longer destroy the previous payload
+  (FID-2026-1005-001):** `guest-image/build.sh` used to `rm -rf` the
+  published `out/contract` BEFORE the replacement was assembled,
+  verified, or copied — the 2026-09-29 build husked the published release
+  while its replacement never published. The whole payload is now
+  assembled on `build-a/contract` first (delta finalization, runtime
+  staging, SHA256SUMS with delta entries), then the extracted
+  `guest-image/publish-tail.sh` self-checks it (`sha256sum -c`), parks
+  the previous payload with a retry-wrapped rename, installs the new one
+  with a second rename, re-verifies in place, and only then removes the
+  park and emits `release-base.json` — no `rm -rf` touches a payload
+  anywhere in the publish path, so the husk case is unrepresentable. The
+  tail's delta bookkeeping is glob/awk-only (no `find`/`head`), which
+  also un-breaks it on hosts missing those tools.
+  `scripts/dev/test-publish-tail.sh` proves every state of the swap FSM
+  (42 assertions: pre-swap refusal with previous untouched,
+  between-rename recovery, busy retry and exhaustion, stale-park
+  refusal, first publish, park invisible to the `contract-*` globs).
+- **The snapshot-lock check no longer depends on `head`:**
+  `guest-image/check-snapshot-lock.sh` piped both of its parses through
+  `| head -1`; on a Git Bash install missing `/usr/bin/head` (this
+  operator host) the command substitution died silently, so the
+  `--contract-only` contract gate reported a misleading "mkosi.conf pins
+  snapshot `<none>`" and failed closed with the real pin unread. Both
+  uses now use the repo's awk first-line idiom
+  (`awk 'NR==1{print; exit}'`), so a coreutils gap cannot break the gate.
+  Verified head-less: direct run OK (snapshot 20260811), a conf pinning
+  a different date fails naming the parsed date, second-snapshot
+  detection intact, and `build-guest.sh --contract-only` green
+  end-to-end with no PATH shim.
 - **The close ladder's escalation rung now actually works (FID-2026-0928-001):**
   rung 2 (`ssh systemctl poweroff -i`) was polkit-denied — the factory image
   shipped no polkit rules, logind's default demands interactive auth, and
@@ -285,6 +315,18 @@
   exits QEMU in seconds.
 
 ### Governance
+- ECHO Protocol 0.2.2: **G1 commit authority reconciled.** The tracked
+  protocol now states the amended G1 — agents may stage, commit, and push
+  granular local commits to `main` (adopted repo-locally 2026-10-05), one
+  committer at a time, path-scoped staging, releases/tags/published
+  artifacts operator-only, force-push and branch deletion ruleset-blocked —
+  ending the two-statement conflict with the vendored `savant-docs/`
+  reference copy's 2026-09-05 amendment. `ECHO.md` carries it as a new
+  abridged-G1 bullet (it previously stated no commit authority at all),
+  `dev/echo-v0.1.2-single-agent.md` mirrors it at 0.1.3-single-agent,
+  `SCOPE.md`'s current-authorization boundary is aligned, and
+  `dev/agenda.md`'s stale PR-ruleset claim is corrected against ground
+  truth (only the `main: no force pushes` ruleset exists).
 - ECHO Protocol 0.2.1: new Working Style clause — **no silent deferrals**;
   any element of an approved plan that will not be implemented requires
   operator approval before merge (arising from FID-2026-0911-005's post-
