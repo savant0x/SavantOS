@@ -2,7 +2,7 @@
 
 > **This is the SINGLE bootstrap file for any agent session in this repository.**
 > Language-agnostic core; project-specific details live in `protocol.config.yaml`.
-> **Version:** 0.2.1 | **Status:** ACTIVE | **Non-Negotiable: YES**
+> **Version:** 0.2.2 | **Status:** ACTIVE | **Non-Negotiable: YES**
 
 ---
 
@@ -116,6 +116,12 @@ FIDs move to `dev/fids/archive/` and get a `CHANGELOG.md` entry.
 
 ### Version-Control Laws (G1–G9, abridged)
 
+- G1 commit authority — agents may stage, commit, and push granular local
+  commits to `main` (upstream amendment 2026-09-05; adopted repo-locally
+  2026-10-05, superseding the earlier "the agent never executes git"
+  reading). Exactly one committer at a time; the operator retains sole
+  authority over releases, tags, and published artifacts; force-push and
+  branch deletion stay blocked by the `main: no force pushes` ruleset.
 - Atomic commits, one coherent change each; G8 message convention:
   `<type>(<scope>): <description> (<FID-ID>)` with types
   `feat|fix|refactor|test|docs|chore|perf`.

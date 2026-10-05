@@ -2,7 +2,7 @@
 
 > **This is the ECHO Protocol adapted for single-agent operation.**
 > For the harness-bound version with 10-agent roster, see `savant-code/ECHO.md` (v0.2.0).
-> **Version:** 0.1.2-single-agent | **Status:** ACTIVE | **Non-Negotiable: YES**
+> **Version:** 0.1.3-single-agent | **Status:** ACTIVE | **Non-Negotiable: YES**
 
 ---
 
@@ -428,11 +428,18 @@ A plan with silent deferrals is a broken plan — the operator approved work tha
 - **Track progress visually.** Update TODO lists after each completed task.
 
 > **Version control:** The Version-Control Workflow Laws (G1–G9) in `ECHO.md`
-> apply in single-agent sessions too: the agent never executes git (G1),
-> FID closure requires a committed hash (G2), commits are logical-atomic and
-> path-scoped (G3/G4), history is preserved granularly through release (G6),
-> and messages follow `<type>(<scope>): <desc> (<FID-ID>)` (G8). The agent
-> prepares path-scoped staging plans and the operator executes or approves.
+> apply in single-agent sessions too: under G1 the agent may stage, commit,
+> and push granular local commits to `main` — adopted repo-locally
+> 2026-10-05, superseding this file's earlier "the agent never executes git"
+> wording (the vendored `savant-docs/` copy carried the 2026-09-05 upstream
+> amendment and stays untouched as reference material). Exactly one
+> committer at a time; releases, tags, and published artifacts remain the
+> operator's sole authority; force-push, history rewrite, and tag mutation
+> stay prohibited. FID closure requires a committed hash (G2), commits are
+> logical-atomic and path-scoped (G3/G4), history is preserved granularly
+> through release (G6), and messages follow `<type>(<scope>): <desc>
+> (<FID-ID>)` (G8). The agent prepares path-scoped staging plans per
+> completed area before committing (G4).
 
 ---
 

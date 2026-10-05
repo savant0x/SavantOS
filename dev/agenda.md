@@ -20,10 +20,12 @@ at session end.
 
 ## Next
 
-- Done 2026-09-11: branch rulesets active on main (no force-push/deletion,
-  no bypass; PR + 1 approval + CODEOWNERS + required checks). Direct
-  pushes to main are gone — everything lands by PR (admin override for
-  the solo maintainer's own PRs, no self-approval).
+- Ruleset history: the PR-required ruleset (added 2026-09-11: PR + 1
+  approval + CODEOWNERS + required checks) was later removed by operator
+  directive (CHANGELOG Unreleased → Governance; `4c8c384` "main goes
+  direct-push"). Ground truth 2026-10-05: the only ruleset on main is
+  `main: no force pushes`, classic branch protection is off — direct
+  pushes are the normal flow, CI runs the full check suite on every push.
 - Next release exercise: prepare → pin → publish cycle on a real tag with
   the executed playbook (exec-bit and CRLF gates now in the tree).
 
