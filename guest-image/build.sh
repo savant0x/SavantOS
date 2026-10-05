@@ -320,30 +320,12 @@ done
 # transient Windows handle on out/contract cost a full re-run on 2026-09-19
 # and again on 2026-09-28) must leave build-a in place for a manual publish.
 trap - EXIT
-# Publish build A as the payload; drop the gate copy. Windows can hold a
-# transient handle on the previous payload directory (search indexer,
-# Explorer, a lagging file-share broker) — rm -rf on it fails with "Device
-# or resource busy" and an rm -rf here killed an otherwise green build
-# twice. Retry with backoff, and fail with the artifacts intact if the
-# handle still will not release.
-rm_ok=0
-for attempt in 1 2 3 4 5 6; do
-    if rm -rf "$out/contract" 2>/dev/null && [[ ! -e $out/contract ]]; then
-        rm_ok=1
-        break
-    fi
-    echo "[build] out/contract busy (attempt $attempt/6); retrying in 10 s" >&2
-    sleep 10
-done
-if [[ $rm_ok -ne 1 ]]; then
-    echo "[build] FATAL: could not fully remove $out/contract - a process still holds it." >&2
-    echo "[build]        The gate PASSED and the payload is intact in build-a/contract." >&2
-    echo "[build]        Publish by hand once the handle releases, either as" >&2
-    echo "[build]          rm -rf out/contract && cp -r build-a/contract out/contract" >&2
-    echo "[build]        or, if only an empty husk remains, into it:" >&2
-    echo "[build]          cp -r build-a/contract/. out/contract/" >&2
-    exit 1
-fi
+# Publish happens at the END of this tail, by atomic rename
+# (FID-2026-1005-001): nothing from here to publish-tail.sh touches
+# out/contract until the payload is fully assembled and self-checked. The
+# previous payload survives every failure before that swap — the old
+# rm-first approach husked a published release on 2026-09-29, and a busy
+# handle mid-rm is exactly how partial destruction happens.
 
 # --- Delta finalization FIRST, on the pristine build-a copy (T2.1,
 # FID-2026-0914-002). The previous release's caibx (when a payload exists
@@ -355,7 +337,19 @@ fi
 # payload copy, avoids dragging ~100k chunk files through the virtiofs
 # mount only to delete them host-side after the copy.
 prev_payload=""
-prev_list=$(find "$out" -maxdepth 1 -type d -name 'contract-*' 2>/dev/null | sort -r | head -n1)
+# Newest sibling payload, same name ordering as the old
+# `find … | sort -r | head -1` — but glob-based: this host has no `find`
+# or `head`, and the publish path must not depend on them
+# (FID-2026-1005-001, design decision 8). `contract-*/` also cannot match
+# out/contract.prev (the park name uses a dot, not a dash).
+prev_list=""
+shopt -s nullglob
+sibling_candidates=("$out"/contract-*/)
+shopt -u nullglob
+if ((${#sibling_candidates[@]} > 0)); then
+    prev_list=$(printf '%s\n' "${sibling_candidates[@]}" | sort -r | awk 'NR==1{print; exit}')
+    prev_list=${prev_list%/}
+fi
 [[ -n $prev_list ]] && prev_payload="$prev_list"
 prev_caibx="NONE"
 if [[ -n $prev_payload && -f $prev_payload/rootfs.ext4.caibx ]]; then
@@ -378,13 +372,12 @@ else
     fi
 fi
 
-cp -r build-a/contract "$out/contract"
-rm -rf build-a build-b
-
 # --- SHA256SUMS for the local release base (format the launcher parses:
-# "<digest>  <name>", binary-mode star tolerated, plain names here)
+# "<digest>  <name>", binary-mode star tolerated, plain names here).
+# Emitted on the STAGED payload: through the swap, build-a/contract IS the
+# payload — out/contract stays untouched until publish-tail.sh runs.
 (
-    cd "$out/contract"
+    cd "$here/build-a/contract"
     sha256sum guest-manifest.json build-spec.json vmlinuz-linux \
         initramfs-linux.img rootfs.ext4 rootfs.ext4.zst > SHA256SUMS
 )
@@ -452,42 +445,46 @@ if [[ $runtime_have != "$runtime_want" ]]; then
     echo "  (set RUNTIME_ZIP=<pinned copy> or delete the drifted file and rerun)" >&2
     exit 1
 fi
-cp -f "$runtime_zip_src" "$out/contract/$runtime_name"
+cp -f "$runtime_zip_src" "$here/build-a/contract/$runtime_name"
 echo "[build] runtime archive staged: ${runtime_have:0:16}"
 
 (
-    cd "$out/contract"
+    cd "$here/build-a/contract"
     sha256sum guest-manifest.json build-spec.json vmlinuz-linux \
         initramfs-linux.img rootfs.ext4 rootfs.ext4.zst \
         "$runtime_name" > SHA256SUMS
 )
 
 # (Delta finalization itself ran earlier, on build-a/contract, BEFORE the
-# payload copy — see above. Nothing here re-runs it: in first-release mode
+# publish swap — see above. Nothing here re-runs it: in first-release mode
 # its rc=3 fallback would strip the already-shipped caibx.)
 # The delta artifacts join the authenticated payload: SHA256SUMS entries for
 # the store files and the two indices. The launcher's delta advertisement
 # reads SHA256SUMS — an unauthenticated artifact is dead weight; these lines
-# make the advertisement honest. The sums digest is recomputed AFTER these
-# entries, then release-base.json is emitted with the final value.
+# make the advertisement honest. The sums digest is computed by
+# publish-tail.sh after the swap, then release-base.json is emitted with
+# the final value. Glob-based chunk enumeration (no `find` — FID-2026-1005-001
+# decision 8); the old `find … | xargs` died under pipefail on this host.
 (
-    cd "$out/contract"
+    cd "$here/build-a/contract"
     if [[ -d rootfs.castr ]]; then
-        find rootfs.castr -type f -print0 | sort -z | xargs -0 sha256sum >> SHA256SUMS
+        shopt -s nullglob
+        chunks=(rootfs.castr/*/*)
+        shopt -u nullglob
+        if ((${#chunks[@]} > 0)); then
+            printf '%s\n' "${chunks[@]}" | sort | xargs sha256sum >> SHA256SUMS
+        fi
     fi
     for f in rootfs.ext4.caibx rootfs.ext4.prev.caibx; do
-        [[ -f $f ]] && sha256sum "$f" >> SHA256SUMS
+        if [[ -f $f ]]; then
+            sha256sum "$f" >> SHA256SUMS
+        fi
     done
 )
-sums_digest=$(sha256sum "$out/contract/SHA256SUMS" | cut -d' ' -f1)
-cat > "$out/release-base.json" <<JSON
-{
-  "releaseName": "$release_name",
-  "version": "$version",
-  "sumsSha256": "$sums_digest",
-  "note": "Serve this directory over loopback HTTP and pass -release <url> -sums-sha256 <sumsSha256> to the unmodified launcher. Includes the v0.0.1 WINQ-EMU runtime archive so the runtime path authenticates."
-}
-JSON
-
-echo "[build] GATE GREEN — payload in $out/contract"
-echo "[build] SHA256SUMS digest for -sums-sha256: $sums_digest"
+# --- Publish (FID-2026-1005-001): self-check, atomic rename swap,
+# re-verify in place, then release-base.json. On any failure the previous
+# payload is still published (or parked as out/contract.prev with the
+# recovery command printed) and build-a/contract is intact — no path in
+# this sequence deletes a payload before its replacement is verified.
+bash "$here/publish-tail.sh" "$out" "$here/build-a" "$release_name" "$version"
+rm -rf build-a build-b

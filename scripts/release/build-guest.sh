@@ -45,7 +45,7 @@ bash "$builder_dir/check-snapshot-lock.sh" "$builder_dir/snapshot.lock.json" "$b
 
 # 2. Builder scripts must parse (a syntax-broken gate is a gate that fails).
 bash -n "$builder_dir/build.sh" "$builder_dir/assemble.sh" \
-  "$builder_dir/check-snapshot-lock.sh"
+  "$builder_dir/check-snapshot-lock.sh" "$builder_dir/publish-tail.sh"
 
 # 3. CRLF gate: no KConfig/unit/theme file may carry CR (KConfig mis-parses
 #    '[Group]\r' — verified 2026-09-13, the whole L&F layer no-op'd on CRLF).

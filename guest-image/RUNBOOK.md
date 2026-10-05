@@ -78,6 +78,10 @@ assemble: six contract files in /work/build-a/contract  # echo wording is histor
 [build] CRLF gate: no KConfig/unit/theme file may carry CR …
 [build] dual-build digest comparison
   rootfs.ext4            <64-hex>     # and the other six files — rootfs.ext4.caibx is gated (T2.1)
+[publish] staged payload: verified (7 gated files present, SHA256SUMS clean)
+[publish] previous payload parked at …/out/contract.prev
+[publish] published payload: verified (7 gated files present, SHA256SUMS clean)
+[publish] previous payload removed after verification
 [build] GATE GREEN — payload in …/out/contract
 [build] SHA256SUMS digest for -sums-sha256: <64-hex>
 ```
@@ -103,12 +107,13 @@ What the builder now emits and when the store gets touched:
   casync output was measured deterministic (same input + flags →
   byte-identical index, even across different store paths), so it gates
   like every other artifact.
-- **Delta finalization runs on `build-a/contract` BEFORE the payload
-  copy.** Given the previous release's caibx (newest `out/contract-*`
+- **Delta finalization runs on `build-a/contract` BEFORE the publish
+  swap.** Given the previous release's caibx (newest `out/contract-*`
   sibling), the finalizer prunes every seed-served chunk from the store
   and copies the prev index in as `rootfs.ext4.prev.caibx`. Doing this
-  pre-copy means first-release mode deletes the whole ~6 GiB store before
-  the ~100k-file virtiofs copy, not after.
+  pre-swap means first-release mode deletes the whole ~6 GiB store before
+  the payload is renamed into place — never dragged through the virtiofs
+  mount only to be deleted host-side.
 - **What a FIRST delta-capable release ships** (no previous payload —
   the T1.3 baseline is one): the bare `rootfs.ext4.caibx` only — the
   store is REMOVED (unusable without a seed) and no prev index exists, so
@@ -122,30 +127,35 @@ What the builder now emits and when the store gets touched:
 - **Never re-run `delta-finalize.py` on the published `out/contract`.**
   In first-release mode its rc=3 fallback deletes the already-shipped
   caibx; a second prune pass double-counts. `build-a/contract` is already
-  final when the publish-tail FATAL fires — copy it verbatim.
+  final when `publish-tail.sh` runs — it is renamed into place verbatim;
+  never mutate it by hand.
 - Chunk files are written 0444 (immutable by design); the finalizer's
   remove path chmods on PermissionError — required host-side on Windows
   (WinError 5, measured), no-op on Linux.
 
 ## Failure modes (each observed at least once)
 
-- **`rm -rf out/contract`: "Device or resource busy"** at the publish tail
-  (2026-09-19, 2026-09-28). A host-side handle holds the previous payload
-  directory — prime suspect: Docker Desktop's file-sharing layer, which
-  serves `out/` through the `/work` bind during the build; Explorer or the
-  search indexer can too. Since 2026-09-28 `build.sh` releases its EXIT
-  trap once the gate has spoken, retries the removal 6 × 10 s, and on
-  residual failure exits with **`build-a/contract` intact** and
-  hand-publish instructions. The old behavior destroyed both proven copies
-  via the EXIT trap — never run a pre-fix `build.sh` for a baseline you
-  cannot afford to rebuild.
-- **Manual publish fallback** (when the FATAL above fires): the husk may
-  remain (empty dir, children deleted). Once writable
-  (`touch out/contract/.probe`), publish into it:
-  `cp -r build-a/contract/. out/contract/`, then copy the runtime zip in
-  and re-emit `SHA256SUMS` + `release-base.json` exactly as the script
-  would (see Post-run checklist). Verify the published `rootfs.ext4`
-  digest equals the gate digest before calling it published.
+- **`out/contract` busy (rename failure)** at the publish tail (the old
+  `rm` tail hit it 2026-09-19 and 2026-09-28, and husked the published N
+  payload on 2026-09-29). A host-side handle holds the payload directory —
+  prime suspect: Docker Desktop's file-sharing layer, which serves `out/`
+  through the `/work` bind during the build; Explorer or the search
+  indexer can too. Since FID-2026-1005-001 the publish path never
+  deletes: `publish-tail.sh` parks the previous payload with a rename
+  (retried 6 × 10 s), installs the new one with a second rename, and
+  removes the park only after re-verifying the published payload.
+  Exhausted retries exit with the **previous payload still published and
+  intact** plus `build-a/contract` intact — no code path destroys a
+  payload before its replacement verifies.
+- **Manual publish fallback** (only if the rename itself stays blocked):
+  everything survives on disk — previous payload published (or parked at
+  `out/contract.prev`), new payload at `build-a/contract`. Once the handle
+  releases, follow the recovery the FATAL message prints:
+  `mv out/contract.prev out/contract` (restore) and/or
+  `mv build-a/contract out/contract` (install), then verify per the
+  Post-run checklist (published `rootfs.ext4` digest equals the gate
+  digest, `sha256sum -c SHA256SUMS` clean, `release-base.json` sumsSha256
+  matches). There is no husk case anymore: renames are all-or-nothing.
 - **Docker engine down** — start Docker Desktop, poll `docker info`.
 - **Runtime archive missing** — since the stage-3 one-owner change the
   build fetches it from the runtime lock's pinned url and digest-verifies
