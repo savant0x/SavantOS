@@ -252,6 +252,22 @@
   a different date fails naming the parsed date, second-snapshot
   detection intact, and `build-guest.sh --contract-only` green
   end-to-end with no PATH shim.
+- **The rotation guard no longer depends on `find`/`tail`:**
+  `guest-image/build.sh` fed the stale-payload prune through
+  `done < <(find … | sort -rz | tail -n +2)`; on a Git Bash install
+  missing `/usr/bin/find` (this host — `find` resolves to Windows
+  `find.exe`, which rejects POSIX syntax with exit 2) the process
+  substitution failed silently under `set -e`, so the guard no-op'd and
+  stale `contract-*` payloads simply accumulated. It now globs the
+  directories (`"$out"/contract-*/` under `nullglob`), sorts them
+  reverse-lexically (names embed timestamps, so that is newest-first),
+  and drops the retained newest with the repo's awk idiom — the same
+  shape as the FID-2026-1005-001 delta-prev scan. Verified by extracting
+  the exact block from `build.sh` and running it against synthetic
+  payload sets (newest kept, older siblings and only they removed,
+  `contract.prev`/`contract` decoys untouched, 0- and 1-dir cases exit
+  0), with `bash -n`, the 42-assertion publish-tail suite, and
+  `--contract-only` all green afterward.
 - **The close ladder's escalation rung now actually works (FID-2026-0928-001):**
   rung 2 (`ssh systemctl poweroff -i`) was polkit-denied — the factory image
   shipped no polkit rules, logind's default demands interactive auth, and

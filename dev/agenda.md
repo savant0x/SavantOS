@@ -32,6 +32,12 @@ at session end.
 ## Waiting on operator
 
 - Submit the SignPath application (checkpoint above) after confirming MFA.
+- Schedule the FID-2026-1005-001 real-build swap proof — the FID's last
+  closure obligation (implementation committed `a5aa557`, pushed): a full
+  `scripts/release/build-guest.sh` run (~2h; headroom present, ~366 GiB
+  free) whose log must show the `[publish]` rename-swap lines, the
+  published SHA256SUMS re-verifying, no `out/contract.prev` residue, and
+  a published rootfs digest equal to the gate digest.
 - Whether to retain the two dropped SavantOS-specific Go rules in
   `AGENTS.md` (`filepath.Join` path building; test-fixture skip-or-fail
   messaging).

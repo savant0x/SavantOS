@@ -324,8 +324,17 @@ ran.
 
 ### Priority Tasks
 
-1. [ ] Decide commit/push for this changeset (5 files + summary) and the
-   six existing unpushed commits.
+1. [x] DONE (same session, 2026-10-05): blanket-approved plan executed —
+   the six pre-existing commits and six new slices pushed to origin/main
+   (`1193c44` lock fix, `185b711` governance, `03a50b2` FID, `a5aa557`
+   publish-tail implementation, `c518e8f` records, `de8ee41` scratchpad
+   drivers), the 14 stale scratchpad scripts deleted, and the
+   rotation-guard `find` at build.sh:254 glob-ified (`49bca9b`) with
+   gates re-run green (suite 42/42, contract-only 0).
 2. [ ] Rule on the new `[OPEN-OUT-OF-SCOPE]` `single_agent` config key.
-3. [ ] Continue the standing queue (publish-tail guard FID, scratchpad
-   disposition, N+1 release chain).
+3. [ ] Operator schedules the FID-2026-1005-001 real-build swap proof
+   (the FID's last closure obligation; ~2h build, headroom present).
+4. [ ] Continue the standing queue (test-dev-vm-init.sh `head` uses at
+   lines 33/63 — suite 27/6 RED on this host; `stage2-exit-evidence.log`
+   un-ignore decision — the FID cites it and `*.log` is ignored; N+1
+   release chain).

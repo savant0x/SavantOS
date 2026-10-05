@@ -3,9 +3,10 @@
 **Filename:** `FID-2026-1005-001-publish-tail-previous-payload-protection.md`
 **ID:** FID-2026-1005-001
 **Severity:** high
-**Status:** fixed — implementation landed 2026-10-05 in the working tree
-(operator: "run perfection loop and approve code"); closure owes a commit
-(G2) and the operator-scheduled real-build swap proof
+**Status:** fixed — implementation committed 2026-10-05 as `a5aa557`
+(`feat(builder): publish by verified rename swap`, pushed to origin/main
+with the governance/records slices); closure owes only the
+operator-scheduled real-build swap proof
 **Created:** 2026-10-05 17:52
 **YAGNI-Compliance:** Verified
 
@@ -488,17 +489,18 @@ this document before any code, then the five steps were implemented.
 - [x] Production call-graph: `build.sh:489` calls `publish-tail.sh`; CI
       wires the suite via `.github/workflows/ci.yml:79`
 - [x] FID status reflects the actual implementation state (`fixed` —
-      code exists and gates pass; `closed` withheld per Ground-Truth:
-      no commit yet, no real-build swap proof)
+      code exists, gates pass, committed as `a5aa557` and pushed;
+      `closed` withheld per Ground-Truth: no real-build swap proof yet)
 - [ ] Live cross-device precondition (NEEDS-REVIEW): a single-filesystem
       host cannot exercise the `stat -c %d` refusal; static presence
       proven by suite scenario 11
 
 ## Resolution
 
-- **Closed Date:** not set — status `fixed`; closure requires (a) the
-  commit (G2 — the staging plan was explicitly left untouched this pass)
-  and (b) the operator-scheduled real-build swap proof (next real build:
+- **Closed Date:** not set — status `fixed`; the commit landed (G2:
+  `a5aa557`, pushed alongside the governance, records and scratchpad
+  slices), so closure requires only (b) the operator-scheduled
+  real-build swap proof (next real build:
   swap lines in the log, published SHA256SUMS re-verifies, no
   `out/contract.prev` residue, published rootfs digest == gate digest)
 - **Fix Description:** assembly completes on `build-a/contract` before
