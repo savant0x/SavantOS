@@ -268,6 +268,18 @@
   `contract.prev`/`contract` decoys untouched, 0- and 1-dir cases exit
   0), with `bash -n`, the 42-assertion publish-tail suite, and
   `--contract-only` all green afterward.
+- **The release-helpers tests match the builder-owned runtime acquisition
+  contract (FID-2026-0914-002):** `prepare-assets.sh` no longer stages the
+  runtime archive — the builder does, and the script asserts the lock's
+  pinned digest against the payload's SHA256SUMS — but
+  `scripts/release/test_prepare_assets.py` still exercised the retired
+  fetch-it-here contract, so every CI run after the six-commit push went
+  red (`lacks the pinned runtime archive entry … rebuild with the current
+  builder`). The test now seeds a builder-staged runtime entry and pins
+  the new contract — its runtime URL is deliberately unreachable, so
+  reaching exit 0 proves the script never fetches the runtime — and a new
+  fail-closed case refuses a payload missing the pinned entry (11 tests,
+  all green locally with the exact CI commands).
 - **The close ladder's escalation rung now actually works (FID-2026-0928-001):**
   rung 2 (`ssh systemctl poweroff -i`) was polkit-denied — the factory image
   shipped no polkit rules, logind's default demands interactive auth, and
